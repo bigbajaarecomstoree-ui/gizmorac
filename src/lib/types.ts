@@ -1,0 +1,204 @@
+// Domain model for the GIZMORAC storefront.
+// Kept framework-agnostic so the data layer can move from mock -> Prisma/DB
+// without changing any UI code.
+
+export type CategorySlug =
+  | "smart-gadgets"
+  | "health-devices"
+  | "office-solutions"
+  | "car-accessories"
+  | "mobile-accessories"
+  | "computer-accessories";
+
+/** Identifies which inline device illustration to render as the product visual. */
+export type DeviceArt =
+  | "printer"
+  | "inflator"
+  | "knee-massager"
+  | "eye-massager"
+  | "bp-monitor"
+  | "oximeter"
+  | "keyboard"
+  | "usb-hub"
+  | "charger"
+  | "vacuum"
+  | "mount"
+  | "webcam"
+  | "mouse"
+  | "stand"
+  | "neck-massager";
+
+export interface Category {
+  slug: CategorySlug;
+  name: string;
+  tagline: string;
+  art: DeviceArt;
+  /** Optional real photo; falls back to the `art` line illustration when absent. */
+  image?: string;
+}
+
+export interface ProductSpec {
+  label: string;
+  value: string;
+}
+
+export interface FaqItem {
+  q: string;
+  a: string;
+}
+
+export interface Review {
+  id: string;
+  author: string;
+  location: string;
+  rating: number;
+  title: string;
+  body: string;
+  date: string;
+  verified: boolean;
+  productSlug?: string;
+}
+
+export interface Product {
+  id: string;
+  slug: string;
+  name: string;
+  brand: string;
+  sku: string;
+  category: CategorySlug;
+  art: DeviceArt;
+  /** Optional real product photo; UI falls back to the `art` illustration. */
+  image?: string | null;
+  /** Uploaded product photos (up to 7). Falls back to `art` when empty. */
+  images: string[];
+  /** Optional uploaded product video URL. */
+  video?: string | null;
+  /** Current selling price in INR (paise not used; whole rupees). */
+  price: number;
+  /** Original MRP in INR, used to derive discount. */
+  mrp: number;
+  rating: number;
+  reviewCount: number;
+  stock: number;
+  /** Flag/warn when stock falls to or below this number. */
+  lowStockThreshold: number;
+  badges: string[];
+  shortDescription: string;
+  description: string;
+  highlights: string[];
+  features: string[];
+  specs: ProductSpec[];
+  faqs: FaqItem[];
+  isBestSeller: boolean;
+  isFeatured: boolean;
+  isDeal: boolean;
+  createdAt: string;
+}
+
+export type SortOption =
+  | "popular"
+  | "newest"
+  | "price-asc"
+  | "price-desc"
+  | "rating"
+  | "discount";
+
+export interface ShopQuery {
+  category?: CategorySlug;
+  sort?: SortOption;
+  minPrice?: number;
+  maxPrice?: number;
+  minRating?: number;
+  inStock?: boolean;
+  q?: string;
+  page?: number;
+}
+
+export interface PagedResult<T> {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  pageCount: number;
+}
+
+export type OrderStatus =
+  | "Pending"
+  | "Confirmed"
+  | "Packed"
+  | "Shipped"
+  | "Delivered"
+  | "Cancelled"
+  | "Returned"
+  | "Refunded";
+
+export interface OrderItem {
+  id: string;
+  slug: string;
+  name: string;
+  price: number;
+  qty: number;
+}
+
+export interface Order {
+  id: string;
+  orderNumber: string;
+  status: OrderStatus;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  address: string;
+  city: string;
+  state: string;
+  pincode: string;
+  items: OrderItem[];
+  subtotal: number;
+  discount: number;
+  shipping: number;
+  total: number;
+  paymentMethod: string;
+  couponCode?: string | null;
+  customerId?: string | null;
+  createdAt: string;
+}
+
+/** Coupon kinds the storefront + admin understand. */
+export type CouponType = "percent" | "fixed" | "bogo";
+
+export interface Coupon {
+  id: string;
+  code: string;
+  type: CouponType;
+  /** Percent (0–100) for "percent"; rupee amount for "fixed"; ignored for "bogo". */
+  value: number;
+  minOrder: number;
+  /** Cap on a percentage discount in rupees; 0 = no cap. */
+  maxDiscount: number;
+  active: boolean;
+  startsAt?: string | null;
+  expiresAt?: string | null;
+  usageLimit: number;
+  usedCount: number;
+  description: string;
+  createdAt: string;
+}
+
+/** Customer record with the password hash stripped — safe to pass to the client. */
+export interface Customer {
+  id: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  address: string;
+  city: string;
+  state: string;
+  pincode: string;
+  createdAt: string;
+}
+
+/** A customer row enriched with order rollups for the admin directory. */
+export interface CustomerWithStats extends Customer {
+  orderCount: number;
+  totalSpent: number;
+}

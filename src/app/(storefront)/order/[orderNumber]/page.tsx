@@ -1,0 +1,197 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { CheckCircle2, Circle, XCircle, Package } from "lucide-react";
+import { getOrderByNumber } from "@/lib/data/orders";
+import { getCurrentCustomer } from "@/lib/customer-auth";
+import { formatINR, deliveryWindow } from "@/lib/format";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
+import { OrderStatusBadge } from "@/components/admin/order-status-badge";
+import { buttonVariants } from "@/components/ui/button";
+import type { OrderStatus } from "@/lib/types";
+
+type Params = Promise<{ orderNumber: string }>;
+
+export const metadata: Metadata = {
+  title: "Order details",
+  robots: { index: false },
+};
+
+export const dynamic = "force-dynamic";
+
+const FLOW: OrderStatus[] = ["Pending", "Confirmed", "Packed", "Shipped", "Delivered"];
+const TERMINAL = ["Cancelled", "Returned", "Refunded"];
+
+export default async function OrderPage({ params }: { params: Params }) {
+  const { orderNumber } = await params;
+  const order = await getOrderByNumber(orderNumber);
+  if (!order) notFound();
+
+  const customer = await getCurrentCustomer();
+  const isOwner = Boolean(
+    customer &&
+      (customer.id === order.customerId ||
+        customer.email.toLowerCase() === order.email.toLowerCase()),
+  );
+
+  const placed = new Date(order.createdAt).toLocaleString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  const isTerminal = TERMINAL.includes(order.status);
+  const currentStep = FLOW.indexOf(order.status as OrderStatus);
+
+  return (
+    <div className="shell py-8">
+      <Breadcrumb
+        items={[
+          { label: "Home", href: "/" },
+          ...(isOwner ? [{ label: "My account", href: "/account" }] : []),
+          { label: order.orderNumber },
+        ]}
+      />
+
+      <div className="mx-auto mt-6 max-w-3xl">
+        {/* confirmation header */}
+        <div className="rounded-2xl border border-border bg-surface p-6 text-center sm:p-8">
+          <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-success/15 text-success">
+            <CheckCircle2 size={30} />
+          </span>
+          <h1 className="mt-4 text-2xl font-bold tracking-tight">Thank you for your order!</h1>
+          <p className="mt-1.5 text-sm text-muted">
+            Order <span className="font-mono font-semibold text-foreground">{order.orderNumber}</span> · placed {placed}
+          </p>
+          <div className="mt-3 flex justify-center">
+            <OrderStatusBadge status={order.status} />
+          </div>
+        </div>
+
+        {/* status timeline */}
+        <div className="mt-5 rounded-xl border border-border bg-surface p-6">
+          <h2 className="mb-5 font-semibold">Order status</h2>
+          {isTerminal ? (
+            <div className="flex items-center gap-3 rounded-lg border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">
+              <XCircle size={18} />
+              This order is {order.status.toLowerCase()}.
+            </div>
+          ) : (
+            <ol className="grid grid-cols-5 gap-1">
+              {FLOW.map((step, i) => {
+                const reached = i <= currentStep;
+                return (
+                  <li key={step} className="flex flex-col items-center gap-2 text-center">
+                    <span
+                      className={
+                        reached
+                          ? "grid h-8 w-8 place-items-center rounded-full bg-accent text-on-accent"
+                          : "grid h-8 w-8 place-items-center rounded-full border border-border bg-background text-faint"
+                      }
+                    >
+                      {reached ? <CheckCircle2 size={16} /> : <Circle size={14} />}
+                    </span>
+                    <span
+                      className={`text-[0.6875rem] font-medium ${reached ? "text-foreground" : "text-faint"}`}
+                    >
+                      {step}
+                    </span>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+          {!isTerminal ? (
+            <p className="mt-5 text-sm text-muted">
+              Estimated delivery:{" "}
+              <span className="font-medium text-foreground">{deliveryWindow()}</span>
+            </p>
+          ) : null}
+        </div>
+
+        {/* items + totals */}
+        <div className="mt-5 rounded-xl border border-border bg-surface">
+          <h2 className="border-b border-border px-5 py-3.5 font-semibold">Items</h2>
+          <div className="divide-y divide-border">
+            {order.items.map((it) => (
+              <div key={it.id} className="flex items-center justify-between gap-4 px-5 py-3">
+                <div className="min-w-0">
+                  <Link href={`/product/${it.slug}`} className="text-sm font-medium hover:text-accent-bright">
+                    {it.name}
+                  </Link>
+                  <div className="text-xs text-muted">
+                    {formatINR(it.price)} × {it.qty}
+                  </div>
+                </div>
+                <span className="text-sm font-semibold">{formatINR(it.price * it.qty)}</span>
+              </div>
+            ))}
+          </div>
+          <dl className="space-y-2 border-t border-border px-5 py-4 text-sm">
+            <div className="flex justify-between">
+              <dt className="text-muted">Subtotal</dt>
+              <dd>{formatINR(order.subtotal)}</dd>
+            </div>
+            {order.discount > 0 ? (
+              <div className="flex justify-between text-success">
+                <dt>Discount{order.couponCode ? ` (${order.couponCode})` : ""}</dt>
+                <dd>−{formatINR(order.discount)}</dd>
+              </div>
+            ) : null}
+            <div className="flex justify-between">
+              <dt className="text-muted">Shipping</dt>
+              <dd>{order.shipping === 0 ? "Free" : formatINR(order.shipping)}</dd>
+            </div>
+            <div className="flex justify-between border-t border-border pt-2 text-base font-semibold">
+              <dt>Total</dt>
+              <dd className="readout">{formatINR(order.total)}</dd>
+            </div>
+            <div className="flex justify-between pt-1 text-xs text-muted">
+              <dt>Payment</dt>
+              <dd>{order.paymentMethod}</dd>
+            </div>
+          </dl>
+        </div>
+
+        {/* shipping — full details only for the owner */}
+        <div className="mt-5 rounded-xl border border-border bg-surface p-5 text-sm">
+          <h2 className="mb-3 font-semibold">Shipping</h2>
+          {isOwner ? (
+            <>
+              <p className="font-medium">{order.firstName} {order.lastName}</p>
+              <p className="text-muted">{order.phone}</p>
+              <p className="mt-1 text-muted">
+                {order.address}, {order.city}, {order.state} — {order.pincode}
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-muted">
+                Shipping to {order.city}, {order.state}.
+              </p>
+              <p className="mt-2 text-xs text-faint">
+                <Link href="/login" className="text-accent-bright hover:text-accent">
+                  Log in
+                </Link>{" "}
+                with this order&apos;s email to see full delivery details.
+              </p>
+            </>
+          )}
+        </div>
+
+        <div className="mt-6 flex flex-wrap justify-center gap-3">
+          <Link href="/shop" className={buttonVariants({ variant: "outline" })}>
+            <Package size={16} /> Continue shopping
+          </Link>
+          {isOwner ? (
+            <Link href="/account" className={buttonVariants()}>
+              View all orders
+            </Link>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}

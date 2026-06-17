@@ -1,0 +1,120 @@
+// GIZMORAC database schema.
+// SQLite for zero-setup local dev. Swap `provider` to "postgresql" / "mysql"
+// and update DATABASE_URL for production — the models stay the same.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Product {
+  id               String   @id
+  slug             String   @unique
+  name             String
+  brand            String   @default("GIZMORAC")
+  sku              String
+  category         String
+  art              String
+  image            String?
+  // JSON-encoded array of uploaded image URLs (up to 7). `image` mirrors images[0].
+  images           String   @default("[]")
+  // Single uploaded product video URL (optional).
+  video            String?
+  price            Int
+  mrp              Int
+  rating           Float    @default(4.5)
+  reviewCount      Int      @default(0)
+  stock            Int      @default(0)
+  // Inventory: warn/flag when stock falls to or below this threshold.
+  lowStockThreshold Int     @default(10)
+  shortDescription String
+  description      String
+  // JSON-encoded arrays/objects (robust across SQLite/Prisma versions)
+  badges           String   @default("[]")
+  highlights       String   @default("[]")
+  features         String   @default("[]")
+  specs            String   @default("[]")
+  faqs             String   @default("[]")
+  isBestSeller     Boolean  @default(false)
+  isFeatured       Boolean  @default(false)
+  isDeal           Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([category])
+}
+
+model Order {
+  id            String   @id @default(cuid())
+  orderNumber   String   @unique
+  // Pending|Confirmed|Packed|Shipped|Delivered|Cancelled|Returned|Refunded
+  status        String   @default("Pending")
+  firstName     String
+  lastName      String
+  email         String
+  phone         String
+  address       String
+  city          String
+  state         String
+  pincode       String
+  items         String   @default("[]") // JSON: [{ id, slug, name, price, qty }]
+  subtotal      Int
+  discount      Int      @default(0)
+  shipping      Int      @default(0)
+  total         Int
+  paymentMethod String   @default("COD")
+  couponCode    String?
+  // Optional link to a registered customer (guest checkout leaves this null).
+  customerId    String?
+  customer      Customer? @relation(fields: [customerId], references: [id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([status])
+  @@index([email])
+  @@index([customerId])
+  @@index([createdAt])
+}
+
+model Customer {
+  id           String   @id @default(cuid())
+  fullName     String
+  email        String   @unique
+  phone        String   @default("")
+  passwordHash String
+  address      String   @default("")
+  city         String   @default("")
+  state        String   @default("")
+  pincode      String   @default("")
+  orders       Order[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Coupon {
+  id          String    @id @default(cuid())
+  code        String    @unique
+  // "percent" | "fixed" | "bogo"
+  type        String    @default("percent")
+  value       Int       @default(0) // percent (0-100) or fixed ₹ amount
+  minOrder    Int       @default(0) // minimum cart subtotal to qualify
+  maxDiscount Int       @default(0) // cap on % discount; 0 = no cap
+  active      Boolean   @default(true)
+  startsAt    DateTime?
+  expiresAt   DateTime?
+  usageLimit  Int       @default(0) // 0 = unlimited
+  usedCount   Int       @default(0)
+  description String    @default("")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Subscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+}

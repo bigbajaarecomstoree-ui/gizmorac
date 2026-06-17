@@ -1,0 +1,135 @@
+"use client";
+
+import * as React from "react";
+import Image from "next/image";
+import { Play } from "lucide-react";
+import type { DeviceArt } from "@/lib/types";
+import { ProductArt } from "./product-art";
+import { cn } from "@/lib/utils";
+
+const VIEWS = ["Front", "Detail", "In use", "Box"];
+
+type Slide =
+  | { kind: "image"; src: string }
+  | { kind: "video"; src: string };
+
+/**
+ * Product gallery. Renders uploaded photos + an optional video when present,
+ * otherwise falls back to the device illustration with a thumbnail strip.
+ */
+export function ProductGallery({
+  art,
+  sku,
+  name,
+  images = [],
+  video = null,
+}: {
+  art: DeviceArt;
+  sku: string;
+  name?: string;
+  images?: string[];
+  video?: string | null;
+}) {
+  const slides: Slide[] = [
+    ...images.map((src) => ({ kind: "image" as const, src })),
+    ...(video ? [{ kind: "video" as const, src: video }] : []),
+  ];
+  const hasMedia = slides.length > 0;
+  const [active, setActive] = React.useState(0);
+
+  // --- Fallback: original illustration gallery ---
+  if (!hasMedia) {
+    return (
+      <div className="flex flex-col gap-3">
+        <div className="group relative aspect-square overflow-hidden rounded-2xl border border-border bg-surface">
+          <div
+            key={active}
+            className="animate-rise h-full w-full transition-transform duration-500 group-hover:scale-105"
+          >
+            <ProductArt
+              art={art}
+              sku={sku}
+              glyphClassName={cn(
+                active === 0 && "text-accent",
+                active === 1 && "scale-125",
+                active === 2 && "opacity-90",
+                active === 3 && "scale-90",
+              )}
+            />
+          </div>
+          <span className="tech-label absolute left-4 top-4 rounded-md border border-border bg-background/70 px-2 py-1 backdrop-blur">
+            {VIEWS[active]}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-4 gap-3">
+          {VIEWS.map((v, i) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => setActive(i)}
+              aria-label={`View ${v}`}
+              aria-pressed={i === active}
+              className={cn(
+                "relative aspect-square overflow-hidden rounded-lg border bg-surface transition-colors cursor-pointer",
+                i === active ? "border-accent" : "border-border hover:border-border-bright",
+              )}
+            >
+              <ProductArt art={art} glyphClassName="!h-[36%]" />
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const current = slides[Math.min(active, slides.length - 1)];
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="relative aspect-square overflow-hidden rounded-2xl border border-border bg-surface">
+        {current.kind === "image" ? (
+          <Image
+            src={current.src}
+            alt={name ?? "Product image"}
+            fill
+            priority
+            sizes="(min-width: 1024px) 45vw, 100vw"
+            className="object-contain"
+          />
+        ) : (
+          <video src={current.src} controls className="h-full w-full bg-black object-contain" />
+        )}
+      </div>
+
+      {slides.length > 1 ? (
+        <div className="grid grid-cols-5 gap-3">
+          {slides.map((s, i) => (
+            <button
+              key={s.src}
+              type="button"
+              onClick={() => setActive(i)}
+              aria-label={s.kind === "video" ? "View video" : `View image ${i + 1}`}
+              aria-pressed={i === active}
+              className={cn(
+                "relative aspect-square overflow-hidden rounded-lg border bg-surface transition-colors cursor-pointer",
+                i === active ? "border-accent" : "border-border hover:border-border-bright",
+              )}
+            >
+              {s.kind === "image" ? (
+                <Image src={s.src} alt="" fill sizes="80px" className="object-cover" />
+              ) : (
+                <>
+                  <video src={s.src} className="h-full w-full bg-black object-cover" muted />
+                  <span className="absolute inset-0 grid place-items-center bg-black/30 text-white">
+                    <Play size={18} className="fill-white" />
+                  </span>
+                </>
+              )}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
