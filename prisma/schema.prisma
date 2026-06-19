@@ -158,3 +158,17 @@ model StoreSetting {
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 }
+
+// Manual cash/bank ledger — owner records money in/out so Reports can show the
+// true cash balance as of any date. The opening balance is just an "in" entry.
+model FinanceEntry {
+  id        String   @id @default(cuid())
+  date      DateTime
+  direction String // "in" | "out"
+  amount    Int // whole rupees
+  category  String   @default("")
+  note      String   @default("")
+  createdAt DateTime @default(now())
+
+  @@index([date])
+}

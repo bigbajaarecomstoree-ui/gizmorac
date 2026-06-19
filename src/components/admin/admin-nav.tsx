@@ -12,6 +12,7 @@ import {
   Users,
   Ticket,
   BarChart3,
+  Wallet,
   Settings,
   Store,
   LogOut,
@@ -28,6 +29,7 @@ const NAV = [
   { label: "Customers", href: "/admin/customers", icon: Users, exact: false },
   { label: "Promotions", href: "/admin/promotions", icon: Ticket, exact: false },
   { label: "Reports", href: "/admin/reports", icon: BarChart3, exact: false },
+  { label: "Finance", href: "/admin/finance", icon: Wallet, exact: false },
 ];
 
 export function AdminNav() {

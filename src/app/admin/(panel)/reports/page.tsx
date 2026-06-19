@@ -10,13 +10,17 @@ import {
   Inbox,
   Wallet,
   HandCoins,
+  Landmark,
 } from "lucide-react";
 import {
   getReportSummary,
   getReportSummaryBetween,
   DATE_RANGES,
+  customBounds,
+  dateBounds,
   type DateRange,
 } from "@/lib/data/orders";
+import { getBalanceAsOf, getFinanceFlow } from "@/lib/data/finance";
 import { getClosingStock } from "@/lib/data/queries";
 import { formatINR, formatCount } from "@/lib/format";
 import { INDIA_STATES } from "@/lib/india-states";
@@ -50,9 +54,16 @@ export default async function ReportsPage({
     ? (sp.range as DateRange)
     : "30d";
 
-  const [report, stock] = await Promise.all([
+  const bounds = custom ? customBounds(sp.from, sp.to) : dateBounds(range);
+  // Balance "as of" the end of the window — bounds.lt is the start of the day
+  // after the end date; undefined (open-ended ranges) means "as of now".
+  const asOf = bounds.lt ?? undefined;
+
+  const [report, stock, balance, flow] = await Promise.all([
     custom ? getReportSummaryBetween(sp.from, sp.to) : getReportSummary(range),
     getClosingStock(),
+    getBalanceAsOf(asOf),
+    getFinanceFlow(bounds),
   ]);
 
   const rangeLabel = custom
@@ -80,6 +91,13 @@ export default async function ReportsPage({
       value: `${formatCount(stock.units)} units`,
       sub: `${formatINR(stock.value)} · ${stock.skus} SKUs`,
       icon: Boxes,
+    },
+    {
+      label: "Bank / Cash Balance",
+      value: formatINR(balance),
+      sub: `as of ${custom ? fmtYMD(sp.to) : "today"}`,
+      icon: Landmark,
+      accent: true,
     },
   ];
 
@@ -179,6 +197,22 @@ export default async function ReportsPage({
             {k.sub ? <div className="mt-1 text-xs text-faint">{k.sub}</div> : null}
           </div>
         ))}
+      </div>
+
+      {/* cash flow for the period */}
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-surface px-4 py-3 text-sm">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+          <span className="text-muted">Cash flow this period:</span>
+          <span className="font-medium text-success">In {formatINR(flow.in)}</span>
+          <span className="font-medium text-danger">Out {formatINR(flow.out)}</span>
+          <span className="font-semibold">Net {formatINR(flow.in - flow.out)}</span>
+        </div>
+        <Link
+          href="/admin/finance"
+          className="font-medium text-accent transition-colors hover:text-accent-bright"
+        >
+          Manage cash ledger →
+        </Link>
       </div>
 
       {/* GST filing export */}
