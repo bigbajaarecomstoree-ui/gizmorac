@@ -320,12 +320,16 @@ async function buildSummary(bounds: {
     .reduce((s, o) => s + o.total, 0);
 
   // P&L: deductions + cost of goods sold (needs product cost prices).
+  // Cancelled orders were never real sales → excluded from Gross Sales entirely
+  // (not shown as a deduction). Only returns/refunds reduce Gross → Net.
   const sumByStatus = (s: OrderStatus) =>
     orders.filter((o) => o.status === s).reduce((a, o) => a + o.total, 0);
-  const grossSales = orders.reduce((s, o) => s + o.total, 0);
   const cancelled = sumByStatus("Cancelled");
   const returned = sumByStatus("Returned");
   const refunded = sumByStatus("Refunded");
+  const grossSales = orders
+    .filter((o) => o.status !== "Cancelled")
+    .reduce((s, o) => s + o.total, 0);
 
   const costRows = await prisma.product.findMany({
     select: { id: true, cost: true },

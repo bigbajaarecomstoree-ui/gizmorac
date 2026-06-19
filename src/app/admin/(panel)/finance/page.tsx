@@ -67,7 +67,6 @@ export default async function FinancePage({
   // P&L waterfall rows (label, amount, sign).
   const lines: { label: string; amount: number; kind: "add" | "less" | "total" }[] = [
     { label: "Gross Sales", amount: r.grossSales, kind: "add" },
-    { label: "Less: Cancelled orders", amount: r.cancelled, kind: "less" },
     { label: "Less: Returned orders", amount: r.returned, kind: "less" },
     { label: "Less: Refunded orders", amount: r.refunded, kind: "less" },
     { label: "Net Sales", amount: r.revenue, kind: "total" },
@@ -202,10 +201,11 @@ export default async function FinancePage({
       </div>
 
       <p className="mt-4 text-xs text-faint">
-        Net Sales excludes cancelled, returned and refunded orders. Gross Profit
-        = Net Sales − Cost of Goods Sold, before operating expenses (outbound
-        shipping, ads, payment/COD fees, salaries). COGS uses each product&apos;s
-        cost price. Returns/replacements are deducted via the Returned/Refunded
+        Cancelled orders are not counted as sales at all. Gross Sales = real
+        orders placed; less returns &amp; refunds = Net Sales. Gross Profit = Net
+        Sales − Cost of Goods Sold, before operating expenses (outbound shipping,
+        ads, payment/COD fees, salaries). COGS uses each product&apos;s cost
+        price. Returns/replacements are deducted via the Returned/Refunded
         statuses on the order.
       </p>
     </div>
