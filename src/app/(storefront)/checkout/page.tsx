@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getAllProducts } from "@/lib/data/queries";
 import { getCurrentCustomer } from "@/lib/customer-auth";
+import { getSettings } from "@/lib/data/settings";
 import { CheckoutView } from "@/components/checkout/checkout-view";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 
@@ -13,9 +14,10 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function CheckoutPage() {
-  const [products, customer] = await Promise.all([
+  const [products, customer, settings] = await Promise.all([
     getAllProducts(),
     getCurrentCustomer(),
+    getSettings(),
   ]);
 
   return (
@@ -29,7 +31,13 @@ export default async function CheckoutPage() {
       />
       <h1 className="mt-5 text-3xl font-bold tracking-tight">Checkout</h1>
       <div className="mt-8">
-        <CheckoutView products={products} customer={customer} />
+        <CheckoutView
+          products={products}
+          customer={customer}
+          freeShippingThreshold={settings.freeShippingThreshold}
+          shippingFee={settings.shippingFee}
+          codEnabled={settings.codEnabled}
+        />
       </div>
     </div>
   );

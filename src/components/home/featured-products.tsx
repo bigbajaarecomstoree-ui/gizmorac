@@ -7,7 +7,7 @@ export async function FeaturedProducts() {
   if (products.length === 0) return null;
   return (
     <section className="border-y border-border bg-surface/30">
-      <div className="shell py-8 sm:py-20">
+      <div className="shell py-8 sm:py-12">
         <SectionHeading
           eyebrow="Hand-picked"
           title="Featured products"

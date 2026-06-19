@@ -6,6 +6,7 @@ import { Minus, Plus, ShoppingCart, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { WishlistButton } from "./wishlist-button";
 import { useStore } from "@/components/store/store-provider";
+import { MAX_QTY } from "@/lib/checkout-shared";
 
 export function ProductPurchase({
   id,
@@ -19,7 +20,7 @@ export function ProductPurchase({
   const router = useRouter();
   const { addToCart } = useStore();
   const [qty, setQty] = React.useState(1);
-  const max = Math.max(1, Math.min(stock, 10));
+  const max = Math.max(1, Math.min(stock, MAX_QTY));
   const outOfStock = stock <= 0;
 
   function add() {
@@ -63,7 +64,7 @@ export function ProductPurchase({
           size="lg"
           onClick={buyNow}
           disabled={outOfStock}
-          className="flex-1"
+          className="w-full sm:w-auto sm:flex-1"
         >
           <Zap size={17} />
           Buy Now
@@ -73,7 +74,7 @@ export function ProductPurchase({
           size="lg"
           onClick={add}
           disabled={outOfStock}
-          className="flex-1"
+          className="w-full sm:w-auto sm:flex-1"
         >
           <ShoppingCart size={17} />
           Add to Cart

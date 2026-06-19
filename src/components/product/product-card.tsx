@@ -6,6 +6,7 @@ import { ProductArt } from "./product-art";
 import { RatingStars } from "./rating-stars";
 import { Price } from "./price";
 import { AddToCartButton } from "./add-to-cart-button";
+import { BuyNowButton } from "./buy-now-button";
 import { WishlistButton } from "./wishlist-button";
 import { Badge } from "@/components/ui/badge";
 
@@ -16,7 +17,7 @@ export function ProductCard({ product }: { product: Product }) {
 
   return (
     <article className="group relative flex flex-col overflow-hidden rounded-xl border border-border bg-surface transition-all duration-300 hover:border-border-bright hover:shadow-[0_14px_34px_-16px_rgba(0,0,0,0.22)]">
-      <div className="relative aspect-[4/3] overflow-hidden">
+      <div className="relative aspect-square overflow-hidden">
         <div className="h-full w-full transition-transform duration-500 group-hover:scale-[1.04]">
           {product.image ? (
             <Image
@@ -29,8 +30,7 @@ export function ProductCard({ product }: { product: Product }) {
           ) : (
             <ProductArt
               art={product.art}
-              sku={product.sku}
-              glyphClassName="group-hover:text-accent"
+              glyphClassName="!h-[52%] !max-h-44 group-hover:text-accent"
             />
           )}
         </div>
@@ -75,13 +75,22 @@ export function ProductCard({ product }: { product: Product }) {
 
         <Price product={product} size="sm" className="mt-0.5" />
 
-        <div className="relative z-20 mt-auto pt-2">
+        <div className="relative z-20 mt-auto flex gap-2 pt-2">
+          <BuyNowButton
+            id={product.id}
+            name={product.name}
+            label="Buy Now"
+            variant="primary"
+            size="sm"
+            className="flex-1"
+          />
           <AddToCartButton
             id={product.id}
             name={product.name}
-            className="w-full"
             variant="surface"
             size="sm"
+            iconOnly
+            className="w-11 shrink-0 px-0"
           />
         </div>
       </div>

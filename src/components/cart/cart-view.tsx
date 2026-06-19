@@ -9,12 +9,17 @@ import { buttonVariants } from "@/components/ui/button";
 import { ProductArt } from "@/components/product/product-art";
 import { formatINR, discountPercent } from "@/lib/format";
 import { applyCoupon } from "@/lib/storefront/actions";
-import { COUPON_STORAGE_KEY } from "@/lib/checkout-shared";
+import { COUPON_STORAGE_KEY, MAX_QTY } from "@/lib/checkout-shared";
 
-const FREE_SHIPPING_THRESHOLD = 999;
-const SHIPPING_FEE = 79;
-
-export function CartView({ products }: { products: Product[] }) {
+export function CartView({
+  products,
+  freeShippingThreshold = 999,
+  shippingFee = 79,
+}: {
+  products: Product[];
+  freeShippingThreshold?: number;
+  shippingFee?: number;
+}) {
   const { cart, setQty, removeFromCart } = useStore();
   const { mounted } = useStore();
   const [code, setCode] = React.useState("");
@@ -56,7 +61,7 @@ export function CartView({ products }: { products: Product[] }) {
   const productDiscount = mrpTotal - subtotal;
   const couponDiscount = coupon ? coupon.off : 0;
   const afterCoupon = Math.max(0, subtotal - couponDiscount);
-  const shipping = afterCoupon >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
+  const shipping = afterCoupon >= freeShippingThreshold ? 0 : shippingFee;
   const total = afterCoupon + shipping;
 
   function submitCoupon(e: React.FormEvent) {
@@ -91,7 +96,7 @@ export function CartView({ products }: { products: Product[] }) {
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
       {/* lines */}
-      <div className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface">
+      <div className="divide-y divide-border self-start overflow-hidden rounded-xl border border-border bg-surface">
         {lines.map(({ product, qty }) => {
           const off = discountPercent(product);
           return (
@@ -145,7 +150,7 @@ export function CartView({ products }: { products: Product[] }) {
                     <span className="w-8 text-center font-mono text-sm tabular-nums">{qty}</span>
                     <button
                       type="button"
-                      onClick={() => setQty(product.id, Math.min(qty + 1, 10))}
+                      onClick={() => setQty(product.id, Math.min(qty + 1, MAX_QTY))}
                       aria-label="Increase quantity"
                       className="grid h-8 w-8 place-items-center text-muted hover:text-foreground cursor-pointer"
                     >

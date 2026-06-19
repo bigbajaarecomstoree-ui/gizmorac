@@ -27,7 +27,7 @@ export function FaqAccordion({
   };
 
   return (
-    <section id="faq" className="shell scroll-mt-24 py-8 sm:py-20">
+    <section id="faq" className="shell scroll-mt-24 py-8 sm:py-12">
       {withSchema ? (
         <script
           type="application/ld+json"

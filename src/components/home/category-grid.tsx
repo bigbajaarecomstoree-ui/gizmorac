@@ -12,7 +12,7 @@ export async function CategoryGrid() {
   ]);
 
   return (
-    <section className="shell py-8 sm:py-20">
+    <section className="shell py-8 sm:py-12">
       <SectionHeading
         eyebrow="Browse"
         title="Shop by category"

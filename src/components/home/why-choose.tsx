@@ -26,7 +26,7 @@ const REASONS = [
 
 export function WhyChoose() {
   return (
-    <section className="shell py-8 sm:py-20">
+    <section className="shell py-8 sm:py-12">
       <SectionHeading
         eyebrow="Why GIZMORAC"
         title="Built on trust, shipped with care"

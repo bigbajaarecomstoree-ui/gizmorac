@@ -27,8 +27,12 @@ function CountBadge({ count }: { count: number }) {
 
 export function SiteHeader({
   customerName,
+  announcement,
+  announcementScroll = false,
 }: {
   customerName?: string | null;
+  announcement?: string | null;
+  announcementScroll?: boolean;
 }) {
   const router = useRouter();
   const { cartCount, wishlistCount, mounted } = useStore();
@@ -52,20 +56,22 @@ export function SiteHeader({
 
   return (
     <header className="sticky top-0 z-50">
-      {/* signature power line */}
-      <div className="h-0.5 w-full bg-gradient-to-r from-transparent via-accent to-transparent" />
-
-      {/* announcement strip */}
-      <div className="bg-surface/80">
-        <div className="shell flex h-8 items-center justify-center">
-          <p className="tech-label !text-faint truncate text-center">
-            <span className="sm:hidden">Free shipping over ₹999 · COD</span>
-            <span className="hidden sm:inline">
-              Free shipping over ₹999 · PAN India delivery · COD available
-            </span>
-          </p>
+      {/* announcement strip — marquee (right→left) when scrolling is on, else centered */}
+      {announcement ? (
+        <div className="bg-accent text-on-accent">
+          {announcementScroll ? (
+            <div className="h-8 overflow-hidden">
+              <div className="animate-marquee inline-block whitespace-nowrap pl-[100%] leading-8 will-change-transform">
+                <span className="tech-label !text-on-accent">{announcement}</span>
+              </div>
+            </div>
+          ) : (
+            <div className="shell flex h-8 items-center justify-center">
+              <p className="tech-label !text-on-accent truncate text-center">{announcement}</p>
+            </div>
+          )}
         </div>
-      </div>
+      ) : null}
 
       <div
         className={cn(

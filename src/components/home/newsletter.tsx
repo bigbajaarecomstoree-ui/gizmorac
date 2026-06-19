@@ -22,7 +22,7 @@ export function Newsletter() {
   }
 
   return (
-    <section className="shell pb-8 sm:pb-20">
+    <section className="shell pb-8 sm:pb-12">
       <div className="relative overflow-hidden rounded-2xl border border-border bg-surface px-6 py-12 sm:px-12">
         <div className="glow-amber absolute -left-20 -top-24 h-80 w-80 opacity-40" />
         <div className="relative mx-auto max-w-2xl text-center">

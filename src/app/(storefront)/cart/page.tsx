@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getAllProducts } from "@/lib/data/queries";
+import { getSettings } from "@/lib/data/settings";
 import { CartView } from "@/components/cart/cart-view";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 
@@ -10,13 +11,17 @@ export const metadata: Metadata = {
 };
 
 export default async function CartPage() {
-  const products = await getAllProducts();
+  const [products, settings] = await Promise.all([getAllProducts(), getSettings()]);
   return (
     <div className="shell py-8">
       <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "Cart" }]} />
       <h1 className="mt-5 text-3xl font-bold tracking-tight">Your cart</h1>
       <div className="mt-8">
-        <CartView products={products} />
+        <CartView
+          products={products}
+          freeShippingThreshold={settings.freeShippingThreshold}
+          shippingFee={settings.shippingFee}
+        />
       </div>
     </div>
   );

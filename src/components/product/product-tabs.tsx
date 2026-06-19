@@ -33,7 +33,7 @@ export function ProductTabs({
       <div
         role="tablist"
         aria-label="Product details"
-        className="flex gap-1 overflow-x-auto border-b border-border"
+        className="flex gap-1 overflow-x-auto border-b border-border [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {TABS.map((t) => (
           <button
@@ -55,7 +55,7 @@ export function ProductTabs({
               </span>
             ) : null}
             {tab === t ? (
-              <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-accent" />
+              <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-accent" />
             ) : null}
           </button>
         ))}

@@ -25,14 +25,14 @@ export function WishlistButton({
         onClick={() => toggleWishlist(id, name)}
         aria-pressed={active}
         className={cn(
-          "inline-flex h-11 items-center justify-center gap-2 rounded-[var(--radius)] border px-5 text-sm font-medium transition-colors cursor-pointer",
+          "inline-flex h-12 items-center justify-center gap-2 rounded-[var(--radius)] border px-7 text-base font-medium transition-colors cursor-pointer",
           active
             ? "border-accent/50 bg-accent-soft text-accent-bright"
             : "border-border-bright text-foreground hover:border-accent hover:text-accent",
           className,
         )}
       >
-        <Heart size={16} fill={active ? "currentColor" : "none"} />
+        <Heart size={17} fill={active ? "currentColor" : "none"} />
         {active ? "Wishlisted" : "Wishlist"}
       </button>
     );

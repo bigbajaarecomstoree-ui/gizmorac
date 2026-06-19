@@ -5,7 +5,7 @@ import { getBestSellers } from "@/lib/data/queries";
 export async function BestSellers() {
   const products = await getBestSellers(4);
   return (
-    <section className="shell py-8 sm:py-20">
+    <section className="shell py-8 sm:py-12">
       <SectionHeading
         eyebrow="Most loved"
         title="Best sellers"

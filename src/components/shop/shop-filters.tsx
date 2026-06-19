@@ -37,6 +37,7 @@ function Row({
   return (
     <Link
       href={href}
+      scroll={false}
       className={cn(
         "flex items-center justify-between rounded-md px-2.5 py-2 text-sm transition-colors",
         active

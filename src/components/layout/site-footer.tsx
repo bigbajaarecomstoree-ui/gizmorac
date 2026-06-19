@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { ShieldCheck, Truck, RotateCcw, Headset } from "lucide-react";
-import { categories } from "@/lib/data/categories";
+import type { Category } from "@/lib/types";
 import { policies } from "@/lib/data/policies";
 import { WHATSAPP_LINK } from "@/lib/constants";
 
@@ -12,9 +12,19 @@ const TRUST = [
   { icon: Headset, label: "WhatsApp support" },
 ];
 
-export function SiteFooter() {
+export function SiteFooter({
+  whatsappHref = WHATSAPP_LINK,
+  supportEmail,
+  supportPhone,
+  categories = [],
+}: {
+  whatsappHref?: string;
+  supportEmail?: string;
+  supportPhone?: string;
+  categories?: Category[];
+} = {}) {
   return (
-    <footer className="mt-10 border-t border-border bg-surface/40 sm:mt-24">
+    <footer className="mt-10 border-t border-border bg-surface/40 sm:mt-16">
       <div className="shell">
         <div className="grid grid-cols-2 gap-4 border-b border-border py-10 sm:grid-cols-4">
           {TRUST.map((t) => (
@@ -109,7 +119,7 @@ export function SiteFooter() {
               </li>
               <li>
                 <a
-                  href={WHATSAPP_LINK}
+                  href={whatsappHref}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-muted hover:text-accent"
@@ -117,6 +127,20 @@ export function SiteFooter() {
                   Contact us
                 </a>
               </li>
+              {supportEmail ? (
+                <li>
+                  <a href={`mailto:${supportEmail}`} className="text-muted hover:text-accent">
+                    {supportEmail}
+                  </a>
+                </li>
+              ) : null}
+              {supportPhone ? (
+                <li>
+                  <a href={`tel:${supportPhone.replace(/\s+/g, "")}`} className="text-muted hover:text-accent">
+                    {supportPhone}
+                  </a>
+                </li>
+              ) : null}
             </ul>
           </div>
 

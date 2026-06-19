@@ -1,10 +1,12 @@
 import type { MetadataRoute } from "next";
 import { SITE } from "@/lib/constants";
-import { getProductSlugs } from "@/lib/data/queries";
-import { categories } from "@/lib/data/categories";
+import { getProductSlugs, getCategories } from "@/lib/data/queries";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const slugs = await getProductSlugs();
+  const [slugs, categories] = await Promise.all([
+    getProductSlugs(),
+    getCategories(),
+  ]);
   const now = new Date();
 
   const staticRoutes: MetadataRoute.Sitemap = [

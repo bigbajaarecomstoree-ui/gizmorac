@@ -17,6 +17,7 @@ import { Price } from "@/components/product/price";
 import { RatingStars } from "@/components/product/rating-stars";
 import { ProductGallery } from "@/components/product/product-gallery";
 import { ProductPurchase } from "@/components/product/product-purchase";
+import { SocialProof } from "@/components/product/social-proof";
 import { PincodeChecker } from "@/components/product/pincode-checker";
 import { ProductTabs } from "@/components/product/product-tabs";
 import { ProductGrid } from "@/components/product/product-grid";
@@ -169,6 +170,8 @@ export default async function ProductPage({ params }: { params: Params }) {
                 <span className="text-danger">Out of stock</span>
               )}
             </div>
+
+            <SocialProof seed={product.slug} />
           </div>
 
           <p className="mt-5 text-[0.95rem] leading-relaxed text-muted">

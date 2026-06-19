@@ -10,11 +10,7 @@ import { ProductArt } from "@/components/product/product-art";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { formatINR } from "@/lib/format";
 import { applyCoupon, placeOrder } from "@/lib/storefront/actions";
-import {
-  COUPON_STORAGE_KEY,
-  FREE_SHIPPING_THRESHOLD,
-  SHIPPING_FEE,
-} from "@/lib/checkout-shared";
+import { COUPON_STORAGE_KEY } from "@/lib/checkout-shared";
 
 const inputCls =
   "h-11 w-full rounded-lg border border-border bg-background px-3 text-sm placeholder:text-faint focus:border-accent focus:outline-none";
@@ -27,9 +23,15 @@ function splitName(full: string): [string, string] {
 export function CheckoutView({
   products,
   customer,
+  freeShippingThreshold = 999,
+  shippingFee = 79,
+  codEnabled = true,
 }: {
   products: Product[];
   customer: Customer | null;
+  freeShippingThreshold?: number;
+  shippingFee?: number;
+  codEnabled?: boolean;
 }) {
   const router = useRouter();
   const { cart, clearCart, mounted } = useStore();
@@ -102,7 +104,7 @@ export function CheckoutView({
 
   const discount = coupon?.off ?? 0;
   const afterCoupon = Math.max(0, subtotal - discount);
-  const shipping = afterCoupon >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
+  const shipping = afterCoupon >= freeShippingThreshold ? 0 : shippingFee;
   const total = afterCoupon + shipping;
 
   function set(key: keyof typeof form) {
@@ -185,16 +187,25 @@ export function CheckoutView({
 
         <div className="rounded-xl border border-border bg-surface p-5">
           <h2 className="mb-3 font-semibold">Payment</h2>
-          <label className="flex items-start gap-3 rounded-lg border border-accent bg-accent-soft/50 p-3">
-            <input type="radio" name="payment" defaultChecked className="mt-1 h-4 w-4 accent-[var(--color-accent)]" />
-            <span>
-              <span className="block text-sm font-medium">Cash on Delivery</span>
-              <span className="block text-xs text-muted">Pay in cash when your order arrives.</span>
-            </span>
-          </label>
-          <p className="mt-3 text-xs text-faint">
-            Online payment (UPI / cards) is coming soon.
-          </p>
+          {codEnabled ? (
+            <>
+              <label className="flex items-start gap-3 rounded-lg border border-accent bg-accent-soft/50 p-3">
+                <input type="radio" name="payment" defaultChecked className="mt-1 h-4 w-4 accent-[var(--color-accent)]" />
+                <span>
+                  <span className="block text-sm font-medium">Cash on Delivery</span>
+                  <span className="block text-xs text-muted">Pay in cash when your order arrives.</span>
+                </span>
+              </label>
+              <p className="mt-3 text-xs text-faint">
+                Online payment (UPI / cards) is coming soon.
+              </p>
+            </>
+          ) : (
+            <p className="rounded-lg border border-danger/30 bg-danger/5 px-3 py-3 text-sm text-danger">
+              Online payments are coming soon and Cash on Delivery is currently
+              paused. Please check back shortly.
+            </p>
+          )}
         </div>
       </div>
 
@@ -263,9 +274,18 @@ export function CheckoutView({
             </p>
           ) : null}
 
-          <Button type="submit" size="lg" className="mt-5 w-full" disabled={placing}>
+          <Button
+            type="submit"
+            size="lg"
+            className="mt-5 w-full"
+            disabled={placing || !codEnabled}
+          >
             {placing ? <Loader2 size={16} className="animate-spin" /> : <Lock size={15} />}
-            {placing ? "Placing order…" : `Place order · ${formatINR(total)}`}
+            {!codEnabled
+              ? "Ordering paused"
+              : placing
+                ? "Placing order…"
+                : `Place order · ${formatINR(total)}`}
           </Button>
           <p className="mt-3 text-center text-xs text-faint">
             By placing this order you agree to our{" "}

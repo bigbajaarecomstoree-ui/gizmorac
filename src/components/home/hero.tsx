@@ -90,7 +90,7 @@ export async function Hero() {
       <div className="glow-amber absolute -left-40 top-0 h-[600px] w-[600px] opacity-60" />
       <div className="glow-amber absolute -right-32 bottom-0 h-[500px] w-[500px] opacity-40" />
 
-      <div className="shell relative grid items-center gap-12 py-10 lg:grid-cols-[0.9fr_1.1fr] lg:py-24">
+      <div className="shell relative grid items-center gap-12 pt-5 pb-10 lg:grid-cols-[0.9fr_1.1fr] lg:pt-6 lg:pb-16">
         {/* Left: thesis */}
         <div className="animate-rise">
           <div className="mb-5 inline-flex items-center gap-2.5 rounded-full border border-border bg-surface/60 px-3.5 py-1.5">

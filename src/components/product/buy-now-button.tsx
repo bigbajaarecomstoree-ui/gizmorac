@@ -1,20 +1,21 @@
 "use client";
 
 import * as React from "react";
-import { Check, ShoppingCart } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Loader2, Zap } from "lucide-react";
 import { Button, type ButtonProps } from "@/components/ui/button";
 import { useStore } from "@/components/store/store-provider";
 import { cn } from "@/lib/utils";
 
-export function AddToCartButton({
+/** Adds the item to the cart and jumps straight to checkout. */
+export function BuyNowButton({
   id,
   name,
   qty = 1,
-  label = "Add to Cart",
+  label = "Buy Now",
   className,
-  variant = "surface",
+  variant = "primary",
   size = "md",
-  iconOnly = false,
 }: {
   id: string;
   name: string;
@@ -23,15 +24,15 @@ export function AddToCartButton({
   className?: string;
   variant?: ButtonProps["variant"];
   size?: ButtonProps["size"];
-  iconOnly?: boolean;
 }) {
+  const router = useRouter();
   const { addToCart } = useStore();
-  const [added, setAdded] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
 
   function handle() {
     addToCart(id, qty, name);
-    setAdded(true);
-    setTimeout(() => setAdded(false), 1600);
+    setLoading(true);
+    router.push("/checkout");
   }
 
   return (
@@ -40,11 +41,11 @@ export function AddToCartButton({
       size={size}
       className={cn(className)}
       onClick={handle}
-      aria-label={`Add ${name} to cart`}
-      title={iconOnly ? "Add to cart" : undefined}
+      disabled={loading}
+      aria-label={`Buy ${name} now`}
     >
-      {added ? <Check size={16} /> : <ShoppingCart size={iconOnly ? 18 : 16} />}
-      {iconOnly ? null : added ? "Added" : label}
+      {loading ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />}
+      {label}
     </Button>
   );
 }
