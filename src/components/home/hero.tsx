@@ -6,14 +6,8 @@ import { ProductArt } from "@/components/product/product-art";
 import { Price } from "@/components/product/price";
 import { formatINR, discountPercent } from "@/lib/format";
 import { TRUST_STATS } from "@/lib/constants";
-import { getProductBySlug } from "@/lib/data/queries";
+import { getDealOfTheDay, getBestSellers } from "@/lib/data/queries";
 import { cn } from "@/lib/utils";
-
-const HERO_SLUGS = [
-  "gizmorac-aeropump-150-tyre-inflator",
-  "gizmorac-labelpro-x1-thermal-printer",
-  "gizmorac-releaf-knee-pro-massager",
-];
 
 const TRUST = [
   { icon: Users, value: TRUST_STATS.customers, label: "Customers" },
@@ -79,9 +73,32 @@ function MiniCard({
   );
 }
 
+function Eyebrow({ className }: { className?: string }) {
+  return (
+    <div
+      className={cn(
+        "inline-flex items-center gap-2.5 rounded-full border border-border bg-surface/60 px-3.5 py-1.5",
+        className,
+      )}
+    >
+      <span className="h-1.5 w-1.5 rounded-full bg-accent shadow-[0_0_8px_rgba(245,158,11,0.9)]" />
+      <span className="tech-label !text-muted">
+        Precision gadgets · Made for India
+      </span>
+    </div>
+  );
+}
+
 export async function Hero() {
-  const trio = await Promise.all(HERO_SLUGS.map((s) => getProductBySlug(s)));
-  const [hero, secondary, tertiary] = trio.filter(Boolean) as Product[];
+  // Lead with the real Deal of the Day, backed by best-sellers for the floating
+  // mini-cards. (Falls back gracefully if nothing is flagged yet.)
+  const [deal, bestSellers] = await Promise.all([
+    getDealOfTheDay(),
+    getBestSellers(6),
+  ]);
+  const hero = deal ?? bestSellers[0] ?? null;
+  const rest = bestSellers.filter((p) => p.id !== hero?.id);
+  const [secondary, tertiary] = rest;
   const off = hero ? discountPercent(hero) : 0;
 
   return (
@@ -90,13 +107,14 @@ export async function Hero() {
       <div className="glow-amber absolute -left-40 top-0 h-[600px] w-[600px] opacity-60" />
       <div className="glow-amber absolute -right-32 bottom-0 h-[500px] w-[500px] opacity-40" />
 
-      <div className="shell relative grid items-center gap-12 pt-5 pb-10 lg:grid-cols-[0.9fr_1.1fr] lg:pt-6 lg:pb-16">
+      <div className="shell relative grid items-center gap-6 pt-5 pb-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-12 lg:pt-6 lg:pb-16">
+        {/* Mobile/tablet: eyebrow leads, above the showcase. Hidden on desktop,
+            where the eyebrow lives inside the left column instead. */}
+        <Eyebrow className="order-1 lg:hidden" />
+
         {/* Left: thesis */}
-        <div className="animate-rise">
-          <div className="mb-5 inline-flex items-center gap-2.5 rounded-full border border-border bg-surface/60 px-3.5 py-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-accent shadow-[0_0_8px_rgba(245,158,11,0.9)]" />
-            <span className="tech-label !text-muted">Precision gadgets · Made for India</span>
-          </div>
+        <div className="order-3 animate-rise lg:order-1">
+          <Eyebrow className="mb-5 hidden lg:inline-flex" />
 
           <h1 className="font-display text-4xl font-bold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
             Smart gadgets that make everyday life{" "}
@@ -132,10 +150,11 @@ export async function Hero() {
           </dl>
         </div>
 
-        {/* Hero device showcase — leads on mobile (order-first), sits on the right
-            on desktop. Cards shrink + spread out on mobile to avoid overlap;
-            desktop keeps the original floating layout via the sm: overrides. */}
-        <div className="relative order-first mx-auto aspect-square w-full max-w-md sm:max-w-lg lg:order-none">
+        {/* Hero device showcase — sits between the eyebrow and the copy on
+            mobile/tablet (order-2), and on the right on desktop. Cards shrink +
+            spread out on mobile to avoid overlap; desktop keeps the original
+            floating layout via the sm: overrides. */}
+        <div className="relative order-2 mx-auto aspect-square w-full max-w-md sm:max-w-lg lg:order-2">
           {/* main device panel */}
           <div className="absolute inset-x-6 inset-y-10 overflow-hidden rounded-3xl border border-border-bright bg-surface shadow-2xl sm:inset-x-8 sm:inset-y-4">
             {hero ? <ProductArt art={hero.art} glyphClassName="!h-[40%] text-accent" /> : null}
