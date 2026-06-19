@@ -19,6 +19,9 @@ model Product {
   name             String
   brand            String   @default("GIZMORAC")
   sku              String
+  // Amazon ASIN when imported from a Seller Central listings report (used to
+  // match/update the same product on re-import). Null for manually-added items.
+  asin             String?
   category         String
   art              String
   image            String?
@@ -51,6 +54,7 @@ model Product {
 
   @@index([category])
   @@index([active])
+  @@index([asin])
 }
 
 model Order {

@@ -10,6 +10,7 @@ import {
   isAuthenticated,
 } from "@/lib/auth";
 import { parseCsv } from "@/lib/products-csv";
+import { mapAmazonReportToProducts } from "@/lib/amazon-import";
 
 // --- helpers (not exported, so they aren't treated as server actions) ---
 
@@ -205,6 +206,7 @@ export async function deleteProducts(ids: string[]): Promise<void> {
 export interface ImportResult {
   created?: number;
   updated?: number;
+  skipped?: number;
   errors?: string[];
   error?: string;
 }
@@ -328,6 +330,93 @@ export async function importProducts(
   revalidateStorefront();
   revalidatePath("/admin/inventory");
   return { created, updated, errors: errors.slice(0, 12) };
+}
+
+/**
+ * Import products from an Amazon Seller Central listings report (the tab-
+ * separated .txt from Reports → Inventory → All/Active Listings Report).
+ * Matches existing products by ASIN (or slug) so re-importing updates rather
+ * than duplicates. Images/videos are not imported — the seller adds those here.
+ */
+export async function importAmazonListings(
+  _prev: ImportResult | undefined,
+  formData: FormData,
+): Promise<ImportResult> {
+  await assertAdmin();
+
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: "Please choose your Amazon listings report (.txt) to import." };
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    return { error: "File too large — keep it under 10MB." };
+  }
+
+  let text: string;
+  try {
+    text = await file.text();
+  } catch {
+    return { error: "Could not read the file." };
+  }
+
+  const { records, skipped } = mapAmazonReportToProducts(text);
+  if (records.length === 0) {
+    return {
+      error:
+        "No products found. Make sure this is the Amazon 'All Listings Report' (tab-separated .txt).",
+    };
+  }
+
+  let created = 0;
+  let updated = 0;
+  const errors: string[] = [];
+
+  for (const rec of records) {
+    const data = {
+      name: rec.name,
+      brand: "GIZMORAC",
+      sku: rec.sku,
+      asin: rec.asin,
+      category: rec.category,
+      art: rec.art,
+      price: rec.price,
+      mrp: rec.mrp,
+      stock: rec.stock,
+      lowStockThreshold: 10,
+      shortDescription: rec.shortDescription,
+      description: rec.description,
+      isBestSeller: rec.isBestSeller,
+      isFeatured: rec.isFeatured,
+      isDeal: rec.isDeal,
+      active: rec.active,
+    };
+    try {
+      const existing = rec.asin
+        ? await prisma.product.findFirst({ where: { asin: rec.asin } })
+        : await prisma.product.findUnique({ where: { slug: rec.slug } });
+      if (existing) {
+        await prisma.product.update({ where: { id: existing.id }, data });
+        updated += 1;
+      } else {
+        await prisma.product.create({
+          data: {
+            id: `p-${rec.slug}-${Math.random().toString(36).slice(2, 6)}`,
+            slug: rec.slug,
+            images: "[]",
+            ...data,
+          },
+        });
+        created += 1;
+      }
+    } catch {
+      errors.push(`${rec.name.slice(0, 50)}: could not be saved`);
+    }
+  }
+
+  revalidateStorefront();
+  revalidatePath("/admin/inventory");
+  revalidatePath("/admin/products");
+  return { created, updated, skipped, errors: errors.slice(0, 12) };
 }
 
 // --- inventory ---
