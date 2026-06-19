@@ -68,13 +68,13 @@ export function ProductTabs({
         className="py-6"
       >
         {tab === "Description" ? (
-          <p className="max-w-3xl text-[0.95rem] leading-relaxed text-muted">
+          <p className="text-[0.95rem] leading-relaxed text-muted lg:columns-2 lg:gap-12">
             {description}
           </p>
         ) : null}
 
         {tab === "Features" ? (
-          <ul className="grid max-w-3xl gap-3 sm:grid-cols-2">
+          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {features.map((f) => (
               <li key={f} className="flex items-start gap-2.5 text-sm text-muted">
                 <Check size={16} className="mt-0.5 shrink-0 text-accent" />
