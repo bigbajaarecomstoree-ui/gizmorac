@@ -39,17 +39,14 @@ const GLYPH: Record<DeviceArt, LucideIcon> = {
 
 /**
  * Placeholder product visual rendered as a precision "instrument module".
- * `sku` shows as a mono caption; `label` reads like a device status line.
  * Swap this slot for <Image> when real product photography is available.
  */
 export function ProductArt({
   art,
-  sku,
   className,
   glyphClassName,
 }: {
   art: DeviceArt;
-  sku?: string;
   className?: string;
   glyphClassName?: string;
 }) {
@@ -84,12 +81,6 @@ export function ProductArt({
         )}
         strokeWidth={1.25}
       />
-
-      {sku ? (
-        <span className="tech-label absolute bottom-3.5 left-1/2 -translate-x-1/2 !text-[0.625rem] !tracking-[0.18em] text-faint">
-          {sku}
-        </span>
-      ) : null}
     </div>
   );
 }

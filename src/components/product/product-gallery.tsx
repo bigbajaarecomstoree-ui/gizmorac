@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Play } from "lucide-react";
 import type { DeviceArt } from "@/lib/types";
 import { ProductArt } from "./product-art";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 const VIEWS = ["Front", "Detail", "In use", "Box"];
@@ -13,22 +14,43 @@ type Slide =
   | { kind: "image"; src: string }
   | { kind: "video"; src: string };
 
+/** Sale/badge tags overlaid on the image — only render when there's something to show. */
+function Tags({ off, badges }: { off: number; badges: string[] }) {
+  if (off <= 0 && badges.length === 0) return null;
+  return (
+    <div className="pointer-events-none absolute left-4 top-4 z-10 flex flex-col items-start gap-1.5">
+      {off > 0 ? (
+        <Badge variant="accent" className="font-semibold shadow-sm">
+          {off}% OFF
+        </Badge>
+      ) : null}
+      {badges.map((b) => (
+        <Badge key={b} variant="soft" className="shadow-sm">
+          {b}
+        </Badge>
+      ))}
+    </div>
+  );
+}
+
 /**
  * Product gallery. Renders uploaded photos + an optional video when present,
  * otherwise falls back to the device illustration with a thumbnail strip.
  */
 export function ProductGallery({
   art,
-  sku,
   name,
   images = [],
   video = null,
+  off = 0,
+  badges = [],
 }: {
   art: DeviceArt;
-  sku: string;
   name?: string;
   images?: string[];
   video?: string | null;
+  off?: number;
+  badges?: string[];
 }) {
   const slides: Slide[] = [
     ...images.map((src) => ({ kind: "image" as const, src })),
@@ -48,7 +70,6 @@ export function ProductGallery({
           >
             <ProductArt
               art={art}
-              sku={sku}
               glyphClassName={cn(
                 active === 0 && "text-accent",
                 active === 1 && "scale-125",
@@ -57,9 +78,7 @@ export function ProductGallery({
               )}
             />
           </div>
-          <span className="tech-label absolute left-4 top-4 rounded-md border border-border bg-background/70 px-2 py-1 backdrop-blur">
-            {VIEWS[active]}
-          </span>
+          <Tags off={off} badges={badges} />
         </div>
 
         <div className="grid grid-cols-4 gap-3">
@@ -100,6 +119,7 @@ export function ProductGallery({
         ) : (
           <video src={current.src} controls className="h-full w-full bg-black object-contain" />
         )}
+        <Tags off={off} badges={badges} />
       </div>
 
       {slides.length > 1 ? (

@@ -6,8 +6,8 @@ import type { FaqItem, ProductSpec, Review } from "@/lib/types";
 import { RatingStars } from "./rating-stars";
 import { cn } from "@/lib/utils";
 
-const TABS = ["Description", "Features", "Specifications", "FAQs", "Reviews"] as const;
-type Tab = (typeof TABS)[number];
+const ALL_TABS = ["Description", "Features", "Specifications", "FAQs", "Reviews"] as const;
+type Tab = (typeof ALL_TABS)[number];
 
 export function ProductTabs({
   description,
@@ -28,6 +28,13 @@ export function ProductTabs({
 }) {
   const [tab, setTab] = React.useState<Tab>("Description");
 
+  // Only show tabs that actually have content (Description + Reviews always).
+  const tabs: Tab[] = ["Description"];
+  if (features.length) tabs.push("Features");
+  if (specs.length) tabs.push("Specifications");
+  if (faqs.length) tabs.push("FAQs");
+  tabs.push("Reviews");
+
   return (
     <div>
       <div
@@ -35,7 +42,7 @@ export function ProductTabs({
         aria-label="Product details"
         className="flex gap-1 overflow-x-auto border-b border-border [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
-        {TABS.map((t) => (
+        {tabs.map((t) => (
           <button
             key={t}
             role="tab"
@@ -68,7 +75,7 @@ export function ProductTabs({
         className="py-6"
       >
         {tab === "Description" ? (
-          <p className="text-[0.95rem] leading-relaxed text-muted">
+          <p className="whitespace-pre-line text-[0.95rem] leading-relaxed text-muted">
             {description}
           </p>
         ) : null}

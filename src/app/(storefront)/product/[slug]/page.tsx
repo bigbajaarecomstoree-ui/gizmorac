@@ -12,7 +12,6 @@ import { discountPercent, savings, formatINR, shortTitle } from "@/lib/format";
 import { SITE } from "@/lib/constants";
 import { jsonLd } from "@/lib/json-ld";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
-import { Badge } from "@/components/ui/badge";
 import { Price } from "@/components/product/price";
 import { RatingStars } from "@/components/product/rating-stars";
 import { ProductGallery } from "@/components/product/product-gallery";
@@ -118,23 +117,15 @@ export default async function ProductPage({ params }: { params: Params }) {
       <div className="mt-6 grid gap-8 lg:grid-cols-2 lg:gap-12">
         <ProductGallery
           art={product.art}
-          sku={product.sku}
           name={product.name}
           images={product.images}
           video={product.video}
+          off={off}
+          badges={product.badges}
         />
 
         <div>
-          <div className="flex flex-wrap items-center gap-2">
-            {off > 0 ? (
-              <Badge variant="accent" className="font-semibold">{off}% OFF</Badge>
-            ) : null}
-            {product.badges.map((b) => (
-              <Badge key={b} variant="soft">{b}</Badge>
-            ))}
-          </div>
-
-          <p className="tech-label mt-4">{product.brand} · {product.sku}</p>
+          <p className="tech-label">{product.brand}</p>
           <h1 className="mt-1.5 text-2xl font-bold leading-tight sm:text-3xl">
             {product.name}
           </h1>

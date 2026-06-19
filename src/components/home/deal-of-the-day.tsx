@@ -43,7 +43,6 @@ export async function DealOfTheDay() {
           <div className="relative mx-auto aspect-square w-full max-w-xl overflow-hidden rounded-2xl border border-border bg-background">
             <ProductArt
               art={deal.art}
-              sku={deal.sku}
               glyphClassName="!h-[48%] !max-h-64 text-accent"
             />
             <Badge
