@@ -137,8 +137,10 @@ export function mapAmazonReportToProducts(text: string): AmazonImportParse {
 
     const description = (r["item-description"] || "").trim();
     const category = guessCategory(name);
-    const status = (r["status"] || "").toLowerCase();
-    const active = !/inactive|incomplete/.test(status);
+    // Default everything to live on the seller's own store — they hide/draft
+    // individual items in admin. (Amazon "inactive" usually just means a
+    // temporary stock/suppression state, not that the seller stopped selling it.)
+    const active = true;
 
     let base = slugify(name).slice(0, 70).replace(/-+$/, "");
     if (!base) base = slugify(asin ?? "") || "product";
