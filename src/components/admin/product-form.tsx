@@ -134,11 +134,19 @@ export function ProductForm({
             <input name="mrp" type="number" required defaultValue={p?.mrp} className={inputCls} />
           </Field>
         </div>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Cost price (₹)" hint="Your purchase cost — used for profit">
+        <p className="rounded-lg border border-border bg-surface-2/50 px-3 py-2 text-xs text-muted">
+          🔒 Cost, HSN and GST rate are <span className="font-medium text-foreground">internal only</span> — never shown to customers or on receipts. Used for your P&amp;L and GST filing.
+        </p>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+          <Field label="Cost price (₹)" hint="Internal — for profit / COGS">
             <input name="cost" type="number" min={0} defaultValue={p?.cost ?? 0} className={inputCls} />
           </Field>
-          <div />
+          <Field label="HSN code" hint="Internal — for GST filing">
+            <input name="hsn" type="text" defaultValue={p?.hsn ?? ""} placeholder="e.g. 8518" className={inputCls} />
+          </Field>
+          <Field label="GST rate %" hint="Internal — for GST filing">
+            <input name="gstRate" type="number" min={0} step={0.5} defaultValue={p?.gstRate ?? 18} className={inputCls} />
+          </Field>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <Field label="Stock">

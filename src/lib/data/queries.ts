@@ -40,6 +40,8 @@ function toProduct(r: ProductRow): Product {
     price: r.price,
     mrp: r.mrp,
     cost: r.cost,
+    hsn: r.hsn,
+    gstRate: r.gstRate,
     rating: r.rating,
     reviewCount: r.reviewCount,
     stock: r.stock,

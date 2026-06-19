@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { isAuthenticated } from "@/lib/auth";
 import { getFilteredOrders, DATE_RANGES, type DateRange } from "@/lib/data/orders";
+import { prisma } from "@/lib/prisma";
 import { gstStateCode, sameState } from "@/lib/india-states";
 
 export const dynamic = "force-dynamic";
@@ -23,74 +24,88 @@ export async function GET(request: NextRequest) {
   const range: DateRange = DATE_RANGES.some((r) => r.value === rangeParam)
     ? (rangeParam as DateRange)
     : "all";
-  const rate = Math.max(0, Number(params.get("rate")) || 18); // % GST, default 18
   const sellerState = params.get("sellerState") ?? "";
 
   const custom = Boolean(from && to);
   const all = await getFilteredOrders(custom ? { from, to } : { range });
-  // GST is reported on invoices issued — exclude cancelled (no supply).
   const orders = all.filter((o) => o.status !== "Cancelled");
+
+  // Per-product GST rate + HSN (admin-only fields).
+  const products = await prisma.product.findMany({
+    select: { id: true, hsn: true, gstRate: true },
+  });
+  const gstById = new Map(products.map((p) => [p.id, p]));
 
   const header = [
     "Invoice No",
     "Invoice Date",
     "Customer",
-    "Customer GSTIN",
     "Place of Supply (State)",
     "State Code",
-    "Order Status",
-    "Taxable Value",
+    "HSN",
+    "Item",
     "GST Rate %",
+    "Qty",
+    "Taxable Value",
     "CGST",
     "SGST",
     "IGST",
     "Total GST",
-    "Invoice Value",
-    "Payment",
+    "Line Total",
+    "Order Status",
   ];
 
   let tTaxable = 0,
     tCgst = 0,
     tSgst = 0,
     tIgst = 0,
-    tInvoice = 0;
+    tLine = 0;
 
-  const rows = orders.map((o) => {
-    const invoiceValue = o.total;
-    // Prices are GST-inclusive (Indian MRP convention) → back-calculate.
-    const taxable = round2(invoiceValue / (1 + rate / 100));
-    const totalGst = round2(invoiceValue - taxable);
+  const rows: string[] = [];
+  for (const o of orders) {
     const intra = sameState(sellerState, o.state);
-    const cgst = intra ? round2(totalGst / 2) : 0;
-    const sgst = intra ? round2(totalGst - cgst) : 0;
-    const igst = intra ? 0 : totalGst;
+    const stateCode = gstStateCode(o.state);
+    for (const item of o.items) {
+      const prod = gstById.get(item.id);
+      const rate = prod?.gstRate ?? 18;
+      const hsn = prod?.hsn ?? "";
+      const lineTotal = item.price * item.qty; // GST-inclusive
+      const taxable = round2(lineTotal / (1 + rate / 100));
+      const totalGst = round2(lineTotal - taxable);
+      const cgst = intra ? round2(totalGst / 2) : 0;
+      const sgst = intra ? round2(totalGst - cgst) : 0;
+      const igst = intra ? 0 : totalGst;
 
-    tTaxable += taxable;
-    tCgst += cgst;
-    tSgst += sgst;
-    tIgst += igst;
-    tInvoice += invoiceValue;
+      tTaxable += taxable;
+      tCgst += cgst;
+      tSgst += sgst;
+      tIgst += igst;
+      tLine += lineTotal;
 
-    return [
-      o.orderNumber,
-      new Date(o.createdAt).toLocaleDateString("en-IN"),
-      `${o.firstName} ${o.lastName}`,
-      "", // B2C — no customer GSTIN captured
-      o.state,
-      gstStateCode(o.state),
-      o.status,
-      taxable,
-      rate,
-      cgst,
-      sgst,
-      igst,
-      totalGst,
-      invoiceValue,
-      o.paymentMethod,
-    ]
-      .map(csv)
-      .join(",");
-  });
+      rows.push(
+        [
+          o.orderNumber,
+          new Date(o.createdAt).toLocaleDateString("en-IN"),
+          `${o.firstName} ${o.lastName}`,
+          o.state,
+          stateCode,
+          hsn,
+          item.name,
+          rate,
+          item.qty,
+          taxable,
+          cgst,
+          sgst,
+          igst,
+          totalGst,
+          lineTotal,
+          o.status,
+        ]
+          .map(csv)
+          .join(","),
+      );
+    }
+  }
 
   const totalRow = [
     "TOTAL",
@@ -100,20 +115,20 @@ export async function GET(request: NextRequest) {
     "",
     "",
     "",
-    round2(tTaxable),
     "",
+    "",
+    round2(tTaxable),
     round2(tCgst),
     round2(tSgst),
     round2(tIgst),
     round2(tCgst + tSgst + tIgst),
-    round2(tInvoice),
+    round2(tLine),
     "",
   ]
     .map(csv)
     .join(",");
 
-  const body =
-    "﻿" + [header.map(csv).join(","), ...rows, totalRow].join("\r\n");
+  const body = "﻿" + [header.map(csv).join(","), ...rows, totalRow].join("\r\n");
   const tag = custom ? `${from}_to_${to}` : range;
 
   return new Response(body, {

@@ -33,6 +33,10 @@ model Product {
   mrp              Int
   // Purchase/landed cost per unit (whole rupees) — used for profit/COGS.
   cost             Int      @default(0)
+  // GST fields — ADMIN/INTERNAL ONLY. Never shown to customers or on receipts;
+  // used for the P&L and GST filing export.
+  hsn              String   @default("")
+  gstRate          Float    @default(18)
   rating           Float    @default(4.5)
   reviewCount      Int      @default(0)
   stock            Int      @default(0)

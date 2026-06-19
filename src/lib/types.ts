@@ -76,6 +76,10 @@ export interface Product {
   mrp: number;
   /** Purchase/landed cost per unit in INR — used for profit/COGS. */
   cost: number;
+  /** HSN code — admin/internal only (GST filing). Never shown to customers. */
+  hsn: string;
+  /** GST rate % — admin/internal only (GST filing). Never shown to customers. */
+  gstRate: number;
   rating: number;
   reviewCount: number;
   stock: number;

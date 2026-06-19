@@ -221,8 +221,9 @@ export default async function ReportsPage({
           <h2 className="font-semibold">GST filing export</h2>
         </div>
         <p className="mt-1 text-sm text-muted">
-          Invoice-level sales with taxable value & CGST/SGST/IGST for the
-          selected date range — ready to hand to your accountant for GSTR-1.
+          Line-item sales with HSN, taxable value & CGST/SGST/IGST for the
+          selected date range — using each product&apos;s own GST rate. Ready to
+          hand to your accountant for GSTR-1.
         </p>
 
         {custom ? (
@@ -253,17 +254,6 @@ export default async function ReportsPage({
               ))}
             </select>
           </label>
-          <label className="flex flex-col gap-1">
-            <span className="tech-label">GST rate %</span>
-            <input
-              type="number"
-              name="rate"
-              defaultValue={18}
-              min={0}
-              step={0.5}
-              className="h-9 w-24 rounded-lg border border-border bg-background px-2 text-sm focus:border-accent focus:outline-none"
-            />
-          </label>
           <button
             type="submit"
             className="inline-flex h-9 items-center gap-2 rounded-lg bg-accent px-4 text-sm font-semibold text-on-accent transition-colors hover:bg-accent-hover"
@@ -272,10 +262,10 @@ export default async function ReportsPage({
           </button>
         </div>
         <p className="mt-3 text-xs text-faint">
-          Prices are treated as GST-inclusive; taxable value is back-calculated
-          at the rate above. Intra-state orders (same as your state) split into
-          CGST+SGST, others as IGST. For mixed GST rates / HSN-level filing, set
-          per-product rates (future enhancement).
+          Prices are GST-inclusive; taxable value is back-calculated using each
+          product&apos;s HSN &amp; GST rate (set per product). Intra-state orders
+          (same as your state) split into CGST+SGST, others as IGST. Set HSN/rate
+          on products for accurate filing.
         </p>
       </form>
 
