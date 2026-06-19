@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { products } from "../src/lib/data/products";
+import { categorySeeds } from "../src/lib/data/categories";
 
 const prisma = new PrismaClient();
 
@@ -142,6 +143,22 @@ const sampleCoupons = [
 ];
 
 async function main() {
+  console.log(`Seeding ${categorySeeds.length} categories...`);
+  for (const c of categorySeeds) {
+    const data = {
+      name: c.name,
+      tagline: c.tagline,
+      art: c.art,
+      image: c.image ?? null,
+      sortOrder: c.sortOrder,
+    };
+    await prisma.category.upsert({
+      where: { slug: c.slug },
+      update: data,
+      create: { slug: c.slug, ...data },
+    });
+  }
+
   console.log(`Seeding ${products.length} products...`);
   for (const p of products) {
     const data = {

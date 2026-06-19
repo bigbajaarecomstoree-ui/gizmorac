@@ -261,3 +261,70 @@ export async function getReportSummary(
     byStatus,
   };
 }
+
+const WEEKDAYS = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
+const NON_REVENUE = ["Cancelled", "Returned", "Refunded"];
+
+/** Total fulfilled units sold for a product (parsed from order line items). */
+export async function getUnitsSoldForProduct(productId: string): Promise<number> {
+  const rows = await prisma.order.findMany({
+    where: { status: REVENUE_STATUSES },
+    select: { items: true },
+  });
+  let sold = 0;
+  for (const r of rows) {
+    try {
+      const items = JSON.parse(r.items) as { id: string; qty: number }[];
+      for (const it of items) if (it.id === productId) sold += it.qty || 0;
+    } catch {
+      // ignore malformed item JSON
+    }
+  }
+  return sold;
+}
+
+export interface DaySales {
+  weekday: string;
+  index: number; // 0 = Sunday … 6 = Saturday (IST)
+  orders: number;
+  units: number;
+  revenue: number;
+}
+
+/**
+ * Orders/units/revenue grouped by day of the week (IST), counting only fulfilled
+ * sales. Returned in calendar order (Sun→Sat); callers sort as needed.
+ */
+export async function getSalesByWeekday(): Promise<DaySales[]> {
+  const rows = await prisma.order.findMany({
+    where: { status: REVENUE_STATUSES },
+  });
+  const orders = rows.map(toOrder);
+
+  const buckets: DaySales[] = WEEKDAYS.map((weekday, index) => ({
+    weekday,
+    index,
+    orders: 0,
+    units: 0,
+    revenue: 0,
+  }));
+
+  for (const o of orders) {
+    if (NON_REVENUE.includes(o.status)) continue;
+    const ist = new Date(new Date(o.createdAt).getTime() + IST_OFFSET_MS);
+    const dow = ist.getUTCDay();
+    buckets[dow].orders += 1;
+    buckets[dow].units += o.items.reduce((n, i) => n + i.qty, 0);
+    buckets[dow].revenue += o.total;
+  }
+
+  return buckets;
+}

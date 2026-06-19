@@ -42,10 +42,13 @@ model Product {
   isBestSeller     Boolean  @default(false)
   isFeatured       Boolean  @default(false)
   isDeal           Boolean  @default(false)
+  // false = Draft (hidden from the storefront). true = Active (live).
+  active           Boolean  @default(true)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
   @@index([category])
+  @@index([active])
 }
 
 model Order {
@@ -117,4 +120,35 @@ model Subscriber {
   id        String   @id @default(cuid())
   email     String   @unique
   createdAt DateTime @default(now())
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  tagline   String   @default("")
+  art       String   @default("printer") // fallback DeviceArt glyph
+  image     String? // optional photo for the home grid
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sortOrder])
+}
+
+// Single-row store configuration (id is always "store").
+model StoreSetting {
+  id                    String   @id @default("store")
+  storeName             String   @default("GIZMORAC")
+  supportEmail          String   @default("")
+  supportPhone          String   @default("")
+  whatsappNumber        String   @default("919999999999")
+  announcementText      String   @default("Free shipping over ₹999 · PAN India delivery · COD available")
+  announcementEnabled   Boolean  @default(true)
+  announcementScroll    Boolean  @default(false) // marquee (right→left) vs centered
+  freeShippingThreshold Int      @default(999)
+  shippingFee           Int      @default(79)
+  codEnabled            Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 }

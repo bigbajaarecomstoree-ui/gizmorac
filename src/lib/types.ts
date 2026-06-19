@@ -2,13 +2,8 @@
 // Kept framework-agnostic so the data layer can move from mock -> Prisma/DB
 // without changing any UI code.
 
-export type CategorySlug =
-  | "smart-gadgets"
-  | "health-devices"
-  | "office-solutions"
-  | "car-accessories"
-  | "mobile-accessories"
-  | "computer-accessories";
+// Category slugs are dynamic (managed in the admin), so this is a plain string.
+export type CategorySlug = string;
 
 /** Identifies which inline device illustration to render as the product visual. */
 export type DeviceArt =
@@ -29,12 +24,14 @@ export type DeviceArt =
   | "neck-massager";
 
 export interface Category {
-  slug: CategorySlug;
+  id: string;
+  slug: string;
   name: string;
   tagline: string;
   art: DeviceArt;
   /** Optional real photo; falls back to the `art` line illustration when absent. */
-  image?: string;
+  image?: string | null;
+  sortOrder: number;
 }
 
 export interface ProductSpec {
@@ -92,6 +89,8 @@ export interface Product {
   isBestSeller: boolean;
   isFeatured: boolean;
   isDeal: boolean;
+  /** false = Draft (hidden from storefront), true = Active (live). */
+  active: boolean;
   createdAt: string;
 }
 

@@ -2,7 +2,10 @@ import type { Product } from "@/lib/types";
 
 // Seed catalogue (input for prisma/seed.ts). Media + inventory-threshold fields
 // are managed in the DB/admin, so they're omitted here and use DB defaults.
-type SeedProduct = Omit<Product, "images" | "video" | "lowStockThreshold">;
+type SeedProduct = Omit<
+  Product,
+  "images" | "video" | "lowStockThreshold" | "active"
+>;
 
 export const products: SeedProduct[] = [
   {

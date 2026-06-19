@@ -1,4 +1,8 @@
-import type { Prisma, Product as ProductRow } from "@prisma/client";
+import type {
+  Prisma,
+  Product as ProductRow,
+  Category as CategoryRow,
+} from "@prisma/client";
 import type {
   Category,
   CategorySlug,
@@ -11,7 +15,6 @@ import type {
 } from "@/lib/types";
 import { discountPercent } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
-import { categories } from "./categories";
 import { reviews } from "./reviews";
 import { siteFaqs } from "./faqs";
 
@@ -50,6 +53,7 @@ function toProduct(r: ProductRow): Product {
     isBestSeller: r.isBestSeller,
     isFeatured: r.isFeatured,
     isDeal: r.isDeal,
+    active: r.active,
     createdAt: r.createdAt.toISOString(),
   };
 }
@@ -67,9 +71,10 @@ export async function getAllProducts(): Promise<Product[]> {
   return rows.map(toProduct);
 }
 
+/** Storefront PDP lookup — drafts (inactive) are treated as not found. */
 export async function getProductBySlug(slug: string): Promise<Product | null> {
   const row = await prisma.product.findUnique({ where: { slug } });
-  return row ? toProduct(row) : null;
+  return row && row.active ? toProduct(row) : null;
 }
 
 export async function getProductById(id: string): Promise<Product | null> {
@@ -77,36 +82,59 @@ export async function getProductById(id: string): Promise<Product | null> {
   return row ? toProduct(row) : null;
 }
 
+/** Active product slugs only — used for SSG params and the sitemap. */
 export async function getProductSlugs(): Promise<string[]> {
-  const rows = await prisma.product.findMany({ select: { slug: true } });
+  const rows = await prisma.product.findMany({
+    where: { active: true },
+    select: { slug: true },
+  });
   return rows.map((r) => r.slug);
 }
 
+function toCategory(r: CategoryRow): Category {
+  return {
+    id: r.id,
+    slug: r.slug,
+    name: r.name,
+    tagline: r.tagline,
+    art: r.art as DeviceArt,
+    image: r.image,
+    sortOrder: r.sortOrder,
+  };
+}
+
 export async function getCategories(): Promise<Category[]> {
-  return categories;
+  const rows = await prisma.category.findMany({
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+  });
+  return rows.map(toCategory);
 }
 
 export async function getCategoryBySlug(slug: string): Promise<Category | null> {
-  return categories.find((c) => c.slug === slug) ?? null;
+  const row = await prisma.category.findUnique({ where: { slug } });
+  return row ? toCategory(row) : null;
 }
 
+export async function getCategoryById(id: string): Promise<Category | null> {
+  const row = await prisma.category.findUnique({ where: { id } });
+  return row ? toCategory(row) : null;
+}
+
+/** Counts only active products so storefront category filters match what shows. */
 export async function getCategoryCounts(): Promise<Record<CategorySlug, number>> {
-  const counts = Object.fromEntries(
-    categories.map((c) => [c.slug, 0]),
-  ) as Record<CategorySlug, number>;
+  const counts: Record<string, number> = {};
   const grouped = await prisma.product.groupBy({
     by: ["category"],
+    where: { active: true },
     _count: { _all: true },
   });
-  for (const g of grouped) {
-    if (g.category in counts) counts[g.category as CategorySlug] = g._count._all;
-  }
+  for (const g of grouped) counts[g.category] = g._count._all;
   return counts;
 }
 
 export async function getBestSellers(limit = 8): Promise<Product[]> {
   const rows = await prisma.product.findMany({
-    where: { isBestSeller: true },
+    where: { isBestSeller: true, active: true },
     orderBy: { reviewCount: "desc" },
     take: limit,
   });
@@ -115,7 +143,7 @@ export async function getBestSellers(limit = 8): Promise<Product[]> {
 
 export async function getFeaturedProducts(limit = 4): Promise<Product[]> {
   const rows = await prisma.product.findMany({
-    where: { isFeatured: true },
+    where: { isFeatured: true, active: true },
     take: limit,
   });
   return rows.map(toProduct);
@@ -123,7 +151,7 @@ export async function getFeaturedProducts(limit = 4): Promise<Product[]> {
 
 export async function getDealOfTheDay(): Promise<Product | null> {
   const deals = (
-    await prisma.product.findMany({ where: { isDeal: true } })
+    await prisma.product.findMany({ where: { isDeal: true, active: true } })
   ).map(toProduct);
   if (deals.length === 0) return null;
   return deals.sort((a, b) => discountPercent(b) - discountPercent(a))[0];
@@ -134,7 +162,7 @@ export async function getRelatedProducts(
   limit = 4,
 ): Promise<Product[]> {
   const rows = await prisma.product.findMany({
-    where: { category: product.category, id: { not: product.id } },
+    where: { category: product.category, id: { not: product.id }, active: true },
     take: limit,
   });
   return rows.map(toProduct);
@@ -172,7 +200,7 @@ function sortProducts(list: Product[], sort: SortOption): Product[] {
 export async function queryProducts(
   query: ShopQuery,
 ): Promise<PagedResult<Product>> {
-  const where: Prisma.ProductWhereInput = {};
+  const where: Prisma.ProductWhereInput = { active: true };
   if (query.category) where.category = query.category;
   if (query.q) {
     where.OR = [
