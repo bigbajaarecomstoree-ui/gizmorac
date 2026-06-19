@@ -212,6 +212,40 @@ export function SettingsForm({ settings }: { settings: StoreSettings }) {
         />
       </Card>
 
+      <Card
+        title="Social media"
+        hint="Paste full profile links. Each icon appears in the footer only when its link is filled in."
+      >
+        <Field
+          label="Instagram"
+          name="instagramUrl"
+          type="url"
+          defaultValue={settings.instagramUrl}
+          placeholder="https://instagram.com/gizmorac"
+        />
+        <Field
+          label="Facebook"
+          name="facebookUrl"
+          type="url"
+          defaultValue={settings.facebookUrl}
+          placeholder="https://facebook.com/gizmorac"
+        />
+        <Field
+          label="YouTube"
+          name="youtubeUrl"
+          type="url"
+          defaultValue={settings.youtubeUrl}
+          placeholder="https://youtube.com/@gizmorac"
+        />
+        <Field
+          label="X (Twitter)"
+          name="twitterUrl"
+          type="url"
+          defaultValue={settings.twitterUrl}
+          placeholder="https://x.com/gizmorac"
+        />
+      </Card>
+
       <div className="flex items-center gap-3 lg:col-span-2">
         <Button type="submit" size="lg" disabled={pending}>
           {pending ? <Loader2 size={16} className="animate-spin" /> : null}

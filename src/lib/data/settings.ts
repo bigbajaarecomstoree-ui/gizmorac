@@ -12,6 +12,10 @@ export interface StoreSettings {
   freeShippingThreshold: number;
   shippingFee: number;
   codEnabled: boolean;
+  instagramUrl: string;
+  facebookUrl: string;
+  youtubeUrl: string;
+  twitterUrl: string;
 }
 
 export const SETTINGS_ID = "store";
@@ -27,6 +31,10 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   freeShippingThreshold: 999,
   shippingFee: 79,
   codEnabled: true,
+  instagramUrl: "",
+  facebookUrl: "",
+  youtubeUrl: "",
+  twitterUrl: "",
 };
 
 function toSettings(r: StoreSetting): StoreSettings {
@@ -41,6 +49,10 @@ function toSettings(r: StoreSetting): StoreSettings {
     freeShippingThreshold: r.freeShippingThreshold,
     shippingFee: r.shippingFee,
     codEnabled: r.codEnabled,
+    instagramUrl: r.instagramUrl,
+    facebookUrl: r.facebookUrl,
+    youtubeUrl: r.youtubeUrl,
+    twitterUrl: r.twitterUrl,
   };
 }
 

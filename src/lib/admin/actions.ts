@@ -612,6 +612,10 @@ export async function updateSettings(
     freeShippingThreshold: Math.max(0, int(formData, "freeShippingThreshold", 999)),
     shippingFee: Math.max(0, int(formData, "shippingFee", 79)),
     codEnabled: bool(formData, "codEnabled"),
+    instagramUrl: str(formData, "instagramUrl"),
+    facebookUrl: str(formData, "facebookUrl"),
+    youtubeUrl: str(formData, "youtubeUrl"),
+    twitterUrl: str(formData, "twitterUrl"),
   };
 
   await prisma.storeSetting.upsert({

@@ -161,6 +161,38 @@ export const policies: Policy[] = [
       },
     ],
   },
+  {
+    slug: "cookies",
+    title: "Cookie Policy",
+    summary: "How GIZMORAC uses cookies and similar technologies.",
+    sections: [
+      {
+        heading: "What cookies are",
+        body: [
+          "Cookies are small text files stored on your device that help a website work and remember your preferences. We use cookies and similar technologies on the GIZMORAC store.",
+        ],
+      },
+      {
+        heading: "How we use cookies",
+        body: [
+          "Essential cookies keep you signed in, remember your cart, and secure checkout — the site cannot work properly without these.",
+          "Analytics cookies help us understand how the store is used so we can improve it. These are optional and never identify you personally.",
+        ],
+      },
+      {
+        heading: "Managing cookies",
+        body: [
+          "You can clear or block cookies from your browser settings at any time. Blocking essential cookies may affect login, cart and checkout.",
+        ],
+      },
+      {
+        heading: "Questions?",
+        body: [
+          `For any question about cookies or your data, contact us at ${POLICY_CONTACT.email}.`,
+        ],
+      },
+    ],
+  },
 ];
 
 export function getPolicy(slug: string): Policy | undefined {

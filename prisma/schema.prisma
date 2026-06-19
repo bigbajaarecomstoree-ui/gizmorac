@@ -161,6 +161,11 @@ model StoreSetting {
   freeShippingThreshold Int      @default(999)
   shippingFee           Int      @default(79)
   codEnabled            Boolean  @default(true)
+  // Social media profile URLs (blank = icon hidden in the footer).
+  instagramUrl          String   @default("")
+  facebookUrl           String   @default("")
+  youtubeUrl            String   @default("")
+  twitterUrl            String   @default("")
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 }

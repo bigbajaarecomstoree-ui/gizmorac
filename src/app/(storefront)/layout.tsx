@@ -35,6 +35,10 @@ export default async function StorefrontLayout({
           supportEmail={settings.supportEmail}
           supportPhone={settings.supportPhone}
           categories={categories}
+          instagramUrl={settings.instagramUrl}
+          facebookUrl={settings.facebookUrl}
+          youtubeUrl={settings.youtubeUrl}
+          twitterUrl={settings.twitterUrl}
         />
         <WhatsAppButton href={waHref} />
       </div>
