@@ -68,7 +68,7 @@ export function ProductTabs({
         className="py-6"
       >
         {tab === "Description" ? (
-          <p className="text-[0.95rem] leading-relaxed text-muted lg:columns-2 lg:gap-12">
+          <p className="text-[0.95rem] leading-relaxed text-muted">
             {description}
           </p>
         ) : null}
