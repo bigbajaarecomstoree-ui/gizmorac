@@ -6,10 +6,15 @@ import {
   Package,
   Users,
   TriangleAlert,
+  CalendarDays,
   Plus,
   ArrowRight,
 } from "lucide-react";
-import { getAdminStats, getOrders } from "@/lib/data/orders";
+import {
+  getAdminStats,
+  getOrders,
+  getSalesByWeekday,
+} from "@/lib/data/orders";
 import { formatINR } from "@/lib/format";
 import { buttonVariants } from "@/components/ui/button";
 import { OrderStatusBadge } from "@/components/admin/order-status-badge";
@@ -17,8 +22,17 @@ import { OrderStatusBadge } from "@/components/admin/order-status-badge";
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboard() {
-  const [stats, orders] = await Promise.all([getAdminStats(), getOrders()]);
+  const [stats, orders, byWeekday] = await Promise.all([
+    getAdminStats(),
+    getOrders(),
+    getSalesByWeekday(),
+  ]);
   const recent = orders.slice(0, 5);
+
+  const topDay = [...byWeekday].sort(
+    (a, b) => b.orders - a.orders || b.revenue - a.revenue,
+  )[0];
+  const hasSales = topDay && topDay.orders > 0;
 
   const cards = [
     { label: "Revenue", value: formatINR(stats.revenue), icon: IndianRupee, href: "/admin/reports", accent: true },
@@ -59,7 +73,30 @@ export default async function AdminDashboard() {
         ))}
       </div>
 
-      <div className="mt-8 rounded-xl border border-border bg-surface">
+      {/* highest selling day — clickable, opens the day-of-week ranking */}
+      <Link
+        href="/admin/reports/days"
+        className="group mt-3 flex items-center gap-4 rounded-xl border border-accent/30 bg-accent-soft/40 p-4 transition-colors hover:border-accent/60 hover:bg-accent-soft"
+      >
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-accent text-on-accent">
+          <CalendarDays size={20} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="tech-label">Top selling day</div>
+          <div className="text-xl font-bold tracking-tight">
+            {hasSales ? topDay.weekday : "—"}
+          </div>
+        </div>
+        <div className="text-right">
+          <div className="readout text-lg font-bold">
+            {hasSales ? topDay.orders : 0}
+          </div>
+          <div className="tech-label">{topDay && topDay.orders === 1 ? "order" : "orders"}</div>
+        </div>
+        <ArrowRight size={18} className="shrink-0 text-accent-bright transition-transform group-hover:translate-x-0.5" />
+      </Link>
+
+      <div className="mt-6 rounded-xl border border-border bg-surface">
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <h2 className="font-semibold">Recent orders</h2>
           <Link

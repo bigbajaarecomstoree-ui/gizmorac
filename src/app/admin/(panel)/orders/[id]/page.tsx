@@ -6,6 +6,7 @@ import { updateOrderStatus } from "@/lib/admin/actions";
 import { formatINR } from "@/lib/format";
 import { OrderStatusBadge } from "@/components/admin/order-status-badge";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 
 type Params = Promise<{ id: string }>;
 
@@ -90,16 +91,14 @@ export default async function OrderDetailPage({ params }: { params: Params }) {
             <h2 className="mb-3 font-semibold">Update status</h2>
             <form action={updateOrderStatus} className="flex gap-2">
               <input type="hidden" name="id" value={order.id} />
-              <select
+              <Select
                 key={order.status}
                 name="status"
                 defaultValue={order.status}
-                className="h-10 flex-1 rounded-lg border border-border bg-background px-3 text-sm focus:border-accent focus:outline-none"
-              >
-                {ORDER_STATUSES.map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
+                options={ORDER_STATUSES.map((s) => ({ value: s, label: s }))}
+                className="flex-1"
+                triggerClassName="bg-background"
+              />
               <Button type="submit" size="md">Save</Button>
             </form>
           </div>

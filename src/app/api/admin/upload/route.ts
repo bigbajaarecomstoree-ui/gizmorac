@@ -1,8 +1,7 @@
 import type { NextRequest } from "next/server";
-import { writeFile, mkdir } from "node:fs/promises";
 import { randomBytes } from "node:crypto";
-import path from "node:path";
 import { isAuthenticated } from "@/lib/auth";
+import { saveUpload } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -66,18 +65,15 @@ export async function POST(request: NextRequest) {
 
   // Random server-generated name — never trust the client filename (path traversal).
   const name = `${Date.now()}-${randomBytes(8).toString("hex")}.${ext}`;
-  const dir = path.join(process.cwd(), "public", "uploads");
 
   try {
-    await mkdir(dir, { recursive: true });
     const bytes = Buffer.from(await file.arrayBuffer());
-    await writeFile(path.join(dir, name), bytes);
+    const url = await saveUpload(name, bytes, file.type);
+    return Response.json({ url });
   } catch {
     return Response.json(
       { error: "Could not save the file. Please try again." },
       { status: 500 },
     );
   }
-
-  return Response.json({ url: `/uploads/${name}` });
 }

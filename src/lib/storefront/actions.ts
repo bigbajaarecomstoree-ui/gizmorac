@@ -3,13 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getCurrentCustomer } from "@/lib/customer-auth";
+import { getSettings } from "@/lib/data/settings";
+import { MAX_QTY } from "@/lib/checkout-shared";
 import {
   validateAndPriceCoupon,
   type CouponResult,
 } from "@/lib/data/coupons";
 
-const FREE_SHIPPING_THRESHOLD = 999;
-const SHIPPING_FEE = 79;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export interface CartLineRef {
@@ -37,7 +37,9 @@ export type PlaceOrderResult =
 /** Fetch authoritative prices for a set of cart line refs. */
 async function resolveLines(refs: CartLineRef[]) {
   const ids = refs.map((r) => r.id);
-  const products = await prisma.product.findMany({ where: { id: { in: ids } } });
+  const products = await prisma.product.findMany({
+    where: { id: { in: ids }, active: true },
+  });
   const byId = new Map(products.map((p) => [p.id, p]));
   const lines: {
     id: string;
@@ -50,7 +52,7 @@ async function resolveLines(refs: CartLineRef[]) {
   for (const ref of refs) {
     const p = byId.get(ref.id);
     if (!p) continue;
-    const qty = Math.max(1, Math.min(10, Math.round(ref.qty)));
+    const qty = Math.max(1, Math.min(MAX_QTY, Math.round(ref.qty)));
     lines.push({
       id: p.id,
       slug: p.slug,
@@ -82,6 +84,14 @@ export async function placeOrder(
   const lines = await resolveLines(payload.items ?? []);
   if (lines.length === 0) {
     return { ok: false, error: "Your cart is empty." };
+  }
+
+  const settings = await getSettings();
+  if (!settings.codEnabled) {
+    return {
+      ok: false,
+      error: "Ordering is paused right now. Please check back shortly.",
+    };
   }
 
   // Required shipping details.
@@ -137,7 +147,8 @@ export async function placeOrder(
   }
 
   const afterCoupon = Math.max(0, subtotal - discount);
-  const shipping = afterCoupon >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
+  const shipping =
+    afterCoupon >= settings.freeShippingThreshold ? 0 : settings.shippingFee;
   const total = afterCoupon + shipping;
 
   const customer = await getCurrentCustomer();

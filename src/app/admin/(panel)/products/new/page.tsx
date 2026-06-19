@@ -1,9 +1,13 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { createProduct } from "@/lib/admin/actions";
+import { getCategories } from "@/lib/data/queries";
 import { ProductForm } from "@/components/admin/product-form";
 
-export default function NewProductPage() {
+export const dynamic = "force-dynamic";
+
+export default async function NewProductPage() {
+  const categories = await getCategories();
   return (
     <div className="mx-auto max-w-4xl">
       <Link
@@ -13,7 +17,7 @@ export default function NewProductPage() {
         <ArrowLeft size={15} /> Back to products
       </Link>
       <h1 className="mb-6 mt-3 text-2xl font-bold tracking-tight">Add product</h1>
-      <ProductForm action={createProduct} submitLabel="Create product" />
+      <ProductForm action={createProduct} submitLabel="Create product" categories={categories} />
     </div>
   );
 }

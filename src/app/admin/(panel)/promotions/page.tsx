@@ -3,6 +3,7 @@ import { Plus, Ticket, Pencil } from "lucide-react";
 import { getCoupons, describeCoupon } from "@/lib/data/coupons";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
+import { DeleteCouponButton } from "@/components/admin/delete-coupon-button";
 
 export const dynamic = "force-dynamic";
 
@@ -78,7 +79,7 @@ export default async function PromotionsPage() {
                   <th className="px-4 py-3 font-medium">Usage</th>
                   <th className="px-4 py-3 font-medium">Expires</th>
                   <th className="px-4 py-3 font-medium">Status</th>
-                  <th className="px-4 py-3 text-right font-medium">Edit</th>
+                  <th className="px-4 py-3 text-right font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -104,14 +105,17 @@ export default async function PromotionsPage() {
                       <td className="px-4 py-3">
                         <Badge variant={st.variant}>{st.label}</Badge>
                       </td>
-                      <td className="px-4 py-3 text-right">
-                        <Link
-                          href={`/admin/promotions/${c.id}/edit`}
-                          className="inline-grid h-9 w-9 place-items-center rounded-lg border border-border text-muted transition-colors hover:border-accent hover:text-accent"
-                          aria-label={`Edit ${c.code}`}
-                        >
-                          <Pencil size={15} />
-                        </Link>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-2">
+                          <Link
+                            href={`/admin/promotions/${c.id}/edit`}
+                            className="inline-grid h-9 w-9 place-items-center rounded-lg border border-border text-muted transition-colors hover:border-accent hover:text-accent"
+                            aria-label={`Edit ${c.code}`}
+                          >
+                            <Pencil size={15} />
+                          </Link>
+                          <DeleteCouponButton id={c.id} code={c.code} />
+                        </div>
                       </td>
                     </tr>
                   );

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { getProductById } from "@/lib/data/queries";
+import { getProductById, getCategories } from "@/lib/data/queries";
 import { updateProduct } from "@/lib/admin/actions";
 import { ProductForm } from "@/components/admin/product-form";
 import { DeleteProductButton } from "@/components/admin/delete-product-button";
@@ -12,7 +12,10 @@ export const dynamic = "force-dynamic";
 
 export default async function EditProductPage({ params }: { params: Params }) {
   const { id } = await params;
-  const product = await getProductById(id);
+  const [product, categories] = await Promise.all([
+    getProductById(id),
+    getCategories(),
+  ]);
   if (!product) notFound();
 
   return (
@@ -25,7 +28,7 @@ export default async function EditProductPage({ params }: { params: Params }) {
       </Link>
       <h1 className="mb-6 mt-3 text-2xl font-bold tracking-tight">Edit product</h1>
 
-      <ProductForm action={updateProduct} product={product} submitLabel="Save changes" />
+      <ProductForm action={updateProduct} product={product} submitLabel="Save changes" categories={categories} />
 
       <div className="mt-8 flex items-center justify-between rounded-xl border border-danger/30 bg-danger/5 p-5">
         <div>

@@ -2,50 +2,75 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Search, X } from "lucide-react";
+import { Search } from "lucide-react";
 import { ORDER_STATUSES, DATE_RANGES, type DateRange } from "@/lib/data/orders";
+import { Select, type SelectOption } from "@/components/ui/select";
 import type { OrderStatus } from "@/lib/types";
 
-const selectCls =
-  "h-10 rounded-lg border border-border bg-background px-3 text-sm focus:border-accent focus:outline-none";
+const DEFAULT_SIZE = 100;
+
+const RANGE_OPTIONS: SelectOption[] = DATE_RANGES.map((r) => ({
+  value: r.value,
+  label: r.label,
+}));
+const STATUS_OPTIONS: SelectOption[] = [
+  { value: "all", label: "All statuses" },
+  ...ORDER_STATUSES.map((s) => ({ value: s, label: s })),
+];
+
+function buildUrl(parts: {
+  status?: string;
+  range?: string;
+  q?: string;
+  size?: number;
+}) {
+  const params = new URLSearchParams();
+  if (parts.status && parts.status !== "all") params.set("status", parts.status);
+  if (parts.range && parts.range !== "all") params.set("range", parts.range);
+  if (parts.q && parts.q.trim()) params.set("q", parts.q.trim());
+  if (parts.size && parts.size !== DEFAULT_SIZE) params.set("size", String(parts.size));
+  const qs = params.toString();
+  return qs ? `/admin/orders?${qs}` : "/admin/orders";
+}
 
 export function OrderFilters({
   status,
   range,
   q,
+  size,
 }: {
   status: OrderStatus | "all";
   range: DateRange;
   q: string;
+  size: number;
 }) {
   const router = useRouter();
   const [search, setSearch] = React.useState(q);
 
-  const push = React.useCallback(
-    (next: { status?: string; range?: string; q?: string }) => {
-      const params = new URLSearchParams();
-      const s = next.status ?? status;
-      const r = next.range ?? range;
-      const query = next.q ?? search;
-      if (s && s !== "all") params.set("status", s);
-      if (r && r !== "all") params.set("range", r);
-      if (query.trim()) params.set("q", query.trim());
-      const qs = params.toString();
-      router.push(qs ? `/admin/orders?${qs}` : "/admin/orders");
-    },
-    [router, status, range, search],
-  );
+  const [prevQ, setPrevQ] = React.useState(q);
+  if (q !== prevQ) {
+    setPrevQ(q);
+    setSearch(q);
+  }
 
-  const hasFilters = status !== "all" || range !== "all" || q !== "";
+  React.useEffect(() => {
+    const trimmed = search.trim();
+    if (trimmed === q) return;
+    const handle = setTimeout(
+      () => router.push(buildUrl({ status, range, q: trimmed, size })),
+      300,
+    );
+    return () => clearTimeout(handle);
+  }, [search, q, status, range, size, router]);
 
   return (
     <div className="flex flex-wrap items-center gap-2">
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          push({ q: search });
+          router.push(buildUrl({ status, range, q: search, size }));
         }}
-        className="relative flex-1 min-w-[180px]"
+        className="relative min-w-[180px] flex-1"
         role="search"
       >
         <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
@@ -58,42 +83,51 @@ export function OrderFilters({
         />
       </form>
 
-      <select
+      <Select
+        options={RANGE_OPTIONS}
         value={range}
-        onChange={(e) => push({ range: e.target.value })}
-        className={selectCls}
-        aria-label="Date range"
-      >
-        {DATE_RANGES.map((r) => (
-          <option key={r.value} value={r.value}>
-            {r.label}
-          </option>
-        ))}
-      </select>
+        onChange={(r) => router.push(buildUrl({ status, range: r, q: search, size }))}
+        ariaLabel="Date range"
+      />
 
-      <select
+      <Select
+        options={STATUS_OPTIONS}
         value={status}
-        onChange={(e) => push({ status: e.target.value })}
-        className={selectCls}
-        aria-label="Order status"
-      >
-        <option value="all">All statuses</option>
-        {ORDER_STATUSES.map((s) => (
-          <option key={s} value={s}>
-            {s}
-          </option>
-        ))}
-      </select>
-
-      {hasFilters ? (
-        <button
-          type="button"
-          onClick={() => router.push("/admin/orders")}
-          className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-border px-3 text-sm text-muted transition-colors hover:border-danger/40 hover:text-danger cursor-pointer"
-        >
-          <X size={14} /> Clear
-        </button>
-      ) : null}
+        onChange={(s) => router.push(buildUrl({ status: s, range, q: search, size }))}
+        ariaLabel="Order status"
+      />
     </div>
+  );
+}
+
+const SIZE_OPTIONS = (sizes: number[]): SelectOption[] =>
+  sizes.map((n) => ({ value: String(n), label: String(n) }));
+
+/** Rows-per-page selector for the bottom of the orders list. */
+export function OrdersPageSize({
+  status,
+  range,
+  q,
+  size,
+  sizes,
+}: {
+  status: OrderStatus | "all";
+  range: DateRange;
+  q: string;
+  size: number;
+  sizes: number[];
+}) {
+  const router = useRouter();
+  return (
+    <label className="flex items-center gap-2 whitespace-nowrap text-sm text-muted">
+      Show
+      <Select
+        options={SIZE_OPTIONS(sizes)}
+        value={String(size)}
+        onChange={(v) => router.push(buildUrl({ status, range, q, size: Number(v) }))}
+        ariaLabel="Orders per page"
+      />
+      per page
+    </label>
   );
 }

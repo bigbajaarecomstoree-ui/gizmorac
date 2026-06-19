@@ -2,9 +2,9 @@
 
 import { useFormStatus } from "react-dom";
 import { Loader2 } from "lucide-react";
-import type { Product } from "@/lib/types";
-import { categories } from "@/lib/data/categories";
+import type { Product, Category } from "@/lib/types";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import { MediaUploader } from "@/components/admin/media-uploader";
 
 const ART_OPTIONS = [
@@ -71,10 +71,12 @@ export function ProductForm({
   action,
   product,
   submitLabel,
+  categories,
 }: {
   action: (formData: FormData) => void | Promise<void>;
   product?: Product;
   submitLabel: string;
+  categories: Category[];
 }) {
   const p = product;
   return (
@@ -95,18 +97,22 @@ export function ProductForm({
         </div>
         <div className="grid grid-cols-2 gap-4">
           <Field label="Category">
-            <select name="category" defaultValue={p?.category ?? categories[0].slug} className={inputCls}>
-              {categories.map((c) => (
-                <option key={c.slug} value={c.slug}>{c.name}</option>
-              ))}
-            </select>
+            <Select
+              name="category"
+              defaultValue={p?.category ?? categories[0]?.slug ?? ""}
+              options={categories.map((c) => ({ value: c.slug, label: c.name }))}
+              className="w-full"
+              triggerClassName="h-11 bg-background"
+            />
           </Field>
           <Field label="Fallback icon" hint="Shown until photos are uploaded">
-            <select name="art" defaultValue={p?.art ?? "printer"} className={inputCls}>
-              {ART_OPTIONS.map((a) => (
-                <option key={a} value={a}>{a}</option>
-              ))}
-            </select>
+            <Select
+              name="art"
+              defaultValue={p?.art ?? "printer"}
+              options={ART_OPTIONS.map((a) => ({ value: a, label: a }))}
+              className="w-full"
+              triggerClassName="h-11 bg-background"
+            />
           </Field>
         </div>
       </Card>
@@ -147,6 +153,18 @@ export function ProductForm({
         <Field label="Badges" hint="Comma separated, e.g. Best Seller, Value Pick">
           <input name="badges" defaultValue={p?.badges.join(", ")} className={inputCls} />
         </Field>
+        <label className="flex items-center gap-2.5 rounded-lg border border-border bg-background px-3 py-2.5 text-sm">
+          <input
+            type="checkbox"
+            name="active"
+            defaultChecked={p ? p.active : true}
+            className="h-4 w-4 accent-[var(--color-accent)]"
+          />
+          <span>
+            <span className="font-medium">Active</span> — visible on the
+            storefront <span className="text-faint">(uncheck to save as draft)</span>
+          </span>
+        </label>
         <div className="flex flex-wrap gap-4 pt-1">
           {[
             { name: "isBestSeller", label: "Best seller", val: p?.isBestSeller },

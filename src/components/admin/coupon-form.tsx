@@ -7,6 +7,7 @@ import type { Coupon, CouponType } from "@/lib/types";
 import { COUPON_TYPES } from "@/lib/data/coupons";
 import { deleteCoupon } from "@/lib/admin/actions";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 
 const inputCls =
   "h-11 w-full rounded-lg border border-border bg-background px-3 text-sm placeholder:text-faint focus:border-accent focus:outline-none";
@@ -81,18 +82,14 @@ export function CouponForm({
             />
           </Field>
           <Field label="Type">
-            <select
+            <Select
               name="type"
               value={type}
-              onChange={(e) => setType(e.target.value as CouponType)}
-              className={inputCls}
-            >
-              {COUPON_TYPES.map((t) => (
-                <option key={t.value} value={t.value}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => setType(v as CouponType)}
+              options={COUPON_TYPES.map((t) => ({ value: t.value, label: t.label }))}
+              className="w-full"
+              triggerClassName="h-11 bg-background"
+            />
           </Field>
         </div>
 

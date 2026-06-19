@@ -1,20 +1,37 @@
 import Link from "next/link";
-import { ChevronRight, Inbox } from "lucide-react";
+import {
+  ChevronRight,
+  ChevronLeft,
+  Inbox,
+  IndianRupee,
+  Receipt,
+  Clock,
+  XCircle,
+} from "lucide-react";
 import {
   getFilteredOrders,
   ORDER_STATUSES,
   DATE_RANGES,
   type DateRange,
-  type OrderFilter,
 } from "@/lib/data/orders";
 import { formatINR } from "@/lib/format";
 import { OrderStatusBadge } from "@/components/admin/order-status-badge";
-import { OrderFilters } from "@/components/admin/order-filters";
-import type { OrderStatus } from "@/lib/types";
+import { OrderFilters, OrdersPageSize } from "@/components/admin/order-filters";
+import type { Order, OrderStatus } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-type SearchParams = Promise<{ status?: string; range?: string; q?: string }>;
+const PAGE_SIZES = [100, 200, 500];
+const NON_REVENUE = ["Cancelled", "Returned", "Refunded"];
+
+type SearchParams = Promise<{
+  status?: string;
+  range?: string;
+  q?: string;
+  size?: string;
+  page?: string;
+}>;
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-IN", {
@@ -24,7 +41,30 @@ function fmtDate(iso: string) {
   });
 }
 
-const NON_REVENUE = ["Cancelled", "Returned", "Refunded"];
+/** "ReLeaf Knee Pro Massager +1 more" — a glanceable summary of an order's items. */
+function itemsLabel(order: Order): string {
+  if (order.items.length === 0) return "—";
+  const first = order.items[0].name.replace(/^GIZMORAC\s+/, "");
+  const extra = order.items.length - 1;
+  return extra > 0 ? `${first} +${extra} more` : first;
+}
+
+function hrefFor(p: {
+  status?: OrderStatus | "all";
+  range: DateRange;
+  q: string;
+  size: number;
+  page?: number;
+}) {
+  const sp = new URLSearchParams();
+  if (p.status && p.status !== "all") sp.set("status", p.status);
+  if (p.range !== "all") sp.set("range", p.range);
+  if (p.q) sp.set("q", p.q);
+  if (p.size !== 100) sp.set("size", String(p.size));
+  if (p.page && p.page > 1) sp.set("page", String(p.page));
+  const qs = sp.toString();
+  return qs ? `/admin/orders?${qs}` : "/admin/orders";
+}
 
 export default async function AdminOrdersPage({
   searchParams,
@@ -41,48 +81,122 @@ export default async function AdminOrdersPage({
     ? (sp.range as DateRange)
     : "all";
   const q = (sp.q ?? "").trim();
+  const size = PAGE_SIZES.includes(Number(sp.size)) ? Number(sp.size) : 100;
 
-  const filter: OrderFilter = { status, range, q };
-  const orders = await getFilteredOrders(filter);
+  // Base set = current date-range + search, ALL statuses (drives the KPI cards).
+  const base = await getFilteredOrders({ status: "all", range, q });
 
-  const revenue = orders
+  const netRevenue = base
     .filter((o) => !NON_REVENUE.includes(o.status))
     .reduce((s, o) => s + o.total, 0);
+  const pendingCount = base.filter((o) => o.status === "Pending").length;
+  const cancelledCount = base.filter((o) => o.status === "Cancelled").length;
+
+  // Table = base narrowed by the active status, then paginated.
+  const filtered = status === "all" ? base : base.filter((o) => o.status === status);
+  const total = filtered.length;
+  const pageCount = Math.max(1, Math.ceil(total / size));
+  const page = Math.min(Math.max(1, Number(sp.page) || 1), pageCount);
+  const start = (page - 1) * size;
+  const pageItems = filtered.slice(start, start + size);
 
   const rangeLabel = DATE_RANGES.find((r) => r.value === range)?.label ?? "All time";
+
+  const cards = [
+    {
+      key: "sales",
+      label: "Total Sales",
+      value: formatINR(netRevenue),
+      icon: IndianRupee,
+      target: "all" as const,
+      highlight: false,
+      accent: true,
+    },
+    {
+      key: "orders",
+      label: "Total Orders",
+      value: String(base.length),
+      icon: Receipt,
+      target: "all" as const,
+      highlight: true,
+    },
+    {
+      key: "pending",
+      label: "Pending Orders",
+      value: String(pendingCount),
+      icon: Clock,
+      target: "Pending" as const,
+      highlight: true,
+    },
+    {
+      key: "cancelled",
+      label: "Cancelled Orders",
+      value: String(cancelledCount),
+      icon: XCircle,
+      target: "Cancelled" as const,
+      highlight: true,
+      danger: true,
+    },
+  ];
 
   return (
     <div className="mx-auto max-w-5xl">
       <h1 className="text-2xl font-bold tracking-tight">Orders</h1>
-      <p className="mt-1 text-sm text-muted">
-        Filter, search and manage every order.
-      </p>
+      <p className="mt-1 text-sm text-muted">Filter, search and manage every order.</p>
+
+      {/* clickable KPI cards */}
+      <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {cards.map((c) => {
+          const active = c.highlight && c.target === status;
+          return (
+            <Link
+              key={c.key}
+              href={hrefFor({ status: c.target, range, q, size })}
+              aria-pressed={active}
+              className={cn(
+                "rounded-xl border bg-surface p-4 transition-colors hover:border-border-bright",
+                active ? "border-accent ring-1 ring-accent" : "border-border",
+              )}
+            >
+              <c.icon
+                size={18}
+                className={c.accent ? "text-accent" : c.danger ? "text-danger" : "text-faint"}
+              />
+              <div className="mt-3 text-xl font-bold tracking-tight">{c.value}</div>
+              <div className="tech-label mt-1">{c.label}</div>
+            </Link>
+          );
+        })}
+      </div>
 
       <div className="mt-5">
-        <OrderFilters status={status} range={range} q={q} />
+        <OrderFilters status={status} range={range} q={q} size={size} />
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-1 rounded-xl border border-border bg-surface px-4 py-3 text-sm">
         <span className="text-muted">
-          Showing <span className="font-semibold text-foreground">{orders.length}</span>{" "}
-          {status === "all" ? "" : `${status.toLowerCase()} `}order{orders.length === 1 ? "" : "s"}
+          Showing{" "}
+          <span className="font-semibold text-foreground">
+            {total === 0 ? 0 : `${start + 1}–${Math.min(start + size, total)}`}
+          </span>{" "}
+          of {total} {status === "all" ? "" : `${status.toLowerCase()} `}
+          order{total === 1 ? "" : "s"}
           <span className="text-faint"> · {rangeLabel}</span>
         </span>
         <span className="text-muted">
-          Net value:{" "}
-          <span className="readout font-semibold">{formatINR(revenue)}</span>
+          Net value: <span className="readout font-semibold">{formatINR(netRevenue)}</span>
         </span>
       </div>
 
       <div className="mt-4 overflow-hidden rounded-xl border border-border bg-surface">
-        {orders.length === 0 ? (
+        {pageItems.length === 0 ? (
           <div className="flex flex-col items-center px-5 py-16 text-center">
             <Inbox size={32} className="text-faint" />
             <p className="mt-3 text-sm text-muted">No orders match these filters.</p>
           </div>
         ) : (
           <div className="divide-y divide-border">
-            {orders.map((o) => {
+            {pageItems.map((o) => {
               const count = o.items.reduce((n, i) => n + i.qty, 0);
               return (
                 <Link
@@ -95,23 +209,72 @@ export default async function AdminOrdersPage({
                       <span className="font-mono text-sm font-semibold">{o.orderNumber}</span>
                       <OrderStatusBadge status={o.status} />
                     </div>
+                    <div className="mt-0.5 truncate text-sm text-foreground">
+                      {itemsLabel(o)}
+                    </div>
                     <div className="mt-0.5 truncate text-xs text-muted">
                       {o.firstName} {o.lastName} · {o.city}, {o.state} · {fmtDate(o.createdAt)}
                     </div>
                   </div>
-                  <div className="hidden text-xs text-muted sm:block">
+                  <div className="hidden shrink-0 text-xs text-muted sm:block">
                     {count} item{count === 1 ? "" : "s"}
                   </div>
-                  <div className="w-24 text-right readout text-sm font-semibold">
+                  <div className="w-24 shrink-0 text-right readout text-sm font-semibold">
                     {formatINR(o.total)}
                   </div>
-                  <ChevronRight size={16} className="text-faint" />
+                  <ChevronRight size={16} className="shrink-0 text-faint" />
                 </Link>
               );
             })}
           </div>
         )}
       </div>
+
+      {/* page size + pagination */}
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <OrdersPageSize status={status} range={range} q={q} size={size} sizes={PAGE_SIZES} />
+
+        {pageCount > 1 ? (
+          <div className="flex items-center gap-4">
+            <PageLink disabled={page <= 1} href={hrefFor({ status, range, q, size, page: page - 1 })} dir="prev" />
+            <span className="text-sm text-muted">
+              Page <span className="font-semibold text-foreground">{page}</span> of {pageCount}
+            </span>
+            <PageLink disabled={page >= pageCount} href={hrefFor({ status, range, q, size, page: page + 1 })} dir="next" />
+          </div>
+        ) : null}
+      </div>
     </div>
+  );
+}
+
+function PageLink({
+  href,
+  disabled,
+  dir,
+}: {
+  href: string;
+  disabled: boolean;
+  dir: "prev" | "next";
+}) {
+  const label = dir === "prev" ? "Previous" : "Next";
+  const icon = dir === "prev" ? <ChevronLeft size={16} /> : <ChevronRight size={16} />;
+  const cls =
+    "inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium transition-colors";
+  if (disabled) {
+    return (
+      <span className={cn(cls, "cursor-not-allowed text-faint opacity-50")} aria-disabled>
+        {dir === "prev" ? icon : null}
+        {label}
+        {dir === "next" ? icon : null}
+      </span>
+    );
+  }
+  return (
+    <Link href={href} className={cn(cls, "text-foreground hover:border-accent hover:text-accent")}>
+      {dir === "prev" ? icon : null}
+      {label}
+      {dir === "next" ? icon : null}
+    </Link>
   );
 }

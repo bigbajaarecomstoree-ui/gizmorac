@@ -6,11 +6,13 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Package,
+  Tags,
   Boxes,
   Receipt,
   Users,
   Ticket,
   BarChart3,
+  Settings,
   Store,
   LogOut,
 } from "lucide-react";
@@ -20,6 +22,7 @@ import { cn } from "@/lib/utils";
 const NAV = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard, exact: true },
   { label: "Products", href: "/admin/products", icon: Package, exact: false },
+  { label: "Categories", href: "/admin/categories", icon: Tags, exact: false },
   { label: "Inventory", href: "/admin/inventory", icon: Boxes, exact: false },
   { label: "Orders", href: "/admin/orders", icon: Receipt, exact: false },
   { label: "Customers", href: "/admin/customers", icon: Users, exact: false },
@@ -74,6 +77,18 @@ export function AdminNav() {
         >
           <Store size={17} />
           View store
+        </Link>
+        <Link
+          href="/admin/settings"
+          className={cn(
+            "flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+            isActive("/admin/settings", false)
+              ? "bg-accent-soft text-accent-bright"
+              : "text-muted hover:bg-surface-2 hover:text-foreground",
+          )}
+        >
+          <Settings size={17} />
+          Settings
         </Link>
         <form action={logoutAction}>
           <button

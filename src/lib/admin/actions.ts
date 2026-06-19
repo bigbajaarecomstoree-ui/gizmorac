@@ -9,6 +9,7 @@ import {
   clearSessionCookie,
   isAuthenticated,
 } from "@/lib/auth";
+import { parseCsv } from "@/lib/products-csv";
 
 // --- helpers (not exported, so they aren't treated as server actions) ---
 
@@ -114,6 +115,7 @@ function productDataFromForm(fd: FormData) {
     isBestSeller: bool(fd, "isBestSeller"),
     isFeatured: bool(fd, "isFeatured"),
     isDeal: bool(fd, "isDeal"),
+    active: bool(fd, "active"),
   };
 }
 
@@ -174,6 +176,160 @@ export async function deleteProduct(formData: FormData): Promise<void> {
   redirect("/admin/products");
 }
 
+// --- bulk product actions (selection) ---
+
+export async function setProductsStatus(
+  ids: string[],
+  active: boolean,
+): Promise<void> {
+  await assertAdmin();
+  if (ids.length === 0) return;
+  await prisma.product.updateMany({
+    where: { id: { in: ids } },
+    data: { active },
+  });
+  revalidateStorefront();
+  revalidatePath("/admin/inventory");
+}
+
+export async function deleteProducts(ids: string[]): Promise<void> {
+  await assertAdmin();
+  if (ids.length === 0) return;
+  await prisma.product.deleteMany({ where: { id: { in: ids } } });
+  revalidateStorefront();
+  revalidatePath("/admin/inventory");
+}
+
+// --- bulk product import (CSV) ---
+
+export interface ImportResult {
+  created?: number;
+  updated?: number;
+  errors?: string[];
+  error?: string;
+}
+
+export async function importProducts(
+  _prev: ImportResult | undefined,
+  formData: FormData,
+): Promise<ImportResult> {
+  await assertAdmin();
+
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: "Please choose a CSV file to import." };
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    return { error: "File too large — keep it under 5MB." };
+  }
+
+  let text: string;
+  try {
+    text = await file.text();
+  } catch {
+    return { error: "Could not read the file." };
+  }
+
+  const rows = parseCsv(text).filter((r) => r.some((c) => c.trim() !== ""));
+  if (rows.length < 2) {
+    return { error: "The file has a header but no product rows." };
+  }
+
+  const header = rows[0].map((h) => h.trim().toLowerCase());
+  const col = (name: string) => header.indexOf(name.toLowerCase());
+  if (col("name") < 0 || col("price") < 0 || col("mrp") < 0) {
+    return { error: "Missing required columns: name, price, mrp." };
+  }
+  const cell = (row: string[], name: string) => {
+    const i = col(name);
+    return i >= 0 ? (row[i] ?? "").trim() : "";
+  };
+  const pipes = (v: string) =>
+    v.split("|").map((x) => x.trim()).filter(Boolean);
+  const truthy = (v: string) => /^(true|1|yes|y)$/i.test(v.trim());
+
+  let created = 0;
+  let updated = 0;
+  const errors: string[] = [];
+
+  for (let r = 1; r < rows.length; r++) {
+    const row = rows[r];
+    const name = cell(row, "name");
+    if (!name) {
+      errors.push(`Row ${r + 1}: missing name`);
+      continue;
+    }
+    const slug = cell(row, "slug") || slugify(name);
+    const price = Math.round(Number(cell(row, "price")));
+    const mrp = Math.round(Number(cell(row, "mrp")));
+    if (!Number.isFinite(price) || !Number.isFinite(mrp) || price <= 0 || mrp <= 0) {
+      errors.push(`Row ${r + 1} (${name}): price and mrp must be numbers > 0`);
+      continue;
+    }
+
+    const image = cell(row, "image") || null;
+    const specs = pipes(cell(row, "specs")).map((l) => {
+      const i = l.indexOf(":");
+      return i === -1
+        ? { label: l, value: "" }
+        : { label: l.slice(0, i).trim(), value: l.slice(i + 1).trim() };
+    });
+    const faqs = pipes(cell(row, "faqs")).map((l) => {
+      const [q, ...a] = l.split("::");
+      return { q: q.trim(), a: a.join("::").trim() };
+    });
+
+    const data = {
+      slug,
+      name,
+      brand: cell(row, "brand") || "GIZMORAC",
+      sku: cell(row, "sku"),
+      category: cell(row, "category") || "smart-gadgets",
+      art: cell(row, "art") || "printer",
+      image,
+      images: JSON.stringify(image ? [image] : []),
+      video: null,
+      price,
+      mrp,
+      rating: Number(cell(row, "rating")) || 4.5,
+      reviewCount: Math.round(Number(cell(row, "reviewCount"))) || 0,
+      stock: Math.round(Number(cell(row, "stock"))) || 0,
+      lowStockThreshold: Math.round(Number(cell(row, "lowStockThreshold"))) || 10,
+      shortDescription: cell(row, "shortDescription"),
+      description: cell(row, "description"),
+      badges: JSON.stringify(pipes(cell(row, "badges"))),
+      highlights: JSON.stringify(pipes(cell(row, "highlights"))),
+      features: JSON.stringify(pipes(cell(row, "features"))),
+      specs: JSON.stringify(specs),
+      faqs: JSON.stringify(faqs),
+      isBestSeller: truthy(cell(row, "isBestSeller")),
+      isFeatured: truthy(cell(row, "isFeatured")),
+      isDeal: truthy(cell(row, "isDeal")),
+      // Default to Active unless the CSV explicitly says otherwise.
+      active: cell(row, "active") === "" ? true : truthy(cell(row, "active")),
+    };
+
+    try {
+      const existing = await prisma.product.findUnique({ where: { slug } });
+      if (existing) {
+        await prisma.product.update({ where: { slug }, data });
+        updated += 1;
+      } else {
+        await prisma.product.create({
+          data: { id: `p-${slug}-${Math.random().toString(36).slice(2, 6)}`, ...data },
+        });
+        created += 1;
+      }
+    } catch {
+      errors.push(`Row ${r + 1} (${name}): could not be saved`);
+    }
+  }
+
+  revalidateStorefront();
+  revalidatePath("/admin/inventory");
+  return { created, updated, errors: errors.slice(0, 12) };
+}
+
 // --- inventory ---
 
 export async function updateInventory(formData: FormData): Promise<void> {
@@ -187,6 +343,51 @@ export async function updateInventory(formData: FormData): Promise<void> {
   });
   revalidateStorefront(product.slug);
   revalidatePath("/admin/inventory");
+}
+
+export interface InventoryEdit {
+  id: string;
+  stock: number;
+  lowStockThreshold: number;
+}
+
+export interface BulkInventoryResult {
+  saved: number;
+  error?: string;
+}
+
+/** Save many inventory rows in one transaction — powers the "Save All" bar. */
+export async function bulkUpdateInventory(
+  edits: InventoryEdit[],
+): Promise<BulkInventoryResult> {
+  await assertAdmin();
+  const clean = (Array.isArray(edits) ? edits : [])
+    .filter((e) => e && typeof e.id === "string")
+    .map((e) => ({
+      id: e.id,
+      stock: Math.max(0, Math.round(Number(e.stock) || 0)),
+      lowStockThreshold: Math.max(0, Math.round(Number(e.lowStockThreshold) || 0)),
+    }))
+    .slice(0, 1000); // sane upper bound
+
+  if (clean.length === 0) return { saved: 0 };
+
+  try {
+    await prisma.$transaction(
+      clean.map((e) =>
+        prisma.product.update({
+          where: { id: e.id },
+          data: { stock: e.stock, lowStockThreshold: e.lowStockThreshold },
+        }),
+      ),
+    );
+  } catch {
+    return { saved: 0, error: "Some products could not be saved. Please retry." };
+  }
+
+  revalidateStorefront();
+  revalidatePath("/admin/inventory");
+  return { saved: clean.length };
 }
 
 // --- orders ---
@@ -242,4 +443,124 @@ export async function deleteCoupon(formData: FormData): Promise<void> {
   await prisma.coupon.delete({ where: { id } });
   revalidatePath("/admin/promotions");
   redirect("/admin/promotions");
+}
+
+// --- categories ---
+
+function categoryDataFromForm(fd: FormData) {
+  const name = str(fd, "name");
+  return {
+    slug: str(fd, "slug") || slugify(name),
+    name,
+    tagline: str(fd, "tagline"),
+    art: str(fd, "art") || "printer",
+    image: str(fd, "image") || null,
+    sortOrder: int(fd, "sortOrder", 0),
+  };
+}
+
+function revalidateCategories() {
+  // Categories drive the home grid, shop, product forms and the footer (layout).
+  revalidatePath("/", "layout");
+  revalidatePath("/shop");
+  revalidatePath("/admin/categories");
+  revalidatePath("/admin/products");
+}
+
+export async function createCategory(formData: FormData): Promise<void> {
+  await assertAdmin();
+  await prisma.category.create({ data: categoryDataFromForm(formData) });
+  revalidateCategories();
+  redirect("/admin/categories");
+}
+
+export async function updateCategory(formData: FormData): Promise<void> {
+  await assertAdmin();
+  const id = str(formData, "id");
+  await prisma.category.update({
+    where: { id },
+    data: categoryDataFromForm(formData),
+  });
+  revalidateCategories();
+  redirect("/admin/categories");
+}
+
+export async function deleteCategory(formData: FormData): Promise<void> {
+  await assertAdmin();
+  const id = str(formData, "id");
+  await prisma.category.delete({ where: { id } });
+  revalidateCategories();
+  redirect("/admin/categories");
+}
+
+// --- store settings ---
+
+export interface SettingsState {
+  ok?: boolean;
+  error?: string;
+}
+
+export async function updateSettings(
+  _prev: SettingsState | undefined,
+  formData: FormData,
+): Promise<SettingsState> {
+  await assertAdmin();
+
+  const data = {
+    storeName: str(formData, "storeName") || "GIZMORAC",
+    supportEmail: str(formData, "supportEmail"),
+    supportPhone: str(formData, "supportPhone"),
+    whatsappNumber: str(formData, "whatsappNumber").replace(/\D/g, ""),
+    announcementText: str(formData, "announcementText"),
+    announcementEnabled: bool(formData, "announcementEnabled"),
+    announcementScroll: bool(formData, "announcementScroll"),
+    freeShippingThreshold: Math.max(0, int(formData, "freeShippingThreshold", 999)),
+    shippingFee: Math.max(0, int(formData, "shippingFee", 79)),
+    codEnabled: bool(formData, "codEnabled"),
+  };
+
+  await prisma.storeSetting.upsert({
+    where: { id: "store" },
+    update: data,
+    create: { id: "store", ...data },
+  });
+
+  // Settings drive the header, footer, WhatsApp, cart and checkout.
+  revalidatePath("/", "layout");
+  revalidatePath("/admin/settings");
+  return { ok: true };
+}
+
+// Boolean settings that the admin can flip individually and have apply
+// instantly (no separate "Save settings" step). Keep this allow-list tight so a
+// forged call can't write arbitrary columns.
+const BOOLEAN_SETTINGS = [
+  "announcementEnabled",
+  "announcementScroll",
+  "codEnabled",
+] as const;
+export type BooleanSetting = (typeof BOOLEAN_SETTINGS)[number];
+
+/**
+ * Persist a single boolean setting the moment its toggle is flipped, so the
+ * switch behaves like a real switch (the storefront reflects it on next load)
+ * instead of silently needing a "Save settings" click.
+ */
+export async function setBooleanSetting(
+  field: BooleanSetting,
+  value: boolean,
+): Promise<SettingsState> {
+  await assertAdmin();
+  if (!BOOLEAN_SETTINGS.includes(field)) return { error: "Unknown setting." };
+
+  const patch: Partial<Record<BooleanSetting, boolean>> = { [field]: value };
+  await prisma.storeSetting.upsert({
+    where: { id: "store" },
+    update: patch,
+    create: { id: "store", ...patch },
+  });
+
+  revalidatePath("/", "layout");
+  revalidatePath("/admin/settings");
+  return { ok: true };
 }
