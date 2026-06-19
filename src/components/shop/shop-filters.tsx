@@ -1,15 +1,9 @@
 import Link from "next/link";
-import { Check, Star } from "lucide-react";
+import { Check, Star, X } from "lucide-react";
 import type { Category, CategorySlug } from "@/lib/types";
 import { buildShopUrl, type RawParams } from "@/lib/shop-url";
+import { PriceSlider } from "./price-slider";
 import { cn } from "@/lib/utils";
-
-const PRICE_RANGES = [
-  { label: "Under ₹1,000", min: undefined, max: "999" },
-  { label: "₹1,000 – ₹2,000", min: "1000", max: "2000" },
-  { label: "₹2,000 – ₹3,000", min: "2000", max: "3000" },
-  { label: "Over ₹3,000", min: "3000", max: undefined },
-];
 
 const RATINGS = [
   { label: "4★ & above", value: "4" },
@@ -55,84 +49,121 @@ export function ShopFilters({
   params,
   categories,
   counts,
+  priceFloor,
+  priceCeil,
+  priceValue,
 }: {
   params: RawParams;
   categories: Category[];
   counts: Record<CategorySlug, number>;
+  priceFloor: number;
+  priceCeil: number;
+  priceValue: number;
 }) {
+  const hasFilters = Boolean(
+    params.category ||
+      params.minPrice ||
+      params.maxPrice ||
+      params.minRating ||
+      params.availability,
+  );
+  const clearHref = buildShopUrl(params, {
+    category: undefined,
+    minPrice: undefined,
+    maxPrice: undefined,
+    minRating: undefined,
+    availability: undefined,
+    page: undefined,
+  });
+
   return (
     <div className="rounded-xl border border-border bg-surface p-5">
-      <Group title="Category">
-        <Row href={buildShopUrl(params, { category: undefined, page: undefined })} active={!params.category}>
-          All products
-        </Row>
-        {categories.map((c) => (
-          <Row
-            key={c.slug}
-            href={buildShopUrl(params, { category: c.slug, page: undefined })}
-            active={params.category === c.slug}
+      {/* header + clear all */}
+      <div className="flex items-center justify-between pb-4">
+        <h2 className="text-sm font-semibold">Filters</h2>
+        {hasFilters ? (
+          <Link
+            href={clearHref}
+            scroll={false}
+            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-muted transition-colors hover:bg-surface-2 hover:text-danger"
           >
-            <span className="flex w-full items-center justify-between gap-2">
-              <span>{c.name}</span>
-              <span className="font-mono text-[0.6875rem] text-faint">
-                {counts[c.slug]}
-              </span>
-            </span>
+            <X size={13} /> Clear all
+          </Link>
+        ) : null}
+      </div>
+
+      <div className="border-t border-border">
+        <Group title="Category">
+          <Row href={buildShopUrl(params, { category: undefined, page: undefined })} active={!params.category}>
+            All products
           </Row>
-        ))}
-      </Group>
-
-      <Group title="Price">
-        {PRICE_RANGES.map((r) => {
-          const active = params.minPrice === r.min && params.maxPrice === r.max;
-          return (
+          {categories.map((c) => (
             <Row
-              key={r.label}
-              href={buildShopUrl(params, {
-                minPrice: active ? undefined : r.min,
-                maxPrice: active ? undefined : r.max,
-                page: undefined,
-              })}
-              active={active}
+              key={c.slug}
+              href={buildShopUrl(params, { category: c.slug, page: undefined })}
+              active={params.category === c.slug}
             >
-              {r.label}
-            </Row>
-          );
-        })}
-      </Group>
-
-      <Group title="Rating">
-        {RATINGS.map((r) => {
-          const active = params.minRating === r.value;
-          return (
-            <Row
-              key={r.value}
-              href={buildShopUrl(params, {
-                minRating: active ? undefined : r.value,
-                page: undefined,
-              })}
-              active={active}
-            >
-              <span className="flex items-center gap-1.5">
-                <Star size={13} className="fill-accent text-accent" />
-                {r.label}
+              <span className="flex w-full items-center justify-between gap-2">
+                <span>{c.name}</span>
+                <span className="font-mono text-[0.6875rem] text-faint">
+                  {counts[c.slug]}
+                </span>
               </span>
             </Row>
-          );
-        })}
-      </Group>
+          ))}
+        </Group>
 
-      <Group title="Availability">
-        <Row
-          href={buildShopUrl(params, {
-            inStock: params.inStock === "1" ? undefined : "1",
-            page: undefined,
+        <Group title="Price">
+          <PriceSlider
+            floor={priceFloor}
+            ceil={priceCeil}
+            value={priceValue}
+            params={params}
+          />
+        </Group>
+
+        <Group title="Rating">
+          {RATINGS.map((r) => {
+            const active = params.minRating === r.value;
+            return (
+              <Row
+                key={r.value}
+                href={buildShopUrl(params, {
+                  minRating: active ? undefined : r.value,
+                  page: undefined,
+                })}
+                active={active}
+              >
+                <span className="flex items-center gap-1.5">
+                  <Star size={13} className="fill-accent text-accent" />
+                  {r.label}
+                </span>
+              </Row>
+            );
           })}
-          active={params.inStock === "1"}
-        >
-          In stock only
-        </Row>
-      </Group>
+        </Group>
+
+        <Group title="Availability">
+          <Row
+            href={buildShopUrl(params, {
+              availability: params.availability === "in" ? undefined : "in",
+              page: undefined,
+            })}
+            active={params.availability === "in"}
+          >
+            In stock
+          </Row>
+          <Row
+            href={buildShopUrl(params, {
+              availability: params.availability === "out" ? undefined : "out",
+              page: undefined,
+            })}
+            active={params.availability === "out"}
+          >
+            Out of stock
+          </Row>
+        </Group>
+      </div>
     </div>
   );
 }

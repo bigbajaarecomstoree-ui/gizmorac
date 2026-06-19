@@ -97,6 +97,16 @@ export async function getClosingStock(): Promise<{
   return { units, value, skus: rows.length };
 }
 
+/** Min/max selling price across active products — powers the shop price slider. */
+export async function getPriceBounds(): Promise<{ min: number; max: number }> {
+  const agg = await prisma.product.aggregate({
+    where: { active: true },
+    _min: { price: true },
+    _max: { price: true },
+  });
+  return { min: agg._min.price ?? 0, max: agg._max.price ?? 0 };
+}
+
 /** Storefront PDP lookup — drafts (inactive) are treated as not found. */
 export async function getProductBySlug(slug: string): Promise<Product | null> {
   const row = await prisma.product.findUnique({ where: { slug } });
@@ -241,7 +251,8 @@ export async function queryProducts(
     if (typeof query.maxPrice === "number") where.price.lte = query.maxPrice;
   }
   if (typeof query.minRating === "number") where.rating = { gte: query.minRating };
-  if (query.inStock) where.stock = { gt: 0 };
+  if (query.availability === "in") where.stock = { gt: 0 };
+  else if (query.availability === "out") where.stock = { lte: 0 };
 
   const rows = await prisma.product.findMany({ where });
   const sorted = sortProducts(rows.map(toProduct), query.sort ?? "popular");

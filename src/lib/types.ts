@@ -114,7 +114,8 @@ export interface ShopQuery {
   minPrice?: number;
   maxPrice?: number;
   minRating?: number;
-  inStock?: boolean;
+  /** "in" = in stock, "out" = out of stock. */
+  availability?: "in" | "out";
   q?: string;
   page?: number;
 }
