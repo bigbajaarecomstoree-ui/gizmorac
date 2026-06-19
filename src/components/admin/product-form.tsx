@@ -1,7 +1,17 @@
 "use client";
 
 import { useFormStatus } from "react-dom";
-import { Loader2 } from "lucide-react";
+import {
+  Loader2,
+  Package,
+  ImageIcon,
+  IndianRupee,
+  Boxes,
+  Lock,
+  Eye,
+  FileText,
+  ListChecks,
+} from "lucide-react";
 import type { Product, Category } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
@@ -33,15 +43,20 @@ const areaCls =
 function Field({
   label,
   hint,
+  required,
   children,
 }: {
   label: string;
   hint?: string;
+  required?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block text-sm font-medium">{label}</span>
+      <span className="mb-1.5 block text-sm font-medium">
+        {label}
+        {required ? <span className="ml-0.5 text-danger">*</span> : null}
+      </span>
       {children}
       {hint ? <span className="mt-1 block text-xs text-faint">{hint}</span> : null}
     </label>
@@ -58,10 +73,28 @@ function SubmitButton({ label }: { label: string }) {
   );
 }
 
-function Card({ title, children }: { title: string; children: React.ReactNode }) {
+function Card({
+  title,
+  desc,
+  icon: Icon,
+  children,
+}: {
+  title: string;
+  desc?: string;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  children: React.ReactNode;
+}) {
   return (
-    <section className="rounded-xl border border-border bg-surface p-5">
-      <h2 className="mb-4 font-semibold">{title}</h2>
+    <section className="rounded-xl border border-border bg-surface p-5 sm:p-6">
+      <div className="mb-4 flex items-start gap-3">
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-accent-soft text-accent">
+          <Icon size={18} />
+        </span>
+        <div>
+          <h2 className="font-semibold leading-tight">{title}</h2>
+          {desc ? <p className="mt-0.5 text-xs text-muted">{desc}</p> : null}
+        </div>
+      </div>
       <div className="space-y-4">{children}</div>
     </section>
   );
@@ -80,94 +113,118 @@ export function ProductForm({
 }) {
   const p = product;
   return (
-    <form action={action} className="grid gap-5 lg:grid-cols-2">
+    <form action={action} className="mx-auto max-w-3xl space-y-5 pb-24">
       {p ? <input type="hidden" name="id" defaultValue={p.id} /> : null}
 
-      <Card title="Basics">
-        <Field label="Product name">
-          <input name="name" required defaultValue={p?.name} className={inputCls} placeholder="GIZMORAC …" />
+      {/* 1 — what the product is */}
+      <Card
+        title="Product details"
+        desc="The name and category customers see."
+        icon={Package}
+      >
+        <Field label="Product name" required>
+          <input
+            name="name"
+            required
+            defaultValue={p?.name}
+            className={inputCls}
+            placeholder="e.g. GIZMORAC Wireless Mouse"
+          />
         </Field>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Slug" hint="Leave blank to auto-generate">
+        <Field label="Category" required>
+          <Select
+            name="category"
+            defaultValue={p?.category ?? categories[0]?.slug ?? ""}
+            options={categories.map((c) => ({ value: c.slug, label: c.name }))}
+            className="w-full"
+            triggerClassName="h-11 bg-background"
+          />
+        </Field>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="SKU" hint="Your own product code (optional).">
+            <input name="sku" defaultValue={p?.sku} className={inputCls} placeholder="e.g. GZ-MOUSE-01" />
+          </Field>
+          <Field label="Web link (slug)" hint="Leave blank — created automatically from the name.">
             <input name="slug" defaultValue={p?.slug} className={inputCls} placeholder="auto" />
           </Field>
-          <Field label="SKU">
-            <input name="sku" defaultValue={p?.sku} className={inputCls} placeholder="GZ-…" />
-          </Field>
         </div>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Category">
-            <Select
-              name="category"
-              defaultValue={p?.category ?? categories[0]?.slug ?? ""}
-              options={categories.map((c) => ({ value: c.slug, label: c.name }))}
-              className="w-full"
-              triggerClassName="h-11 bg-background"
-            />
+        <Field
+          label="Placeholder icon"
+          hint="A line drawing shown ONLY until you upload a real photo below."
+        >
+          <Select
+            name="art"
+            defaultValue={p?.art ?? "printer"}
+            options={ART_OPTIONS.map((a) => ({ value: a, label: a }))}
+            className="w-full"
+            triggerClassName="h-11 bg-background"
+          />
+        </Field>
+      </Card>
+
+      {/* 2 — media */}
+      <Card
+        title="Photos & video"
+        desc="Up to 7 photos and one video. The first photo is the main image."
+        icon={ImageIcon}
+      >
+        <MediaUploader defaultImages={p?.images ?? []} defaultVideo={p?.video ?? null} />
+      </Card>
+
+      {/* 3 — pricing (customer-facing) */}
+      <Card
+        title="Pricing"
+        desc="What customers pay. The discount badge is calculated from MRP automatically."
+        icon={IndianRupee}
+      >
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Selling price (₹)" required hint="The price the customer pays.">
+            <input name="price" type="number" min={0} required defaultValue={p?.price} className={inputCls} placeholder="e.g. 1499" />
           </Field>
-          <Field label="Fallback icon" hint="Shown until photos are uploaded">
-            <Select
-              name="art"
-              defaultValue={p?.art ?? "printer"}
-              options={ART_OPTIONS.map((a) => ({ value: a, label: a }))}
-              className="w-full"
-              triggerClassName="h-11 bg-background"
-            />
+          <Field label="MRP (₹)" required hint="Original price — shown struck-through.">
+            <input name="mrp" type="number" min={0} required defaultValue={p?.mrp} className={inputCls} placeholder="e.g. 2499" />
           </Field>
         </div>
       </Card>
 
-      <section className="rounded-xl border border-border bg-surface p-5 lg:col-span-2">
-        <h2 className="mb-4 font-semibold">Media</h2>
-        <MediaUploader
-          defaultImages={p?.images ?? []}
-          defaultVideo={p?.video ?? null}
-        />
-      </section>
-
-      <Card title="Pricing & stock">
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Sale price (₹)">
-            <input name="price" type="number" required defaultValue={p?.price} className={inputCls} />
+      {/* 4 — inventory */}
+      <Card title="Inventory" desc="Stock on hand and when to be warned." icon={Boxes}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Stock (units available)">
+            <input name="stock" type="number" min={0} defaultValue={p?.stock ?? 0} className={inputCls} />
           </Field>
-          <Field label="MRP (₹)">
-            <input name="mrp" type="number" required defaultValue={p?.mrp} className={inputCls} />
+          <Field label="Low-stock alert at" hint="Flag the product when stock falls to this number.">
+            <input name="lowStockThreshold" type="number" min={0} defaultValue={p?.lowStockThreshold ?? 10} className={inputCls} />
           </Field>
         </div>
-        <p className="rounded-lg border border-border bg-surface-2/50 px-3 py-2 text-xs text-muted">
-          🔒 Cost, HSN and GST rate are <span className="font-medium text-foreground">internal only</span> — never shown to customers or on receipts. Used for your P&amp;L and GST filing.
-        </p>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-          <Field label="Cost price (₹)" hint="Internal — for profit / COGS">
+      </Card>
+
+      {/* 5 — internal cost & tax */}
+      <Card
+        title="Cost & tax — internal only"
+        desc="🔒 Never shown to customers or on receipts. Used for your profit (P&L) and GST filing."
+        icon={Lock}
+      >
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Field label="Cost price (₹)" hint="What you pay per unit.">
             <input name="cost" type="number" min={0} defaultValue={p?.cost ?? 0} className={inputCls} />
           </Field>
-          <Field label="HSN code" hint="Internal — for GST filing">
+          <Field label="HSN code" hint="For GST filing.">
             <input name="hsn" type="text" defaultValue={p?.hsn ?? ""} placeholder="e.g. 8518" className={inputCls} />
           </Field>
-          <Field label="GST rate %" hint="Internal — for GST filing">
+          <Field label="GST rate %" hint="For GST filing.">
             <input name="gstRate" type="number" min={0} step={0.5} defaultValue={p?.gstRate ?? 18} className={inputCls} />
           </Field>
         </div>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Stock">
-            <input name="stock" type="number" defaultValue={p?.stock ?? 0} className={inputCls} />
-          </Field>
-          <Field label="Low-stock alert at" hint="Flag inventory at or below this">
-            <input name="lowStockThreshold" type="number" defaultValue={p?.lowStockThreshold ?? 10} className={inputCls} />
-          </Field>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Rating">
-            <input name="rating" type="number" step="0.1" min="0" max="5" defaultValue={p?.rating ?? 4.5} className={inputCls} />
-          </Field>
-          <Field label="Reviews">
-            <input name="reviewCount" type="number" defaultValue={p?.reviewCount ?? 0} className={inputCls} />
-          </Field>
-        </div>
-        <Field label="Badges" hint="Comma separated, e.g. Best Seller, Value Pick">
-          <input name="badges" defaultValue={p?.badges.join(", ")} className={inputCls} />
-        </Field>
-        <label className="flex items-center gap-2.5 rounded-lg border border-border bg-background px-3 py-2.5 text-sm">
+      </Card>
+
+      {/* 6 — visibility & placement */}
+      <Card
+        title="Visibility & placement"
+        desc="Whether the product is live, and where it's featured."
+        icon={Eye}
+      >
+        <label className="flex items-center gap-3 rounded-lg border border-border bg-background px-3 py-3 text-sm">
           <input
             type="checkbox"
             name="active"
@@ -175,63 +232,96 @@ export function ProductForm({
             className="h-4 w-4 accent-[var(--color-accent)]"
           />
           <span>
-            <span className="font-medium">Active</span> — visible on the
-            storefront <span className="text-faint">(uncheck to save as draft)</span>
+            <span className="font-medium">Active</span> — visible on the storefront.{" "}
+            <span className="text-faint">Uncheck to save as a hidden draft.</span>
           </span>
         </label>
-        <div className="flex flex-wrap gap-4 pt-1">
-          {[
-            { name: "isBestSeller", label: "Best seller", val: p?.isBestSeller },
-            { name: "isFeatured", label: "Featured", val: p?.isFeatured },
-            { name: "isDeal", label: "Deal of the day", val: p?.isDeal },
-          ].map((f) => (
-            <label key={f.name} className="flex items-center gap-2 text-sm">
-              <input type="checkbox" name={f.name} defaultChecked={f.val} className="h-4 w-4 accent-[var(--color-accent)]" />
-              {f.label}
-            </label>
-          ))}
+
+        <div>
+          <p className="mb-2 text-sm font-medium">Feature on the home page</p>
+          <div className="grid gap-2 sm:grid-cols-3">
+            {[
+              { name: "isBestSeller", label: "Best seller", val: p?.isBestSeller },
+              { name: "isFeatured", label: "Featured", val: p?.isFeatured },
+              { name: "isDeal", label: "Deal of the day", val: p?.isDeal },
+            ].map((f) => (
+              <label
+                key={f.name}
+                className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2.5 text-sm"
+              >
+                <input type="checkbox" name={f.name} defaultChecked={f.val} className="h-4 w-4 accent-[var(--color-accent)]" />
+                {f.label}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <Field label="Badges" hint="Small labels on the product card. Comma separated, e.g. Best Seller, New">
+          <input name="badges" defaultValue={p?.badges.join(", ")} className={inputCls} placeholder="Best Seller, New" />
+        </Field>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Star rating (0–5)" hint="Shown as stars on the product.">
+            <input name="rating" type="number" step="0.1" min="0" max="5" defaultValue={p?.rating ?? 4.5} className={inputCls} />
+          </Field>
+          <Field label="Number of reviews">
+            <input name="reviewCount" type="number" min={0} defaultValue={p?.reviewCount ?? 0} className={inputCls} />
+          </Field>
         </div>
       </Card>
 
-      <Card title="Description">
-        <Field label="Short description">
-          <textarea name="shortDescription" rows={2} defaultValue={p?.shortDescription} className={areaCls} />
+      {/* 7 — description */}
+      <Card
+        title="Description"
+        desc="The text customers read about this product."
+        icon={FileText}
+      >
+        <Field label="Short description" hint="One line shown under the title.">
+          <textarea name="shortDescription" rows={2} defaultValue={p?.shortDescription} className={areaCls} placeholder="A pocket-sized speaker with deep bass." />
         </Field>
-        <Field label="Full description">
-          <textarea name="description" rows={4} defaultValue={p?.description} className={areaCls} />
+        <Field label="Full description" hint="The detailed description on the product page.">
+          <textarea name="description" rows={5} defaultValue={p?.description} className={areaCls} />
         </Field>
-        <Field label="Highlights" hint="One per line">
-          <textarea name="highlights" rows={3} defaultValue={p?.highlights.join("\n")} className={areaCls} />
+        <Field label="Highlights" hint="Key selling points — write one per line.">
+          <textarea name="highlights" rows={3} defaultValue={p?.highlights.join("\n")} className={areaCls} placeholder={"12-hour battery\nIPX5 splash resistant\nBluetooth 5.3"} />
         </Field>
       </Card>
 
-      <Card title="Specs & FAQs">
-        <Field label="Features" hint="One per line">
+      {/* 8 — specs & faqs */}
+      <Card
+        title="Specifications & FAQs"
+        desc="Optional extra detail shown in tabs on the product page."
+        icon={ListChecks}
+      >
+        <Field label="Features" hint="Write one per line.">
           <textarea name="features" rows={4} defaultValue={p?.features.join("\n")} className={areaCls} />
         </Field>
-        <Field label="Specifications" hint="One per line — “Label: Value”">
+        <Field label="Specifications" hint="One per line, as “Label: Value” — e.g. Battery: 2000mAh">
           <textarea
             name="specs"
             rows={4}
             defaultValue={p?.specs.map((s) => `${s.label}: ${s.value}`).join("\n")}
             className={areaCls}
+            placeholder={"Battery: 2000mAh\nWeight: 220g"}
           />
         </Field>
-        <Field label="FAQs" hint="One per line — “Question :: Answer”">
+        <Field label="FAQs" hint="One per line, as “Question :: Answer”">
           <textarea
             name="faqs"
             rows={4}
             defaultValue={p?.faqs.map((f) => `${f.q} :: ${f.a}`).join("\n")}
             className={areaCls}
+            placeholder={"Is it waterproof? :: It is IPX5 splash resistant.\nWarranty? :: 1 year."}
           />
         </Field>
       </Card>
 
-      <div className="flex items-center gap-3 lg:col-span-2">
-        <SubmitButton label={submitLabel} />
-        <a href="/admin/products" className="text-sm text-muted hover:text-foreground">
+      {/* sticky save bar */}
+      <div className="sticky bottom-0 z-10 -mx-1 flex items-center justify-end gap-3 border-t border-border bg-background/90 px-1 py-3 backdrop-blur">
+        <a href="/admin/products" className="text-sm text-muted transition-colors hover:text-foreground">
           Cancel
         </a>
+        <SubmitButton label={submitLabel} />
       </div>
     </form>
   );
