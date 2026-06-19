@@ -1,14 +1,16 @@
 // GIZMORAC database schema.
-// SQLite for zero-setup local dev. Swap `provider` to "postgresql" / "mysql"
-// and update DATABASE_URL for production — the models stay the same.
+// PostgreSQL (Neon) in production. `url` is the pooled connection used at
+// runtime; `directUrl` is the unpooled connection used by Prisma CLI for
+// `db push` / migrations (pgbouncer can't run those reliably).
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 model Product {
