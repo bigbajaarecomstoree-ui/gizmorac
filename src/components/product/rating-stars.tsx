@@ -26,15 +26,21 @@ export function RatingStars({
       >
         <span className="flex text-border-bright">
           {Array.from({ length: 5 }).map((_, i) => (
-            <Star key={i} size={px} strokeWidth={1.5} />
+            <Star key={i} size={px} strokeWidth={1.5} className="shrink-0" />
           ))}
         </span>
         <span
-          className="absolute inset-0 flex overflow-hidden text-accent"
+          className="absolute inset-y-0 left-0 flex overflow-hidden text-accent"
           style={{ width: `${pct}%` }}
         >
           {Array.from({ length: 5 }).map((_, i) => (
-            <Star key={i} size={px} strokeWidth={1.5} fill="currentColor" />
+            <Star
+              key={i}
+              size={px}
+              strokeWidth={1.5}
+              fill="currentColor"
+              className="shrink-0"
+            />
           ))}
         </span>
       </span>
