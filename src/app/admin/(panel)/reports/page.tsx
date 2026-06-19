@@ -8,6 +8,8 @@ import {
   Clock,
   Truck,
   Inbox,
+  Wallet,
+  HandCoins,
 } from "lucide-react";
 import {
   getReportSummary,
@@ -68,6 +70,8 @@ export default async function ReportsPage({
 
   const kpis = [
     { label: "Total Sales", value: formatINR(report.revenue), icon: IndianRupee, accent: true },
+    { label: "Cash Collected", value: formatINR(report.collected), sub: "Delivered (COD)", icon: Wallet },
+    { label: "Payment to Receive", value: formatINR(report.toReceive), sub: "Open orders", icon: HandCoins },
     { label: "Total Orders", value: String(report.orders), icon: Receipt },
     { label: "Pending Orders", value: String(report.pending), icon: Clock },
     { label: "Open Orders", value: String(report.open), icon: Truck },
@@ -166,7 +170,7 @@ export default async function ReportsPage({
       </form>
 
       {/* KPIs */}
-      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {kpis.map((k) => (
           <div key={k.label} className="rounded-xl border border-border bg-surface p-4">
             <k.icon size={18} className={k.accent ? "text-accent" : "text-faint"} />
@@ -295,8 +299,9 @@ export default async function ReportsPage({
       </div>
 
       <p className="mt-4 text-xs text-faint">
-        Total Sales excludes cancelled, returned and refunded orders. Open orders
-        = Pending + Confirmed + Packed + Shipped. Closing stock is current
+        Total Sales excludes cancelled, returned and refunded orders, and equals
+        Cash Collected (Delivered) + Payment to Receive (open orders). Open
+        orders = Pending + Confirmed + Packed + Shipped. Closing stock is current
         on-hand inventory (no historical snapshots).
       </p>
     </div>

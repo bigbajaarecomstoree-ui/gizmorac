@@ -259,6 +259,10 @@ export interface ReportSummary {
   avgOrderValue: number;
   pending: number;
   open: number;
+  /** COD already collected = value of Delivered orders. */
+  collected: number;
+  /** Payment to be received = value of open (undelivered, not cancelled) orders. */
+  toReceive: number;
   byStatus: { status: OrderStatus; count: number; value: number }[];
 }
 
@@ -295,6 +299,13 @@ async function buildSummary(bounds: {
     };
   });
 
+  const collected = orders
+    .filter((o) => o.status === "Delivered")
+    .reduce((s, o) => s + o.total, 0);
+  const toReceive = orders
+    .filter((o) => OPEN_STATUSES.includes(o.status))
+    .reduce((s, o) => s + o.total, 0);
+
   return {
     orders: orders.length,
     revenue,
@@ -302,6 +313,8 @@ async function buildSummary(bounds: {
     avgOrderValue: counted.length ? Math.round(revenue / counted.length) : 0,
     pending: orders.filter((o) => o.status === "Pending").length,
     open: orders.filter((o) => OPEN_STATUSES.includes(o.status)).length,
+    collected,
+    toReceive,
     byStatus,
   };
 }
