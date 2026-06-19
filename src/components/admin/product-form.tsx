@@ -135,6 +135,12 @@ export function ProductForm({
           </Field>
         </div>
         <div className="grid grid-cols-2 gap-4">
+          <Field label="Cost price (₹)" hint="Your purchase cost — used for profit">
+            <input name="cost" type="number" min={0} defaultValue={p?.cost ?? 0} className={inputCls} />
+          </Field>
+          <div />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
           <Field label="Stock">
             <input name="stock" type="number" defaultValue={p?.stock ?? 0} className={inputCls} />
           </Field>

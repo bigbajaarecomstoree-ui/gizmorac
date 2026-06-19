@@ -39,6 +39,7 @@ function toProduct(r: ProductRow): Product {
     video: r.video,
     price: r.price,
     mrp: r.mrp,
+    cost: r.cost,
     rating: r.rating,
     reviewCount: r.reviewCount,
     stock: r.stock,

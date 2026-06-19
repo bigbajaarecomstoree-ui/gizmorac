@@ -10,17 +10,14 @@ import {
   Inbox,
   Wallet,
   HandCoins,
-  Landmark,
+  TrendingUp,
 } from "lucide-react";
 import {
   getReportSummary,
   getReportSummaryBetween,
   DATE_RANGES,
-  customBounds,
-  dateBounds,
   type DateRange,
 } from "@/lib/data/orders";
-import { getBalanceAsOf, getFinanceFlow } from "@/lib/data/finance";
 import { getClosingStock } from "@/lib/data/queries";
 import { formatINR, formatCount } from "@/lib/format";
 import { INDIA_STATES } from "@/lib/india-states";
@@ -54,16 +51,9 @@ export default async function ReportsPage({
     ? (sp.range as DateRange)
     : "30d";
 
-  const bounds = custom ? customBounds(sp.from, sp.to) : dateBounds(range);
-  // Balance "as of" the end of the window — bounds.lt is the start of the day
-  // after the end date; undefined (open-ended ranges) means "as of now".
-  const asOf = bounds.lt ?? undefined;
-
-  const [report, stock, balance, flow] = await Promise.all([
+  const [report, stock] = await Promise.all([
     custom ? getReportSummaryBetween(sp.from, sp.to) : getReportSummary(range),
     getClosingStock(),
-    getBalanceAsOf(asOf),
-    getFinanceFlow(bounds),
   ]);
 
   const rangeLabel = custom
@@ -87,17 +77,17 @@ export default async function ReportsPage({
     { label: "Pending Orders", value: String(report.pending), icon: Clock },
     { label: "Open Orders", value: String(report.open), icon: Truck },
     {
+      label: "Gross Profit",
+      value: formatINR(report.grossProfit),
+      sub: `${report.margin}% margin`,
+      icon: TrendingUp,
+      accent: true,
+    },
+    {
       label: "Closing Stock",
       value: `${formatCount(stock.units)} units`,
       sub: `${formatINR(stock.value)} · ${stock.skus} SKUs`,
       icon: Boxes,
-    },
-    {
-      label: "Bank / Cash Balance",
-      value: formatINR(balance),
-      sub: `as of ${custom ? fmtYMD(sp.to) : "today"}`,
-      icon: Landmark,
-      accent: true,
     },
   ];
 
@@ -199,19 +189,24 @@ export default async function ReportsPage({
         ))}
       </div>
 
-      {/* cash flow for the period */}
+      {/* profit & loss link */}
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-surface px-4 py-3 text-sm">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-          <span className="text-muted">Cash flow this period:</span>
-          <span className="font-medium text-success">In {formatINR(flow.in)}</span>
-          <span className="font-medium text-danger">Out {formatINR(flow.out)}</span>
-          <span className="font-semibold">Net {formatINR(flow.in - flow.out)}</span>
-        </div>
+        <span className="text-muted">
+          Net Sales {formatINR(report.revenue)} · COGS {formatINR(report.cogs)} ·
+          Gross Profit{" "}
+          <span className="font-semibold text-foreground">
+            {formatINR(report.grossProfit)}
+          </span>
+        </span>
         <Link
-          href="/admin/finance"
+          href={
+            custom
+              ? `/admin/finance?from=${sp.from}&to=${sp.to}`
+              : `/admin/finance?range=${range}`
+          }
           className="font-medium text-accent transition-colors hover:text-accent-bright"
         >
-          Manage cash ledger →
+          Full Profit &amp; Loss →
         </Link>
       </div>
 

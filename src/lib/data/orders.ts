@@ -254,6 +254,7 @@ export async function getAdminStats(): Promise<AdminStats> {
 
 export interface ReportSummary {
   orders: number;
+  /** Net Sales = total of orders that count (excludes cancelled/returned/refunded). */
   revenue: number;
   units: number;
   avgOrderValue: number;
@@ -263,6 +264,18 @@ export interface ReportSummary {
   collected: number;
   /** Payment to be received = value of open (undelivered, not cancelled) orders. */
   toReceive: number;
+  // --- profit & loss (order-derived) ---
+  /** Gross Sales = total of every order placed in the period. */
+  grossSales: number;
+  cancelled: number;
+  returned: number;
+  refunded: number;
+  /** Cost of goods sold for counted orders (Σ unit cost × qty). */
+  cogs: number;
+  /** Gross Profit = Net Sales − COGS (before operating expenses). */
+  grossProfit: number;
+  /** Gross margin %, on net sales. */
+  margin: number;
   byStatus: { status: OrderStatus; count: number; value: number }[];
 }
 
@@ -306,6 +319,26 @@ async function buildSummary(bounds: {
     .filter((o) => OPEN_STATUSES.includes(o.status))
     .reduce((s, o) => s + o.total, 0);
 
+  // P&L: deductions + cost of goods sold (needs product cost prices).
+  const sumByStatus = (s: OrderStatus) =>
+    orders.filter((o) => o.status === s).reduce((a, o) => a + o.total, 0);
+  const grossSales = orders.reduce((s, o) => s + o.total, 0);
+  const cancelled = sumByStatus("Cancelled");
+  const returned = sumByStatus("Returned");
+  const refunded = sumByStatus("Refunded");
+
+  const costRows = await prisma.product.findMany({
+    select: { id: true, cost: true },
+  });
+  const costById = new Map(costRows.map((p) => [p.id, p.cost]));
+  const cogs = counted.reduce(
+    (s, o) =>
+      s + o.items.reduce((n, i) => n + (costById.get(i.id) ?? 0) * i.qty, 0),
+    0,
+  );
+  const grossProfit = revenue - cogs;
+  const margin = revenue > 0 ? Math.round((grossProfit / revenue) * 1000) / 10 : 0;
+
   return {
     orders: orders.length,
     revenue,
@@ -315,6 +348,13 @@ async function buildSummary(bounds: {
     open: orders.filter((o) => OPEN_STATUSES.includes(o.status)).length,
     collected,
     toReceive,
+    grossSales,
+    cancelled,
+    returned,
+    refunded,
+    cogs,
+    grossProfit,
+    margin,
     byStatus,
   };
 }

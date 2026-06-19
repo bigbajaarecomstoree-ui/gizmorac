@@ -97,6 +97,7 @@ function productDataFromForm(fd: FormData) {
     video,
     price: int(fd, "price"),
     mrp: int(fd, "mrp"),
+    cost: int(fd, "cost"),
     rating: num(fd, "rating", 4.5),
     reviewCount: int(fd, "reviewCount"),
     stock: int(fd, "stock"),
@@ -293,6 +294,7 @@ export async function importProducts(
       video: null,
       price,
       mrp,
+      cost: Math.round(Number(cell(row, "cost"))) || 0,
       rating: Number(cell(row, "rating")) || 4.5,
       reviewCount: Math.round(Number(cell(row, "reviewCount"))) || 0,
       stock: Math.round(Number(cell(row, "stock"))) || 0,
@@ -654,41 +656,3 @@ export async function setBooleanSetting(
   return { ok: true };
 }
 
-// --- finance ledger (manual cash/bank entries) ---
-
-function revalidateFinance() {
-  revalidatePath("/admin/finance");
-  revalidatePath("/admin/reports");
-  revalidatePath("/admin");
-}
-
-export async function addFinanceEntry(formData: FormData): Promise<void> {
-  await assertAdmin();
-  const direction = str(formData, "direction") === "out" ? "out" : "in";
-  const amount = Math.max(0, int(formData, "amount"));
-  if (!amount) return; // ignore empty/zero entries
-  const ymd = str(formData, "date");
-  // Store at noon IST of the chosen day, safely inside IST day boundaries.
-  const date = /^\d{4}-\d{2}-\d{2}$/.test(ymd)
-    ? new Date(`${ymd}T12:00:00+05:30`)
-    : new Date();
-  await prisma.financeEntry.create({
-    data: {
-      date,
-      direction,
-      amount,
-      category: str(formData, "category"),
-      note: str(formData, "note"),
-    },
-  });
-  revalidateFinance();
-}
-
-export async function deleteFinanceEntry(formData: FormData): Promise<void> {
-  await assertAdmin();
-  const id = str(formData, "id");
-  if (id) {
-    await prisma.financeEntry.delete({ where: { id } }).catch(() => {});
-  }
-  revalidateFinance();
-}

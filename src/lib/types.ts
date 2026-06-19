@@ -74,6 +74,8 @@ export interface Product {
   price: number;
   /** Original MRP in INR, used to derive discount. */
   mrp: number;
+  /** Purchase/landed cost per unit in INR — used for profit/COGS. */
+  cost: number;
   rating: number;
   reviewCount: number;
   stock: number;
