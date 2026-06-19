@@ -152,7 +152,7 @@ export function InventoryTable({ items }: { items: InventoryItem[] }) {
   return (
     <>
       <div className="mt-3 overflow-hidden rounded-xl border border-border bg-surface">
-        <div className="hidden border-b border-border px-4 py-2.5 text-xs font-medium uppercase tracking-wider text-faint sm:grid sm:grid-cols-[auto_1fr_auto_auto]">
+        <div className="hidden border-b border-border px-4 py-2.5 text-xs font-medium uppercase tracking-wider text-faint sm:grid sm:grid-cols-[auto_minmax(0,1fr)_auto_auto]">
           <span className="flex w-8 items-center">
             <input
               type="checkbox"
@@ -187,7 +187,7 @@ export function InventoryTable({ items }: { items: InventoryItem[] }) {
                 <div
                   key={p.id}
                   className={cn(
-                    "grid grid-cols-1 items-center gap-3 px-4 py-3 transition-colors sm:grid-cols-[auto_1fr_auto_auto]",
+                    "grid grid-cols-1 items-center gap-3 px-4 py-3 transition-colors sm:grid-cols-[auto_minmax(0,1fr)_auto_auto]",
                     out && "bg-danger/10",
                     low && "bg-accent/10",
                     isSel && "ring-1 ring-inset ring-accent/40",
@@ -203,7 +203,7 @@ export function InventoryTable({ items }: { items: InventoryItem[] }) {
                     />
                   </div>
 
-                  <div className="flex items-center gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
                     <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg border border-border">
                       {p.image ? (
                         <Image src={p.image} alt="" fill sizes="44px" className="object-cover" />
@@ -212,7 +212,9 @@ export function InventoryTable({ items }: { items: InventoryItem[] }) {
                       )}
                     </div>
                     <div className="min-w-0">
-                      <div className="truncate text-sm font-medium">{p.name}</div>
+                      <div className="truncate text-sm font-medium" title={p.name}>
+                        {p.name}
+                      </div>
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-xs text-faint">{p.sku}</span>
                         {out ? (
