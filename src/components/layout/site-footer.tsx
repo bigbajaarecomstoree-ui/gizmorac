@@ -1,9 +1,10 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ShieldCheck, Truck, RotateCcw, Headset } from "lucide-react";
+import { ShieldCheck, Truck, RotateCcw, Headset, MapPin, Phone, Mail } from "lucide-react";
 import type { Category } from "@/lib/types";
 import { policies } from "@/lib/data/policies";
 import { WHATSAPP_LINK } from "@/lib/constants";
+import { FooterNewsletter } from "./footer-newsletter";
 
 const TRUST = [
   { icon: Truck, label: "PAN India shipping" },
@@ -12,6 +13,11 @@ const TRUST = [
   { icon: Headset, label: "WhatsApp support" },
 ];
 
+// Registered business contact details.
+const COMPANY = "BIG BAJAAR ECOM STOREE";
+const ADDRESS =
+  "D-12, Bhagwan Dass Nagar, Near East Punjabi Bagh, New Delhi-110026.";
+const CARE_PHONE = "+91 99999 99999";
 const CARE_EMAIL = "care@gizmorac.com";
 
 // Brand glyphs as inline SVG (lucide dropped brand/logo icons).
@@ -49,8 +55,6 @@ function XIcon({ size = 16, className }: IconProps) {
 
 export function SiteFooter({
   whatsappHref = WHATSAPP_LINK,
-  supportEmail,
-  supportPhone,
   categories = [],
   instagramUrl,
   facebookUrl,
@@ -58,8 +62,6 @@ export function SiteFooter({
   twitterUrl,
 }: {
   whatsappHref?: string;
-  supportEmail?: string;
-  supportPhone?: string;
   categories?: Category[];
   instagramUrl?: string;
   facebookUrl?: string;
@@ -86,8 +88,8 @@ export function SiteFooter({
           ))}
         </div>
 
-        <div className="grid grid-cols-2 gap-8 py-12 md:grid-cols-5">
-          <div className="col-span-2 md:col-span-1">
+        <div className="grid grid-cols-2 gap-8 py-12 lg:grid-cols-12">
+          <div className="col-span-2 lg:col-span-3">
             <Link href="/" className="flex items-center gap-1">
               <Image
                 src="/logo.png"
@@ -122,7 +124,7 @@ export function SiteFooter({
             ) : null}
           </div>
 
-          <div>
+          <div className="lg:col-span-2">
             <h4 className="tech-label mb-4">Shop</h4>
             <ul className="space-y-2.5 text-sm">
               {categories.map((c) => (
@@ -138,33 +140,7 @@ export function SiteFooter({
             </ul>
           </div>
 
-          <div>
-            <h4 className="tech-label mb-4">Discover</h4>
-            <ul className="space-y-2.5 text-sm">
-              <li>
-                <Link href="/shop" className="text-muted hover:text-accent">
-                  All Products
-                </Link>
-              </li>
-              <li>
-                <Link href="/shop?sort=popular" className="text-muted hover:text-accent">
-                  Best Sellers
-                </Link>
-              </li>
-              <li>
-                <Link href="/shop?sort=newest" className="text-muted hover:text-accent">
-                  New Arrivals
-                </Link>
-              </li>
-              <li>
-                <Link href="/shop?sort=discount" className="text-muted hover:text-accent">
-                  Today&apos;s Deals
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          <div>
+          <div className="lg:col-span-2">
             <h4 className="tech-label mb-4">Help</h4>
             <ul className="space-y-2.5 text-sm">
               <li>
@@ -192,29 +168,10 @@ export function SiteFooter({
                   Contact us
                 </a>
               </li>
-              <li>
-                <a href={`mailto:${CARE_EMAIL}`} className="text-muted hover:text-accent">
-                  {CARE_EMAIL}
-                </a>
-              </li>
-              {supportEmail && supportEmail !== CARE_EMAIL ? (
-                <li>
-                  <a href={`mailto:${supportEmail}`} className="text-muted hover:text-accent">
-                    {supportEmail}
-                  </a>
-                </li>
-              ) : null}
-              {supportPhone ? (
-                <li>
-                  <a href={`tel:${supportPhone.replace(/\s+/g, "")}`} className="text-muted hover:text-accent">
-                    {supportPhone}
-                  </a>
-                </li>
-              ) : null}
             </ul>
           </div>
 
-          <div>
+          <div className="lg:col-span-2">
             <h4 className="tech-label mb-4">Legal</h4>
             <ul className="space-y-2.5 text-sm">
               {policies.map((p) => (
@@ -228,6 +185,40 @@ export function SiteFooter({
                 </li>
               ))}
             </ul>
+          </div>
+
+          {/* Contact Us + Newsletter */}
+          <div className="col-span-2 lg:col-span-3">
+            <h4 className="tech-label mb-4">Contact Us</h4>
+            <div className="space-y-3 text-sm">
+              <div className="flex gap-2.5">
+                <MapPin size={16} className="mt-0.5 shrink-0 text-accent" />
+                <p className="text-muted">
+                  <span className="block font-semibold text-foreground">{COMPANY}</span>
+                  {ADDRESS}
+                </p>
+              </div>
+              <a
+                href={`tel:${CARE_PHONE.replace(/\s+/g, "")}`}
+                className="flex items-center gap-2.5 text-muted transition-colors hover:text-accent"
+              >
+                <Phone size={16} className="shrink-0 text-accent" />
+                {CARE_PHONE}
+              </a>
+              <a
+                href={`mailto:${CARE_EMAIL}`}
+                className="flex items-center gap-2.5 text-muted transition-colors hover:text-accent"
+              >
+                <Mail size={16} className="shrink-0 text-accent" />
+                {CARE_EMAIL}
+              </a>
+            </div>
+
+            <h4 className="tech-label mb-1 mt-6">Newsletter</h4>
+            <p className="mb-3 text-xs text-muted">
+              Subscribe to receive updates and offers
+            </p>
+            <FooterNewsletter />
           </div>
         </div>
 

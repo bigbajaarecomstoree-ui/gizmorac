@@ -32,8 +32,6 @@ export default async function StorefrontLayout({
         <main className="flex-1">{children}</main>
         <SiteFooter
           whatsappHref={waHref}
-          supportEmail={settings.supportEmail}
-          supportPhone={settings.supportPhone}
           categories={categories}
           instagramUrl={settings.instagramUrl}
           facebookUrl={settings.facebookUrl}
