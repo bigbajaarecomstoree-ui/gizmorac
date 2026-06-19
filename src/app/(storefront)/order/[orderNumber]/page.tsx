@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CheckCircle2, Circle, XCircle, Package } from "lucide-react";
+import { CheckCircle2, XCircle, Package } from "lucide-react";
 import { getOrderByNumber } from "@/lib/data/orders";
 import { getCurrentCustomer } from "@/lib/customer-auth";
 import { formatINR, deliveryWindow } from "@/lib/format";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { OrderStatusBadge } from "@/components/admin/order-status-badge";
+import { OrderTracker } from "@/components/order/order-tracker";
 import { buttonVariants } from "@/components/ui/button";
 import type { OrderStatus } from "@/lib/types";
 
@@ -79,29 +80,7 @@ export default async function OrderPage({ params }: { params: Params }) {
               This order is {order.status.toLowerCase()}.
             </div>
           ) : (
-            <ol className="grid grid-cols-5 gap-1">
-              {FLOW.map((step, i) => {
-                const reached = i <= currentStep;
-                return (
-                  <li key={step} className="flex flex-col items-center gap-2 text-center">
-                    <span
-                      className={
-                        reached
-                          ? "grid h-8 w-8 place-items-center rounded-full bg-accent text-on-accent"
-                          : "grid h-8 w-8 place-items-center rounded-full border border-border bg-background text-faint"
-                      }
-                    >
-                      {reached ? <CheckCircle2 size={16} /> : <Circle size={14} />}
-                    </span>
-                    <span
-                      className={`text-[0.6875rem] font-medium ${reached ? "text-foreground" : "text-faint"}`}
-                    >
-                      {step}
-                    </span>
-                  </li>
-                );
-              })}
-            </ol>
+            <OrderTracker currentStep={currentStep} />
           )}
           {!isTerminal ? (
             <p className="mt-5 text-sm text-muted">
