@@ -208,3 +208,50 @@ export interface CustomerWithStats extends Customer {
   orderCount: number;
   totalSpent: number;
 }
+
+// --- support tickets (damage / defect claims) ---
+
+export type TicketStatus =
+  | "Open"
+  | "Awaiting proof"
+  | "Under review"
+  | "Resolved"
+  | "Rejected";
+
+export type TicketCategory =
+  | "Damaged"
+  | "Defective"
+  | "Wrong item"
+  | "Not working"
+  | "Other";
+
+/** "" = undecided. Otherwise the outcome the admin granted. */
+export type TicketResolution = "" | "Refund" | "Replacement" | "Warranty";
+
+export interface TicketMessage {
+  id: string;
+  author: "customer" | "admin";
+  body: string;
+  /** Uploaded image/video proof URLs. */
+  attachments: string[];
+  /** true when an admin message asks the customer for photo/video proof. */
+  proofRequest: boolean;
+  createdAt: string;
+}
+
+export interface Ticket {
+  id: string;
+  ticketNumber: string;
+  orderId: string;
+  orderNumber: string;
+  customerId: string | null;
+  email: string;
+  name: string;
+  category: TicketCategory;
+  description: string;
+  status: TicketStatus;
+  resolution: TicketResolution;
+  createdAt: string;
+  updatedAt: string;
+  messages: TicketMessage[];
+}

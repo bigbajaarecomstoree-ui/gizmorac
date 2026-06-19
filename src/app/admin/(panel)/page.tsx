@@ -7,6 +7,7 @@ import {
   Users,
   TriangleAlert,
   CalendarDays,
+  LifeBuoy,
   Plus,
   ArrowRight,
 } from "lucide-react";
@@ -15,6 +16,7 @@ import {
   getOrders,
   getSalesByWeekday,
 } from "@/lib/data/orders";
+import { getOpenTicketCount } from "@/lib/data/tickets";
 import { formatINR } from "@/lib/format";
 import { buttonVariants } from "@/components/ui/button";
 import { OrderStatusBadge } from "@/components/admin/order-status-badge";
@@ -22,10 +24,11 @@ import { OrderStatusBadge } from "@/components/admin/order-status-badge";
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboard() {
-  const [stats, orders, byWeekday] = await Promise.all([
+  const [stats, orders, byWeekday, openTickets] = await Promise.all([
     getAdminStats(),
     getOrders(),
     getSalesByWeekday(),
+    getOpenTicketCount(),
   ]);
   const recent = orders.slice(0, 5);
 
@@ -72,6 +75,25 @@ export default async function AdminDashboard() {
           </Link>
         ))}
       </div>
+
+      {/* support tickets needing action */}
+      {openTickets > 0 ? (
+        <Link
+          href="/admin/support"
+          className="group mt-3 flex items-center gap-4 rounded-xl border border-danger/40 bg-danger/5 p-4 transition-colors hover:border-danger/60 hover:bg-danger/10"
+        >
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-danger text-white">
+            <LifeBuoy size={20} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="tech-label">Support tickets to resolve</div>
+            <div className="text-xl font-bold tracking-tight">
+              {openTickets} open {openTickets === 1 ? "ticket" : "tickets"}
+            </div>
+          </div>
+          <ArrowRight size={18} className="shrink-0 text-danger transition-transform group-hover:translate-x-0.5" />
+        </Link>
+      ) : null}
 
       {/* highest selling day — clickable, opens the day-of-week ranking */}
       <Link

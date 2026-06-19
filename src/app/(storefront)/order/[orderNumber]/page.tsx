@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CheckCircle2, XCircle, Package, Star } from "lucide-react";
+import { CheckCircle2, XCircle, Package, Star, ShieldAlert } from "lucide-react";
 import { getOrderByNumber } from "@/lib/data/orders";
 import { getReviewsForOrder } from "@/lib/data/customer-reviews";
 import { getRewardForOrder } from "@/lib/data/rewards";
+import { getTicketForOrder } from "@/lib/data/tickets";
 import { getCurrentCustomer } from "@/lib/customer-auth";
 import { formatINR, deliveryWindow } from "@/lib/format";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
@@ -12,6 +13,7 @@ import { OrderStatusBadge } from "@/components/admin/order-status-badge";
 import { OrderTracker } from "@/components/order/order-tracker";
 import { OrderItemReview } from "@/components/account/order-review";
 import { RewardCouponCard } from "@/components/account/reward-coupon";
+import { TicketPanel } from "@/components/account/ticket-panel";
 import { buttonVariants } from "@/components/ui/button";
 import type { OrderStatus } from "@/lib/types";
 
@@ -52,10 +54,14 @@ export default async function OrderPage({ params }: { params: Params }) {
   const isDelivered = order.status === "Delivered";
 
   // Post-delivery actions are owner-only.
-  const [reviews, reward] =
+  const [reviews, reward, ticket] =
     isOwner && isDelivered
-      ? await Promise.all([getReviewsForOrder(order.id), getRewardForOrder(order.id)])
-      : [new Map(), null];
+      ? await Promise.all([
+          getReviewsForOrder(order.id),
+          getRewardForOrder(order.id),
+          getTicketForOrder(order.id),
+        ])
+      : [new Map(), null, null];
 
   return (
     <div className="shell py-8">
@@ -177,6 +183,23 @@ export default async function OrderPage({ params }: { params: Params }) {
                   />
                 );
               })}
+            </div>
+          </div>
+        ) : null}
+
+        {/* support — raise / track a damage or defect ticket (delivered, owner) */}
+        {isOwner && isDelivered ? (
+          <div className="mt-5 rounded-xl border border-border bg-surface p-5">
+            <div className="flex items-center gap-2">
+              <ShieldAlert size={18} className="text-accent" />
+              <h2 className="font-semibold">Need help with this order?</h2>
+            </div>
+            <p className="mt-1 text-sm text-muted">
+              Item damaged or defective? Raise a ticket and our team will help with a
+              refund, replacement or warranty claim.
+            </p>
+            <div className="mt-4">
+              <TicketPanel orderNumber={order.orderNumber} ticket={ticket} />
             </div>
           </div>
         ) : null}

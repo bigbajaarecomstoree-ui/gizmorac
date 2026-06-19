@@ -9,6 +9,15 @@ import {
   validateAndPriceCoupon,
   type CouponResult,
 } from "@/lib/data/coupons";
+import {
+  createTicket,
+  getTicketForOrder,
+  getTicketById,
+  addTicketMessage,
+  setTicketStatus,
+  TICKET_CATEGORIES,
+} from "@/lib/data/tickets";
+import type { TicketCategory } from "@/lib/types";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -327,6 +336,124 @@ export async function submitReview(input: {
   revalidatePath(`/product/${line.slug}`);
   revalidatePath(`/order/${order.orderNumber}`);
   revalidatePath("/account");
+  return { ok: true };
+}
+
+// --- support tickets (damage / defect claims) ---
+
+export type TicketResult =
+  | { ok: true; ticketNumber: string }
+  | { ok: false; error: string };
+
+const MAX_ATTACHMENTS = 6;
+
+function cleanAttachments(urls: unknown): string[] {
+  if (!Array.isArray(urls)) return [];
+  return urls
+    .filter((u): u is string => typeof u === "string" && u.length > 0)
+    .slice(0, MAX_ATTACHMENTS);
+}
+
+/** Customer raises a damage/defect ticket against a delivered order. */
+export async function raiseTicket(input: {
+  orderNumber: string;
+  category: string;
+  description: string;
+  attachments?: string[];
+}): Promise<TicketResult> {
+  const customer = await getCurrentCustomer();
+  if (!customer) return { ok: false, error: "Please log in to report a problem." };
+
+  const order = await prisma.order.findUnique({
+    where: { orderNumber: input.orderNumber },
+  });
+  if (!order) return { ok: false, error: "Order not found." };
+  const owns =
+    order.customerId === customer.id ||
+    order.email.toLowerCase() === customer.email.toLowerCase();
+  if (!owns) {
+    return { ok: false, error: "You can only report problems on your own orders." };
+  }
+  if (order.status !== "Delivered") {
+    return {
+      ok: false,
+      error: "You can report a problem once your order is delivered.",
+    };
+  }
+
+  const existing = await getTicketForOrder(order.id);
+  if (existing) {
+    return {
+      ok: false,
+      error: "You've already raised a ticket for this order. Open it to add details.",
+    };
+  }
+
+  const category: TicketCategory = (TICKET_CATEGORIES as string[]).includes(
+    input.category,
+  )
+    ? (input.category as TicketCategory)
+    : "Other";
+  const description = (input.description ?? "").trim().slice(0, 4000);
+  if (!description) return { ok: false, error: "Please describe the problem." };
+
+  const ticket = await createTicket({
+    orderId: order.id,
+    orderNumber: order.orderNumber,
+    customerId: customer.id,
+    email: order.email,
+    name: `${order.firstName} ${order.lastName}`.trim() || customer.fullName,
+    category,
+    description,
+    attachments: cleanAttachments(input.attachments),
+  });
+
+  revalidatePath(`/order/${order.orderNumber}`);
+  revalidatePath("/account");
+  revalidatePath("/admin");
+  revalidatePath("/admin/support");
+  return { ok: true, ticketNumber: ticket.ticketNumber };
+}
+
+/** Customer adds a reply / uploads requested proof to their own ticket. */
+export async function replyToTicket(input: {
+  ticketId: string;
+  body?: string;
+  attachments?: string[];
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const customer = await getCurrentCustomer();
+  if (!customer) return { ok: false, error: "Please log in." };
+
+  const ticket = await getTicketById(input.ticketId);
+  if (!ticket) return { ok: false, error: "Ticket not found." };
+  const owns =
+    ticket.customerId === customer.id ||
+    ticket.email.toLowerCase() === customer.email.toLowerCase();
+  if (!owns) return { ok: false, error: "This isn't your ticket." };
+  if (ticket.status === "Resolved" || ticket.status === "Rejected") {
+    return { ok: false, error: "This ticket is closed." };
+  }
+
+  const body = (input.body ?? "").trim().slice(0, 4000);
+  const attachments = cleanAttachments(input.attachments);
+  if (!body && attachments.length === 0) {
+    return { ok: false, error: "Add a message or attach a photo/video." };
+  }
+
+  await addTicketMessage({
+    ticketId: ticket.id,
+    author: "customer",
+    body,
+    attachments,
+  });
+  // Replying to a proof request moves the ticket back for the store to review.
+  if (ticket.status === "Awaiting proof") {
+    await setTicketStatus(ticket.id, "Under review");
+  }
+
+  revalidatePath(`/order/${ticket.orderNumber}`);
+  revalidatePath(`/admin/support/${ticket.id}`);
+  revalidatePath("/admin/support");
   return { ok: true };
 }
 

@@ -12,6 +12,14 @@ import {
 import { parseCsv } from "@/lib/products-csv";
 import { mapAmazonReportToProducts } from "@/lib/amazon-import";
 import { issueRepeatCoupon } from "@/lib/data/rewards";
+import {
+  addTicketMessage,
+  setTicketStatus,
+  setTicketResolution,
+  getTicketById,
+  TICKET_RESOLUTIONS,
+} from "@/lib/data/tickets";
+import type { TicketResolution, TicketStatus } from "@/lib/types";
 
 // --- helpers (not exported, so they aren't treated as server actions) ---
 
@@ -671,5 +679,79 @@ export async function setBooleanSetting(
   revalidatePath("/", "layout");
   revalidatePath("/admin/settings");
   return { ok: true };
+}
+
+// --- support tickets (damage / defect claims) ---
+
+async function revalidateTicket(ticketId: string): Promise<void> {
+  revalidatePath(`/admin/support/${ticketId}`);
+  revalidatePath("/admin/support");
+  revalidatePath("/admin");
+  const t = await getTicketById(ticketId);
+  if (t) revalidatePath(`/order/${t.orderNumber}`);
+}
+
+/**
+ * Admin replies on a ticket. With "proofRequest" checked, it's logged as a
+ * request for photo/video proof and the ticket moves to "Awaiting proof".
+ */
+export async function adminReplyTicket(formData: FormData): Promise<void> {
+  await assertAdmin();
+  const ticketId = str(formData, "ticketId");
+  if (!ticketId) return;
+  const proofRequest = bool(formData, "proofRequest");
+  const attachments = jsonArray(formData, "attachments").slice(0, 6);
+  let body = str(formData, "body").slice(0, 4000);
+  if (!body && proofRequest) {
+    body =
+      "Please share clear photo or video proof of the issue so we can process your claim.";
+  }
+  if (!body && attachments.length === 0) return;
+
+  await addTicketMessage({
+    ticketId,
+    author: "admin",
+    body,
+    attachments,
+    proofRequest,
+  });
+  if (proofRequest) await setTicketStatus(ticketId, "Awaiting proof");
+  await revalidateTicket(ticketId);
+}
+
+/**
+ * Admin decides a ticket: grant a Refund / Replacement / Warranty claim, or
+ * reject it. Records a closing message and sets the final status.
+ */
+export async function resolveTicket(formData: FormData): Promise<void> {
+  await assertAdmin();
+  const ticketId = str(formData, "ticketId");
+  if (!ticketId) return;
+  const decision = str(formData, "decision");
+  const note = str(formData, "note").slice(0, 2000);
+
+  let resolution: TicketResolution = "";
+  let status: TicketStatus;
+  let body: string;
+
+  if (decision === "Reject") {
+    status = "Rejected";
+    body = note || "After reviewing the details, we're unable to approve this claim.";
+  } else if ((TICKET_RESOLUTIONS as string[]).includes(decision)) {
+    resolution = decision as TicketResolution;
+    status = "Resolved";
+    const labels: Record<string, string> = {
+      Refund: "A refund has been approved and will be processed shortly.",
+      Replacement: "A replacement has been approved and will be arranged shortly.",
+      Warranty: "Your warranty claim has been approved.",
+    };
+    body = `${labels[decision]}${note ? ` ${note}` : ""}`;
+  } else {
+    return;
+  }
+
+  await addTicketMessage({ ticketId, author: "admin", body, attachments: [] });
+  await setTicketResolution(ticketId, resolution, status);
+  await revalidateTicket(ticketId);
 }
 
