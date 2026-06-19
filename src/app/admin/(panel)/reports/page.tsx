@@ -16,6 +16,7 @@ import {
 } from "@/lib/data/orders";
 import { getClosingStock } from "@/lib/data/queries";
 import { formatINR, formatCount } from "@/lib/format";
+import { INDIA_STATES } from "@/lib/india-states";
 import { OrderStatusBadge } from "@/components/admin/order-status-badge";
 
 export const dynamic = "force-dynamic";
@@ -174,6 +175,75 @@ export default async function ReportsPage({
           </div>
         ))}
       </div>
+
+      {/* GST filing export */}
+      <form
+        method="get"
+        action="/api/admin/reports/gst"
+        className="mt-6 rounded-xl border border-border bg-surface p-5"
+      >
+        <div className="flex items-center gap-2">
+          <Download size={18} className="text-accent" />
+          <h2 className="font-semibold">GST filing export</h2>
+        </div>
+        <p className="mt-1 text-sm text-muted">
+          Invoice-level sales with taxable value & CGST/SGST/IGST for the
+          selected date range — ready to hand to your accountant for GSTR-1.
+        </p>
+
+        {custom ? (
+          <>
+            <input type="hidden" name="from" value={sp.from} />
+            <input type="hidden" name="to" value={sp.to} />
+          </>
+        ) : (
+          <input type="hidden" name="range" value={range} />
+        )}
+
+        <div className="mt-4 flex flex-wrap items-end gap-3">
+          <label className="flex flex-col gap-1">
+            <span className="tech-label">Your registered state</span>
+            <select
+              name="sellerState"
+              required
+              defaultValue=""
+              className="h-9 rounded-lg border border-border bg-background px-2 text-sm focus:border-accent focus:outline-none"
+            >
+              <option value="" disabled>
+                Select state…
+              </option>
+              {INDIA_STATES.map((s) => (
+                <option key={s.code} value={s.name}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="tech-label">GST rate %</span>
+            <input
+              type="number"
+              name="rate"
+              defaultValue={18}
+              min={0}
+              step={0.5}
+              className="h-9 w-24 rounded-lg border border-border bg-background px-2 text-sm focus:border-accent focus:outline-none"
+            />
+          </label>
+          <button
+            type="submit"
+            className="inline-flex h-9 items-center gap-2 rounded-lg bg-accent px-4 text-sm font-semibold text-on-accent transition-colors hover:bg-accent-hover"
+          >
+            <Download size={16} /> Download GST CSV
+          </button>
+        </div>
+        <p className="mt-3 text-xs text-faint">
+          Prices are treated as GST-inclusive; taxable value is back-calculated
+          at the rate above. Intra-state orders (same as your state) split into
+          CGST+SGST, others as IGST. For mixed GST rates / HSN-level filing, set
+          per-product rates (future enhancement).
+        </p>
+      </form>
 
       {/* status breakdown */}
       <div className="mt-8 rounded-xl border border-border bg-surface">
