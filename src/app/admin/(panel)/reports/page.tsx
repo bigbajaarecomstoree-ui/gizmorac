@@ -7,6 +7,7 @@ import {
   Boxes,
   Clock,
   Truck,
+  Inbox,
 } from "lucide-react";
 import {
   getReportSummary,
@@ -250,38 +251,47 @@ export default async function ReportsPage({
         <h2 className="border-b border-border px-5 py-4 font-semibold">
           Orders by status
         </h2>
-        <div className="divide-y divide-border">
-          {report.byStatus.map((s) => (
-            <div key={s.status} className="flex items-center gap-4 px-5 py-3">
-              <div className="w-28 shrink-0">
-                <OrderStatusBadge status={s.status} />
-              </div>
-              <div className="flex-1">
-                <div className="h-2 overflow-hidden rounded-full bg-surface-2">
-                  <div
-                    className={
-                      HIGHLIGHT.includes(s.status)
-                        ? "h-full rounded-full bg-danger/60"
-                        : "h-full rounded-full bg-accent"
-                    }
-                    style={{ width: `${(s.count / maxCount) * 100}%` }}
-                  />
-                </div>
-              </div>
-              <div className="w-12 text-right text-sm font-semibold tabular-nums">
-                {s.count}
-              </div>
-              <div className="hidden w-28 text-right text-sm text-muted sm:block">
-                {formatINR(s.value)}
-              </div>
-            </div>
-          ))}
-        </div>
         {report.orders === 0 ? (
-          <p className="px-5 py-6 text-center text-sm text-muted">
-            No orders in this period.
-          </p>
-        ) : null}
+          <div className="flex flex-col items-center px-5 py-12 text-center">
+            <Inbox size={28} className="text-faint" />
+            <p className="mt-3 text-sm font-medium text-muted">
+              No orders in this period
+            </p>
+            <p className="mt-1 text-xs text-faint">
+              Once orders come in, the breakdown by status appears here.
+            </p>
+          </div>
+        ) : (
+          <div className="divide-y divide-border">
+            {report.byStatus
+              .filter((s) => s.count > 0)
+              .map((s) => (
+                <div key={s.status} className="flex items-center gap-4 px-5 py-3">
+                  <div className="w-28 shrink-0">
+                    <OrderStatusBadge status={s.status} />
+                  </div>
+                  <div className="flex-1">
+                    <div className="h-2 overflow-hidden rounded-full bg-surface-2">
+                      <div
+                        className={
+                          HIGHLIGHT.includes(s.status)
+                            ? "h-full rounded-full bg-danger/60"
+                            : "h-full rounded-full bg-accent"
+                        }
+                        style={{ width: `${(s.count / maxCount) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                  <div className="w-12 text-right text-sm font-semibold tabular-nums">
+                    {s.count}
+                  </div>
+                  <div className="hidden w-28 text-right text-sm text-muted sm:block">
+                    {formatINR(s.value)}
+                  </div>
+                </div>
+              ))}
+          </div>
+        )}
       </div>
 
       <p className="mt-4 text-xs text-faint">
