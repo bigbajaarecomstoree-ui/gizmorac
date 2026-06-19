@@ -1,13 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CheckCircle2, XCircle, Package } from "lucide-react";
+import { CheckCircle2, XCircle, Package, Star } from "lucide-react";
 import { getOrderByNumber } from "@/lib/data/orders";
+import { getReviewsForOrder } from "@/lib/data/customer-reviews";
+import { getRewardForOrder } from "@/lib/data/rewards";
 import { getCurrentCustomer } from "@/lib/customer-auth";
 import { formatINR, deliveryWindow } from "@/lib/format";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { OrderStatusBadge } from "@/components/admin/order-status-badge";
 import { OrderTracker } from "@/components/order/order-tracker";
+import { OrderItemReview } from "@/components/account/order-review";
+import { RewardCouponCard } from "@/components/account/reward-coupon";
 import { buttonVariants } from "@/components/ui/button";
 import type { OrderStatus } from "@/lib/types";
 
@@ -45,6 +49,13 @@ export default async function OrderPage({ params }: { params: Params }) {
 
   const isTerminal = TERMINAL.includes(order.status);
   const currentStep = FLOW.indexOf(order.status as OrderStatus);
+  const isDelivered = order.status === "Delivered";
+
+  // Post-delivery actions are owner-only.
+  const [reviews, reward] =
+    isOwner && isDelivered
+      ? await Promise.all([getReviewsForOrder(order.id), getRewardForOrder(order.id)])
+      : [new Map(), null];
 
   return (
     <div className="shell py-8">
@@ -133,6 +144,42 @@ export default async function OrderPage({ params }: { params: Params }) {
             </div>
           </dl>
         </div>
+
+        {/* repeat-order reward — delivered orders, owner only */}
+        {isOwner && isDelivered && reward ? (
+          <div className="mt-5">
+            <RewardCouponCard {...reward} />
+          </div>
+        ) : null}
+
+        {/* rate & review — delivered orders, owner only */}
+        {isOwner && isDelivered ? (
+          <div className="mt-5 rounded-xl border border-border bg-surface p-5">
+            <div className="flex items-center gap-2">
+              <Star size={18} className="text-accent" />
+              <h2 className="font-semibold">Rate &amp; review your items</h2>
+            </div>
+            <p className="mt-1 text-sm text-muted">
+              Tell us how it went — your rating and feedback appear on the product page.
+            </p>
+            <div className="mt-4 space-y-3">
+              {order.items.map((it) => {
+                const r = reviews.get(it.id);
+                return (
+                  <OrderItemReview
+                    key={it.id}
+                    orderNumber={order.orderNumber}
+                    productId={it.id}
+                    productName={it.name}
+                    existing={
+                      r ? { rating: r.rating, title: r.title, body: r.body } : null
+                    }
+                  />
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
 
         {/* shipping — full details only for the owner */}
         <div className="mt-5 rounded-xl border border-border bg-surface p-5 text-sm">

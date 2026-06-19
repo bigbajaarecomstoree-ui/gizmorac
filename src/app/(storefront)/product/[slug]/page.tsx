@@ -8,6 +8,7 @@ import {
   getReviews,
   getCategoryBySlug,
 } from "@/lib/data/queries";
+import { getDbReviewsForSlug } from "@/lib/data/customer-reviews";
 import { discountPercent, savings, formatINR, shortTitle } from "@/lib/format";
 import { SITE } from "@/lib/constants";
 import { jsonLd } from "@/lib/json-ld";
@@ -62,13 +63,18 @@ export default async function ProductPage({ params }: { params: Params }) {
   const product = await getProductBySlug(slug);
   if (!product) notFound();
 
-  const [related, allReviews, category] = await Promise.all([
+  const [related, allReviews, dbReviews, category] = await Promise.all([
     getRelatedProducts(product, 4),
     getReviews(50),
+    getDbReviewsForSlug(product.slug),
     getCategoryBySlug(product.category),
   ]);
 
-  const productReviews = allReviews.filter((r) => r.productSlug === product.slug);
+  // Real customer reviews (from delivered orders) first, then any seeded ones.
+  const productReviews = [
+    ...dbReviews,
+    ...allReviews.filter((r) => r.productSlug === product.slug),
+  ];
   const off = discountPercent(product);
   const inStock = product.stock > 0;
   const lowStock = inStock && product.stock <= 10;

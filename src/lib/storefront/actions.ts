@@ -243,6 +243,93 @@ export async function placeOrder(
   return { ok: true, orderNumber };
 }
 
+export type ReviewResult = { ok: true } | { ok: false; error: string };
+
+/**
+ * Save a customer's rating + feedback for one product on a delivered order.
+ * One review per product per order (re-submitting edits the existing one).
+ */
+export async function submitReview(input: {
+  orderNumber: string;
+  productId: string;
+  rating: number;
+  title?: string;
+  body?: string;
+}): Promise<ReviewResult> {
+  const customer = await getCurrentCustomer();
+  if (!customer) return { ok: false, error: "Please log in to leave a review." };
+
+  const order = await prisma.order.findUnique({
+    where: { orderNumber: input.orderNumber },
+  });
+  if (!order) return { ok: false, error: "Order not found." };
+
+  const owns =
+    order.customerId === customer.id ||
+    order.email.toLowerCase() === customer.email.toLowerCase();
+  if (!owns) return { ok: false, error: "You can only review your own orders." };
+  if (order.status !== "Delivered") {
+    return { ok: false, error: "You can review items once your order is delivered." };
+  }
+
+  let items: { id: string; slug: string; name: string }[] = [];
+  try {
+    items = JSON.parse(order.items);
+  } catch {
+    items = [];
+  }
+  const line = items.find((i) => i.id === input.productId);
+  if (!line) return { ok: false, error: "That product isn't in this order." };
+
+  const rating = Math.max(1, Math.min(5, Math.round(input.rating)));
+  if (!rating) return { ok: false, error: "Please select a star rating." };
+  const title = (input.title ?? "").trim().slice(0, 120);
+  const body = (input.body ?? "").trim().slice(0, 2000);
+  const location = [order.city, order.state].filter(Boolean).join(", ");
+  const author =
+    customer.fullName.trim() ||
+    `${order.firstName} ${order.lastName}`.trim() ||
+    "Verified buyer";
+
+  await prisma.review.upsert({
+    where: { orderId_productId: { orderId: order.id, productId: input.productId } },
+    update: { rating, title, body, author, location },
+    create: {
+      productId: input.productId,
+      productSlug: line.slug,
+      orderId: order.id,
+      customerId: customer.id,
+      author,
+      location,
+      rating,
+      title,
+      body,
+      verified: true,
+    },
+  });
+
+  // Keep the product's displayed rating + count honest once real reviews exist.
+  const agg = await prisma.review.aggregate({
+    where: { productId: input.productId },
+    _avg: { rating: true },
+    _count: true,
+  });
+  if (agg._count > 0 && agg._avg.rating != null) {
+    await prisma.product.update({
+      where: { id: input.productId },
+      data: {
+        rating: Math.round(agg._avg.rating * 10) / 10,
+        reviewCount: agg._count,
+      },
+    });
+  }
+
+  revalidatePath(`/product/${line.slug}`);
+  revalidatePath(`/order/${order.orderNumber}`);
+  revalidatePath("/account");
+  return { ok: true };
+}
+
 export type SubscribeResult = { ok: boolean; error?: string };
 
 export async function subscribeNewsletter(

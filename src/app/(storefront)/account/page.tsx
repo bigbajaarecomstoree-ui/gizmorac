@@ -2,13 +2,16 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { LogOut, Package, ChevronRight } from "lucide-react";
+import { Gift } from "lucide-react";
 import { getCurrentCustomer } from "@/lib/customer-auth";
 import { getOrdersForCustomer } from "@/lib/data/orders";
+import { getRewardsForCustomer } from "@/lib/data/rewards";
 import { logoutAction } from "@/lib/customer/actions";
 import { formatINR } from "@/lib/format";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { OrderStatusBadge } from "@/components/admin/order-status-badge";
 import { ProfileForm } from "@/components/account/profile-form";
+import { RewardCouponCard } from "@/components/account/reward-coupon";
 import { buttonVariants } from "@/components/ui/button";
 
 export const metadata: Metadata = {
@@ -30,7 +33,11 @@ export default async function AccountPage() {
   const customer = await getCurrentCustomer();
   if (!customer) redirect("/login");
 
-  const orders = await getOrdersForCustomer(customer.id, customer.email);
+  const [orders, rewards] = await Promise.all([
+    getOrdersForCustomer(customer.id, customer.email),
+    getRewardsForCustomer(customer.id),
+  ]);
+  const activeRewards = rewards.filter((r) => !r.used && !r.expired);
 
   return (
     <div className="shell py-8">
@@ -95,14 +102,33 @@ export default async function AccountPage() {
           )}
         </section>
 
-        {/* profile */}
-        <section className="lg:sticky lg:top-28 lg:self-start">
-          <h2 className="text-lg font-semibold">Profile &amp; address</h2>
-          <p className="mt-1 text-sm text-muted">
-            Saved details speed up checkout.
-          </p>
-          <div className="mt-4 rounded-xl border border-border bg-surface p-5">
-            <ProfileForm customer={customer} />
+        {/* rewards + profile */}
+        <section className="space-y-8 lg:sticky lg:top-28 lg:self-start">
+          {activeRewards.length > 0 ? (
+            <div>
+              <div className="flex items-center gap-2">
+                <Gift size={18} className="text-accent" />
+                <h2 className="text-lg font-semibold">Your rewards</h2>
+              </div>
+              <p className="mt-1 text-sm text-muted">
+                Repeat-order coupons — apply the code at checkout.
+              </p>
+              <div className="mt-4 space-y-3">
+                {activeRewards.map((r) => (
+                  <RewardCouponCard key={r.code} {...r} />
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          <div>
+            <h2 className="text-lg font-semibold">Profile &amp; address</h2>
+            <p className="mt-1 text-sm text-muted">
+              Saved details speed up checkout.
+            </p>
+            <div className="mt-4 rounded-xl border border-border bg-surface p-5">
+              <ProfileForm customer={customer} />
+            </div>
           </div>
         </section>
       </div>

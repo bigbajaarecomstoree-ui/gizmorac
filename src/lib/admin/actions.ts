@@ -11,6 +11,7 @@ import {
 } from "@/lib/auth";
 import { parseCsv } from "@/lib/products-csv";
 import { mapAmazonReportToProducts } from "@/lib/amazon-import";
+import { issueRepeatCoupon } from "@/lib/data/rewards";
 
 // --- helpers (not exported, so they aren't treated as server actions) ---
 
@@ -491,11 +492,19 @@ export async function updateOrderStatus(formData: FormData): Promise<void> {
   await assertAdmin();
   const id = str(formData, "id");
   const status = str(formData, "status");
-  await prisma.order.update({ where: { id }, data: { status } });
+  const updated = await prisma.order.update({ where: { id }, data: { status } });
+
+  // Reward the customer with a repeat-order coupon the moment it's delivered.
+  if (status === "Delivered") {
+    await issueRepeatCoupon({ id: updated.id, customerId: updated.customerId });
+  }
+
   revalidatePath("/admin/orders");
   revalidatePath(`/admin/orders/${id}`);
   revalidatePath("/admin");
   revalidatePath("/admin/reports");
+  revalidatePath(`/order/${updated.orderNumber}`);
+  revalidatePath("/account");
 }
 
 // --- coupons / promotions ---

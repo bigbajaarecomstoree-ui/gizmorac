@@ -124,8 +124,81 @@ model Coupon {
   usageLimit  Int       @default(0) // 0 = unlimited
   usedCount   Int       @default(0)
   description String    @default("")
+  // "manual" = created in admin; "reward" = auto-issued repeat-order coupon.
+  kind        String    @default("manual")
+  // For reward coupons: the order that earned it and the customer it belongs to.
+  orderId     String?
+  customerId  String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+
+  @@index([customerId])
+  @@index([orderId])
+}
+
+// A customer's rating + written feedback for one product on one delivered order.
+model Review {
+  id          String   @id @default(cuid())
+  productId   String
+  productSlug String
+  orderId     String
+  customerId  String?
+  author      String
+  location    String   @default("")
+  rating      Int // 1..5
+  title       String   @default("")
+  body        String   @default("")
+  verified    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // One review per product per order.
+  @@unique([orderId, productId])
+  @@index([productSlug])
+  @@index([customerId])
+}
+
+// A damage/defect support request raised by a customer against an order.
+model Ticket {
+  id           String   @id @default(cuid())
+  ticketNumber String   @unique
+  orderId      String
+  orderNumber  String
+  customerId   String?
+  email        String
+  name         String   @default("")
+  // Damaged | Defective | Wrong item | Not working | Other
+  category     String   @default("Damaged")
+  description  String
+  // Open | Awaiting proof | Under review | Resolved | Rejected
+  status       String   @default("Open")
+  // "" | Refund | Replacement | Warranty
+  resolution   String          @default("")
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  messages     TicketMessage[]
+
+  @@index([status])
+  @@index([orderId])
+  @@index([customerId])
+  @@index([createdAt])
+}
+
+// One message in a ticket thread (customer or admin), with optional media proof.
+model TicketMessage {
+  id           String   @id @default(cuid())
+  ticketId     String
+  ticket       Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  // "customer" | "admin"
+  author       String
+  body         String   @default("")
+  // JSON-encoded array of uploaded image/video URLs.
+  attachments  String   @default("[]")
+  // true when an admin message is a request for photo/video proof.
+  proofRequest Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  @@index([ticketId])
 }
 
 model Subscriber {
