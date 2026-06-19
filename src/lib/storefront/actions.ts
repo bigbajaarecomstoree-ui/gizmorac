@@ -213,11 +213,27 @@ export async function placeOrder(
           customerId: customer?.id ?? null,
         },
       });
+
+      // Save the shipping details back to the logged-in customer's profile so
+      // "Profile & address" reflects what they entered at checkout.
+      if (customer) {
+        await tx.customer.update({
+          where: { id: customer.id },
+          data: {
+            phone: payload.phone.trim(),
+            address: payload.address.trim(),
+            city: payload.city.trim(),
+            state: payload.state.trim(),
+            pincode: payload.pincode.trim(),
+          },
+        });
+      }
     });
   } catch {
     return { ok: false, error: "Could not place order, please try again." };
   }
 
+  revalidatePath("/account");
   revalidatePath("/admin");
   revalidatePath("/admin/orders");
   revalidatePath("/admin/reports");
