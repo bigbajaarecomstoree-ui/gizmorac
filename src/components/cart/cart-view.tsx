@@ -7,7 +7,7 @@ import type { Product } from "@/lib/types";
 import { useStore } from "@/components/store/store-provider";
 import { buttonVariants } from "@/components/ui/button";
 import { ProductArt } from "@/components/product/product-art";
-import { formatINR, discountPercent } from "@/lib/format";
+import { formatINR, discountPercent, shortTitle } from "@/lib/format";
 import { applyCoupon } from "@/lib/storefront/actions";
 import { COUPON_STORAGE_KEY, MAX_QTY } from "@/lib/checkout-shared";
 
@@ -112,14 +112,15 @@ export function CartView({
                 <div className="flex items-start justify-between gap-3">
                   <Link
                     href={`/product/${product.slug}`}
-                    className="text-sm font-semibold leading-snug hover:text-accent-bright"
+                    title={product.name}
+                    className="line-clamp-2 text-sm font-semibold leading-snug hover:text-accent-bright"
                   >
-                    {product.name}
+                    {shortTitle(product.name)}
                   </Link>
                   <button
                     type="button"
                     onClick={() => removeFromCart(product.id)}
-                    aria-label={`Remove ${product.name}`}
+                    aria-label={`Remove ${shortTitle(product.name)}`}
                     className="shrink-0 text-faint transition-colors hover:text-danger cursor-pointer"
                   >
                     <Trash2 size={16} />

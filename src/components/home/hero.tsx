@@ -4,7 +4,7 @@ import type { Product } from "@/lib/types";
 import { buttonVariants } from "@/components/ui/button";
 import { ProductArt } from "@/components/product/product-art";
 import { Price } from "@/components/product/price";
-import { formatINR, discountPercent } from "@/lib/format";
+import { formatINR, discountPercent, shortTitle } from "@/lib/format";
 import { TRUST_STATS } from "@/lib/constants";
 import { getDealOfTheDay, getBestSellers } from "@/lib/data/queries";
 import { cn } from "@/lib/utils";
@@ -63,7 +63,7 @@ function MiniCard({
       </div>
       <div className="p-2.5">
         <p className="truncate text-[0.7rem] font-medium text-muted">
-          {product.name.replace("GIZMORAC ", "")}
+          {shortTitle(product.name)}
         </p>
         <p className="readout mt-0.5 text-xs font-semibold">
           {formatINR(product.price)}
@@ -199,8 +199,8 @@ export async function Hero() {
           {/* hero product nameplate */}
           {hero ? (
             <div className="absolute bottom-1 left-1/2 w-44 -translate-x-1/2 rounded-xl border border-border-bright bg-background/90 p-3 text-center shadow-xl backdrop-blur sm:bottom-8 sm:w-56">
-              <p className="text-xs font-medium text-muted">
-                {hero.name.replace("GIZMORAC ", "")}
+              <p className="line-clamp-2 text-xs font-medium text-muted">
+                {shortTitle(hero.name)}
               </p>
               <Price product={hero} size="sm" className="mt-1 justify-center" />
             </div>

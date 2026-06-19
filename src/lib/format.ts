@@ -11,6 +11,28 @@ export function formatINR(amount: number): string {
   return inr.format(amount);
 }
 
+/**
+ * A clean, compact title for cards / hero / cart, derived from a long
+ * marketplace (Amazon) listing name. The full keyword-rich `name` is kept for
+ * the product page + SEO; this is display-only. Cuts at the first natural
+ * separator (comma, pipe, bracket, dash, colon) and caps the length.
+ */
+export function shortTitle(name: string, maxChars = 46): string {
+  let s = (name ?? "").replace(/\s+/g, " ").trim();
+  // Drop a leading brand / filler word so the noun leads.
+  s = s.replace(/^(gizmorac|compatible)\s+/i, "");
+  // Cut at the first separator that appears after a meaningful first chunk.
+  const sep = s.match(/[,|•(\[\]{}:]|\s[–—-]\s/);
+  if (sep && sep.index !== undefined && sep.index >= 8) s = s.slice(0, sep.index);
+  s = s.trim();
+  const words = s.split(" ");
+  if (words.length > 8) s = words.slice(0, 8).join(" ");
+  if (s.length > maxChars) {
+    s = s.slice(0, maxChars - 1).replace(/\s+\S*$/, "").trim() + "…";
+  }
+  return s || name;
+}
+
 /** Whole-number discount percentage off MRP. */
 export function discountPercent(product: Pick<Product, "price" | "mrp">): number {
   if (!product.mrp || product.mrp <= product.price) return 0;

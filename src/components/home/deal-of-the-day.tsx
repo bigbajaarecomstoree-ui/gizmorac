@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Zap, Flame } from "lucide-react";
 import { getDealOfTheDay } from "@/lib/data/queries";
 import { getUnitsSoldForProduct } from "@/lib/data/orders";
-import { discountPercent, savings } from "@/lib/format";
+import { discountPercent, savings, shortTitle } from "@/lib/format";
 import { ProductArt } from "@/components/product/product-art";
 import { Price } from "@/components/product/price";
 import { RatingStars } from "@/components/product/rating-stars";
@@ -24,6 +24,7 @@ export async function DealOfTheDay() {
   if (!deal) return null;
 
   const off = discountPercent(deal);
+  const title = shortTitle(deal.name);
 
   // Real stock-based urgency: % claimed = units sold of the (sold + remaining) total.
   const sold = await getUnitsSoldForProduct(deal.id);
@@ -62,7 +63,7 @@ export async function DealOfTheDay() {
             </div>
 
             <h2 className="text-2xl font-bold leading-tight tracking-tight sm:text-3xl">
-              {deal.name}
+              {title}
             </h2>
 
             <div className="mt-3">
@@ -119,14 +120,14 @@ export async function DealOfTheDay() {
             <div className="mt-7 flex flex-wrap gap-3">
               <BuyNowButton
                 id={deal.id}
-                name={deal.name}
+                name={title}
                 label="Buy Now"
                 variant="primary"
                 size="lg"
               />
               <AddToCartButton
                 id={deal.id}
-                name={deal.name}
+                name={title}
                 label="Add to Cart"
                 variant="surface"
                 size="lg"

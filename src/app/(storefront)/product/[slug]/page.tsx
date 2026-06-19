@@ -8,7 +8,7 @@ import {
   getReviews,
   getCategoryBySlug,
 } from "@/lib/data/queries";
-import { discountPercent, savings, formatINR } from "@/lib/format";
+import { discountPercent, savings, formatINR, shortTitle } from "@/lib/format";
 import { SITE } from "@/lib/constants";
 import { jsonLd } from "@/lib/json-ld";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
@@ -111,7 +111,7 @@ export default async function ProductPage({ params }: { params: Params }) {
           ...(category
             ? [{ label: category.name, href: `/shop?category=${category.slug}` }]
             : []),
-          { label: product.name.replace("GIZMORAC ", "") },
+          { label: shortTitle(product.name) },
         ]}
       />
 
@@ -188,7 +188,7 @@ export default async function ProductPage({ params }: { params: Params }) {
           </ul>
 
           <div className="mt-7">
-            <ProductPurchase id={product.id} name={product.name} stock={product.stock} />
+            <ProductPurchase id={product.id} name={shortTitle(product.name)} stock={product.stock} />
           </div>
 
           <div className="mt-6">

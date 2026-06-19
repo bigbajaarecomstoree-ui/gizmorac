@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { Product } from "@/lib/types";
-import { discountPercent } from "@/lib/format";
+import { discountPercent, shortTitle } from "@/lib/format";
 import { ProductArt } from "./product-art";
 import { RatingStars } from "./rating-stars";
 import { Price } from "./price";
@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 
 export function ProductCard({ product }: { product: Product }) {
   const off = discountPercent(product);
+  const title = shortTitle(product.name);
   const outOfStock = product.stock <= 0;
   const lowStock = product.stock > 0 && product.stock <= 10;
 
@@ -47,7 +48,7 @@ export function ProductCard({ product }: { product: Product }) {
         </div>
 
         <div className="absolute right-3 top-3 z-20">
-          <WishlistButton id={product.id} name={product.name} />
+          <WishlistButton id={product.id} name={title} />
         </div>
 
         {outOfStock ? (
@@ -62,12 +63,13 @@ export function ProductCard({ product }: { product: Product }) {
       </div>
 
       <div className="flex flex-1 flex-col gap-2.5 p-4">
-        <h3 className="text-[0.95rem] font-semibold leading-snug text-foreground">
+        <h3 className="line-clamp-2 text-[0.95rem] font-semibold leading-snug text-foreground">
           <Link
             href={`/product/${product.slug}`}
+            title={product.name}
             className="transition-colors after:absolute after:inset-0 after:content-[''] hover:text-accent-bright"
           >
-            {product.name}
+            {title}
           </Link>
         </h3>
 
@@ -78,7 +80,7 @@ export function ProductCard({ product }: { product: Product }) {
         <div className="relative z-20 mt-auto flex gap-2 pt-2">
           <BuyNowButton
             id={product.id}
-            name={product.name}
+            name={title}
             label="Buy Now"
             variant="primary"
             size="sm"
@@ -86,7 +88,7 @@ export function ProductCard({ product }: { product: Product }) {
           />
           <AddToCartButton
             id={product.id}
-            name={product.name}
+            name={title}
             variant="surface"
             size="sm"
             iconOnly

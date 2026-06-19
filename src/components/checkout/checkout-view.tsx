@@ -8,7 +8,7 @@ import type { Customer, Product } from "@/lib/types";
 import { useStore } from "@/components/store/store-provider";
 import { ProductArt } from "@/components/product/product-art";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { formatINR } from "@/lib/format";
+import { formatINR, shortTitle } from "@/lib/format";
 import { applyCoupon, placeOrder } from "@/lib/storefront/actions";
 import { COUPON_STORAGE_KEY } from "@/lib/checkout-shared";
 
@@ -220,7 +220,7 @@ export function CheckoutView({
                   <ProductArt art={product.art} glyphClassName="!h-[42%]" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{product.name}</p>
+                  <p className="truncate text-sm font-medium">{shortTitle(product.name)}</p>
                   <p className="text-xs text-muted">Qty {qty}</p>
                 </div>
                 <span className="text-sm font-semibold">{formatINR(product.price * qty)}</span>
