@@ -71,6 +71,29 @@ export async function getAllProducts(): Promise<Product[]> {
   return rows.map(toProduct);
 }
 
+/**
+ * Closing stock = current inventory on hand across active products: total units
+ * and their value at selling price. (Point-in-time — there's no stock history,
+ * so this reflects stock as of now.)
+ */
+export async function getClosingStock(): Promise<{
+  units: number;
+  value: number;
+  skus: number;
+}> {
+  const rows = await prisma.product.findMany({
+    where: { active: true },
+    select: { stock: true, price: true },
+  });
+  let units = 0;
+  let value = 0;
+  for (const r of rows) {
+    units += r.stock;
+    value += r.stock * r.price;
+  }
+  return { units, value, skus: rows.length };
+}
+
 /** Storefront PDP lookup — drafts (inactive) are treated as not found. */
 export async function getProductBySlug(slug: string): Promise<Product | null> {
   const row = await prisma.product.findUnique({ where: { slug } });

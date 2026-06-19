@@ -14,12 +14,19 @@ export async function GET(request: NextRequest) {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const rangeParam = request.nextUrl.searchParams.get("range");
+  const params = request.nextUrl.searchParams;
+  const from = params.get("from") ?? undefined;
+  const to = params.get("to") ?? undefined;
+  const rangeParam = params.get("range");
   const range: DateRange = DATE_RANGES.some((r) => r.value === rangeParam)
     ? (rangeParam as DateRange)
     : "all";
 
-  const orders = await getFilteredOrders({ range });
+  const custom = Boolean(from && to);
+  const orders = await getFilteredOrders(
+    custom ? { from, to } : { range },
+  );
+  const tag = custom ? `${from}_to_${to}` : range;
 
   const header = [
     "Order Number",
@@ -71,7 +78,7 @@ export async function GET(request: NextRequest) {
     status: 200,
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="gizmorac-orders-${range}-${date}.csv"`,
+      "Content-Disposition": `attachment; filename="gizmorac-orders-${tag}-${date}.csv"`,
       "Cache-Control": "no-store",
     },
   });

@@ -5,21 +5,35 @@ import {
   Receipt,
   IndianRupee,
   Boxes,
-  TrendingUp,
+  Clock,
+  Truck,
 } from "lucide-react";
 import {
   getReportSummary,
+  getReportSummaryBetween,
   DATE_RANGES,
   type DateRange,
 } from "@/lib/data/orders";
-import { formatINR } from "@/lib/format";
+import { getClosingStock } from "@/lib/data/queries";
+import { formatINR, formatCount } from "@/lib/format";
 import { OrderStatusBadge } from "@/components/admin/order-status-badge";
 
 export const dynamic = "force-dynamic";
 
-type SearchParams = Promise<{ range?: string }>;
+type SearchParams = Promise<{ range?: string; from?: string; to?: string }>;
 
 const HIGHLIGHT = ["Cancelled", "Returned", "Refunded"];
+const YMD = /^\d{4}-\d{2}-\d{2}$/;
+
+function fmtYMD(ymd?: string): string {
+  if (!ymd || !YMD.test(ymd)) return "";
+  const [y, m, d] = ymd.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
 
 export default async function ReportsPage({
   searchParams,
@@ -27,18 +41,40 @@ export default async function ReportsPage({
   searchParams: SearchParams;
 }) {
   const sp = await searchParams;
+  const custom = Boolean(sp.from && sp.to && YMD.test(sp.from) && YMD.test(sp.to));
   const range: DateRange = DATE_RANGES.some((r) => r.value === sp.range)
     ? (sp.range as DateRange)
     : "30d";
 
-  const report = await getReportSummary(range);
-  const rangeLabel = DATE_RANGES.find((r) => r.value === range)?.label ?? "";
+  const [report, stock] = await Promise.all([
+    custom ? getReportSummaryBetween(sp.from, sp.to) : getReportSummary(range),
+    getClosingStock(),
+  ]);
+
+  const rangeLabel = custom
+    ? `${fmtYMD(sp.from)} – ${fmtYMD(sp.to)}`
+    : (DATE_RANGES.find((r) => r.value === range)?.label ?? "");
+
+  const exportHref = custom
+    ? `/api/admin/orders/export?from=${sp.from}&to=${sp.to}`
+    : `/api/admin/orders/export?range=${range}`;
+
+  // IST "today" so the date pickers can't pick a future day.
+  const todayYMD = new Date().toLocaleDateString("en-CA", {
+    timeZone: "Asia/Kolkata",
+  });
 
   const kpis = [
-    { label: "Orders", value: String(report.orders), icon: Receipt },
-    { label: "Net revenue", value: formatINR(report.revenue), icon: IndianRupee, accent: true },
-    { label: "Units sold", value: String(report.units), icon: Boxes },
-    { label: "Avg order value", value: formatINR(report.avgOrderValue), icon: TrendingUp },
+    { label: "Total Sales", value: formatINR(report.revenue), icon: IndianRupee, accent: true },
+    { label: "Total Orders", value: String(report.orders), icon: Receipt },
+    { label: "Pending Orders", value: String(report.pending), icon: Clock },
+    { label: "Open Orders", value: String(report.open), icon: Truck },
+    {
+      label: "Closing Stock",
+      value: `${formatCount(stock.units)} units`,
+      sub: `${formatINR(stock.value)} · ${stock.skus} SKUs`,
+      icon: Boxes,
+    },
   ];
 
   const maxCount = Math.max(1, ...report.byStatus.map((s) => s.count));
@@ -56,7 +92,7 @@ export default async function ReportsPage({
           </p>
         </div>
         <a
-          href={`/api/admin/orders/export?range=${range}`}
+          href={exportHref}
           className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-on-accent transition-colors hover:bg-accent-hover"
           download
         >
@@ -64,14 +100,14 @@ export default async function ReportsPage({
         </a>
       </div>
 
-      {/* range chips */}
+      {/* preset range chips */}
       <div className="mt-5 flex flex-wrap gap-2">
         {DATE_RANGES.map((r) => (
           <Link
             key={r.value}
             href={`/admin/reports?range=${r.value}`}
             className={
-              r.value === range
+              !custom && r.value === range
                 ? "rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-on-accent"
                 : "rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-muted transition-colors hover:border-accent hover:text-accent"
             }
@@ -81,13 +117,60 @@ export default async function ReportsPage({
         ))}
       </div>
 
+      {/* custom date range */}
+      <form
+        method="get"
+        action="/admin/reports"
+        className={`mt-3 flex flex-wrap items-end gap-3 rounded-xl border bg-surface p-3 ${
+          custom ? "border-accent" : "border-border"
+        }`}
+      >
+        <label className="flex flex-col gap-1">
+          <span className="tech-label">From</span>
+          <input
+            type="date"
+            name="from"
+            defaultValue={custom ? sp.from : ""}
+            max={todayYMD}
+            required
+            className="h-9 rounded-lg border border-border bg-background px-2 text-sm focus:border-accent focus:outline-none"
+          />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="tech-label">To</span>
+          <input
+            type="date"
+            name="to"
+            defaultValue={custom ? sp.to : ""}
+            max={todayYMD}
+            required
+            className="h-9 rounded-lg border border-border bg-background px-2 text-sm focus:border-accent focus:outline-none"
+          />
+        </label>
+        <button
+          type="submit"
+          className="h-9 rounded-lg bg-accent px-4 text-sm font-semibold text-on-accent transition-colors hover:bg-accent-hover"
+        >
+          Apply range
+        </button>
+        {custom ? (
+          <Link
+            href="/admin/reports?range=30d"
+            className="inline-flex h-9 items-center rounded-lg px-3 text-sm text-muted transition-colors hover:text-foreground"
+          >
+            Reset
+          </Link>
+        ) : null}
+      </form>
+
       {/* KPIs */}
-      <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {kpis.map((k) => (
           <div key={k.label} className="rounded-xl border border-border bg-surface p-4">
             <k.icon size={18} className={k.accent ? "text-accent" : "text-faint"} />
             <div className="mt-3 text-xl font-bold tracking-tight">{k.value}</div>
             <div className="tech-label mt-1">{k.label}</div>
+            {k.sub ? <div className="mt-1 text-xs text-faint">{k.sub}</div> : null}
           </div>
         ))}
       </div>
@@ -132,7 +215,9 @@ export default async function ReportsPage({
       </div>
 
       <p className="mt-4 text-xs text-faint">
-        Net revenue and units exclude cancelled, returned and refunded orders.
+        Total Sales excludes cancelled, returned and refunded orders. Open orders
+        = Pending + Confirmed + Packed + Shipped. Closing stock is current
+        on-hand inventory (no historical snapshots).
       </p>
     </div>
   );

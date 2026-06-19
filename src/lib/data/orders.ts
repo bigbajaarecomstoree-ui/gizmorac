@@ -91,9 +91,47 @@ export function dateBounds(range: DateRange): { gte?: Date; lt?: Date } {
   }
 }
 
+/** Parse a "YYYY-MM-DD" date (from a date input) as IST midnight, as a UTC instant. */
+function istDayStartFromYMD(ymd: string): Date | undefined {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd.trim());
+  if (!m) return undefined;
+  const utcMidnight = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return new Date(utcMidnight - IST_OFFSET_MS);
+}
+
+/**
+ * Inclusive custom date range from two "YYYY-MM-DD" strings (IST days). The end
+ * date is inclusive — bounds run up to the start of the day *after* `to`.
+ */
+export function customBounds(
+  from?: string,
+  to?: string,
+): { gte?: Date; lt?: Date } {
+  const day = 24 * 60 * 60 * 1000;
+  let start = from ? istDayStartFromYMD(from) : undefined;
+  let endDay = to ? istDayStartFromYMD(to) : undefined;
+  // Be forgiving if the user picks the dates in reverse.
+  if (start && endDay && start > endDay) [start, endDay] = [endDay, start];
+  const bounds: { gte?: Date; lt?: Date } = {};
+  if (start) bounds.gte = start;
+  if (endDay) bounds.lt = new Date(endDay.getTime() + day);
+  return bounds;
+}
+
+/** Orders still in progress (not delivered or closed/reversed). */
+export const OPEN_STATUSES: OrderStatus[] = [
+  "Pending",
+  "Confirmed",
+  "Packed",
+  "Shipped",
+];
+
 export interface OrderFilter {
   status?: OrderStatus | "all";
   range?: DateRange;
+  /** Custom inclusive "YYYY-MM-DD" window — takes precedence over `range`. */
+  from?: string;
+  to?: string;
   q?: string;
 }
 
@@ -106,7 +144,10 @@ export async function getFilteredOrders(filter: OrderFilter): Promise<Order[]> {
   const where: Prisma.OrderWhereInput = {};
   if (filter.status && filter.status !== "all") where.status = filter.status;
 
-  const bounds = dateBounds(filter.range ?? "all");
+  const bounds =
+    filter.from || filter.to
+      ? customBounds(filter.from, filter.to)
+      : dateBounds(filter.range ?? "all");
   if (bounds.gte || bounds.lt) {
     where.createdAt = {};
     if (bounds.gte) where.createdAt.gte = bounds.gte;
@@ -212,18 +253,20 @@ export async function getAdminStats(): Promise<AdminStats> {
 }
 
 export interface ReportSummary {
-  range: DateRange;
   orders: number;
   revenue: number;
   units: number;
   avgOrderValue: number;
+  pending: number;
+  open: number;
   byStatus: { status: OrderStatus; count: number; value: number }[];
 }
 
-export async function getReportSummary(
-  range: DateRange,
-): Promise<ReportSummary> {
-  const bounds = dateBounds(range);
+/** Build a report summary for an arbitrary date window (UTC-instant bounds). */
+async function buildSummary(bounds: {
+  gte?: Date;
+  lt?: Date;
+}): Promise<ReportSummary> {
   const where: Prisma.OrderWhereInput = {};
   if (bounds.gte || bounds.lt) {
     where.createdAt = {};
@@ -253,13 +296,29 @@ export async function getReportSummary(
   });
 
   return {
-    range,
     orders: orders.length,
     revenue,
     units,
     avgOrderValue: counted.length ? Math.round(revenue / counted.length) : 0,
+    pending: orders.filter((o) => o.status === "Pending").length,
+    open: orders.filter((o) => OPEN_STATUSES.includes(o.status)).length,
     byStatus,
   };
+}
+
+/** Report summary for a named preset range (Today / 7d / This month / …). */
+export async function getReportSummary(
+  range: DateRange,
+): Promise<ReportSummary> {
+  return buildSummary(dateBounds(range));
+}
+
+/** Report summary for a custom, inclusive "YYYY-MM-DD" date range. */
+export async function getReportSummaryBetween(
+  from?: string,
+  to?: string,
+): Promise<ReportSummary> {
+  return buildSummary(customBounds(from, to));
 }
 
 const WEEKDAYS = [
