@@ -186,7 +186,9 @@ export async function placeOrder(
       await tx.order.create({
         data: {
           orderNumber,
-          status: "Pending",
+          // Auto-confirmed on placement so customers immediately see their order
+          // is accepted (a "Pending" state reads as unconfirmed and risks drop-off).
+          status: "Confirmed",
           firstName: payload.firstName.trim(),
           lastName: payload.lastName.trim(),
           email: payload.email.trim().toLowerCase(),
