@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentCustomer } from "@/lib/customer-auth";
 import { getSettings } from "@/lib/data/settings";
 import { MAX_QTY } from "@/lib/checkout-shared";
-import { initiatePayment, phonepeConfigured } from "@/lib/phonepe";
+import { initiatePayment, getPhonePeConfig } from "@/lib/phonepe";
 import {
   validateAndPriceCoupon,
   type CouponResult,
@@ -109,7 +109,7 @@ export async function placeOrder(
 
   const settings = await getSettings();
   const wantsOnline = payload.paymentMethod === "PhonePe";
-  if (wantsOnline && !phonepeConfigured()) {
+  if (wantsOnline && !(await getPhonePeConfig()).configured) {
     return { ok: false, error: "Online payment is unavailable right now." };
   }
   if (!wantsOnline && !settings.codEnabled) {

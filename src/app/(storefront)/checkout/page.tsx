@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { getAllProducts } from "@/lib/data/queries";
 import { getCurrentCustomer } from "@/lib/customer-auth";
 import { getSettings } from "@/lib/data/settings";
-import { phonepeConfigured } from "@/lib/phonepe";
+import { getPhonePeConfig } from "@/lib/phonepe";
 import { CheckoutView } from "@/components/checkout/checkout-view";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 
@@ -15,10 +15,11 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function CheckoutPage() {
-  const [products, customer, settings] = await Promise.all([
+  const [products, customer, settings, phonepe] = await Promise.all([
     getAllProducts(),
     getCurrentCustomer(),
     getSettings(),
+    getPhonePeConfig(),
   ]);
 
   return (
@@ -38,7 +39,7 @@ export default async function CheckoutPage() {
           freeShippingThreshold={settings.freeShippingThreshold}
           shippingFee={settings.shippingFee}
           codEnabled={settings.codEnabled}
-          phonepeEnabled={phonepeConfigured()}
+          phonepeEnabled={phonepe.configured}
         />
       </div>
     </div>

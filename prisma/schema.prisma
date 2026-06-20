@@ -263,6 +263,12 @@ model StoreSetting {
   // Cart-waiting popup (feature 3) — extra instant discount that stacks on coupons.
   cartOfferEnabled      Boolean  @default(false)
   cartOfferAmount       Int      @default(100)
+  // PhonePe payment gateway — admin-managed online payments (server-only secret).
+  phonepeClientId       String   @default("")
+  phonepeClientVersion  String   @default("1")
+  phonepeClientSecret   String   @default("")
+  phonepeEnv            String   @default("sandbox") // "sandbox" | "production"
+  phonepeConnected      Boolean  @default(false)
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 }

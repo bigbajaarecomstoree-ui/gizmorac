@@ -12,6 +12,7 @@ import {
 import { parseCsv } from "@/lib/products-csv";
 import { mapAmazonReportToProducts } from "@/lib/amazon-import";
 import { issueRepeatCoupon } from "@/lib/data/rewards";
+import { verifyPhonePeKeys, type PhonePeEnv } from "@/lib/phonepe";
 import {
   addTicketMessage,
   setTicketStatus,
@@ -687,6 +688,80 @@ export async function setBooleanSetting(
   revalidatePath("/", "layout");
   revalidatePath("/admin/settings");
   return { ok: true };
+}
+
+// --- payment gateway (PhonePe) ---
+
+export interface PaymentGatewayState {
+  ok: boolean;
+  error?: string;
+  connected?: boolean;
+  env?: PhonePeEnv;
+}
+
+/**
+ * Save the PhonePe keys, verify them live against PhonePe, and (only on
+ * success) switch the gateway on. The entered keys replace whatever was stored;
+ * a blank secret keeps the existing one so the admin needn't retype it.
+ */
+export async function connectPaymentGateway(input: {
+  clientId: string;
+  clientVersion: string;
+  clientSecret: string;
+  env: PhonePeEnv;
+}): Promise<PaymentGatewayState> {
+  await assertAdmin();
+
+  const clientId = (input.clientId ?? "").trim();
+  const clientVersion = (input.clientVersion ?? "1").trim() || "1";
+  const env: PhonePeEnv = input.env === "production" ? "production" : "sandbox";
+
+  // Reuse the stored secret when the field is left blank (it's masked in the UI).
+  const existing = await prisma.storeSetting.findUnique({ where: { id: "store" } });
+  const clientSecret = (input.clientSecret ?? "").trim() || existing?.phonepeClientSecret || "";
+
+  if (!clientId || !clientSecret) {
+    return { ok: false, error: "Enter the Client ID and Client Secret." };
+  }
+
+  // Verify before we save+switch on, so "Connected" really means reachable.
+  const verified = await verifyPhonePeKeys({ clientId, clientVersion, clientSecret, env });
+  if (!verified.ok) {
+    return { ok: false, error: verified.error ?? "Could not verify these keys." };
+  }
+
+  const data = {
+    phonepeClientId: clientId,
+    phonepeClientVersion: clientVersion,
+    phonepeClientSecret: clientSecret,
+    phonepeEnv: env,
+    phonepeConnected: true,
+  };
+  await prisma.storeSetting.upsert({
+    where: { id: "store" },
+    update: data,
+    create: { id: "store", ...data },
+  });
+
+  revalidatePath("/", "layout");
+  revalidatePath("/checkout");
+  revalidatePath("/admin/settings");
+  return { ok: true, connected: true, env };
+}
+
+/** Turn the gateway off — checkout falls back to Cash on Delivery only. */
+export async function disconnectPaymentGateway(): Promise<PaymentGatewayState> {
+  await assertAdmin();
+  await prisma.storeSetting.upsert({
+    where: { id: "store" },
+    update: { phonepeConnected: false },
+    create: { id: "store", phonepeConnected: false },
+  });
+
+  revalidatePath("/", "layout");
+  revalidatePath("/checkout");
+  revalidatePath("/admin/settings");
+  return { ok: true, connected: false };
 }
 
 // --- support tickets (damage / defect claims) ---
