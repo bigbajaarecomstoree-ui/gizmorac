@@ -11,6 +11,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { formatINR, shortTitle } from "@/lib/format";
 import { applyCoupon, placeOrder } from "@/lib/storefront/actions";
 import { COUPON_STORAGE_KEY } from "@/lib/checkout-shared";
+import { INDIAN_STATES, lookupPincode } from "@/lib/india";
 
 const inputCls =
   "h-11 w-full rounded-lg border border-border bg-background px-3 text-sm placeholder:text-faint focus:border-accent focus:outline-none";
@@ -49,6 +50,9 @@ export function CheckoutView({
     gstin: "",
   });
 
+  const [pinStatus, setPinStatus] = React.useState<
+    "idle" | "checking" | "found" | "notfound"
+  >("idle");
   const [coupon, setCoupon] = React.useState<{ code: string; off: number } | null>(null);
   const [code, setCode] = React.useState("");
   const [couponError, setCouponError] = React.useState<string | null>(null);
@@ -151,8 +155,27 @@ export function CheckoutView({
   }
 
   function set(key: keyof typeof form) {
-    return (e: React.ChangeEvent<HTMLInputElement>) =>
+    return (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setForm((f) => ({ ...f, [key]: e.target.value }));
+  }
+
+  // Pincode → auto-detect state (and city if empty) via India Post.
+  function onPincode(e: React.ChangeEvent<HTMLInputElement>) {
+    const v = e.target.value.replace(/\D/g, "").slice(0, 6);
+    setForm((f) => ({ ...f, pincode: v }));
+    if (v.length !== 6) {
+      setPinStatus("idle");
+      return;
+    }
+    setPinStatus("checking");
+    lookupPincode(v).then((r) => {
+      if (r?.state) {
+        setForm((f) => ({ ...f, state: r.state!, city: f.city || r.city || "" }));
+        setPinStatus("found");
+      } else {
+        setPinStatus("notfound");
+      }
+    });
   }
 
   function submit(e: React.FormEvent) {
@@ -221,12 +244,48 @@ export function CheckoutView({
               <input required value={form.city} onChange={set("city")} className={inputCls} autoComplete="address-level2" />
             </label>
             <label className="block">
-              <span className="mb-1.5 block text-sm font-medium">State</span>
-              <input required value={form.state} onChange={set("state")} className={inputCls} autoComplete="address-level1" />
-            </label>
-            <label className="block">
               <span className="mb-1.5 block text-sm font-medium">Pincode</span>
-              <input required value={form.pincode} onChange={set("pincode")} className={inputCls} inputMode="numeric" autoComplete="postal-code" placeholder="6-digit" />
+              <input
+                required
+                value={form.pincode}
+                onChange={onPincode}
+                className={inputCls}
+                inputMode="numeric"
+                maxLength={6}
+                autoComplete="postal-code"
+                placeholder="6-digit"
+              />
+              {pinStatus === "checking" ? (
+                <span className="mt-1 block text-xs text-faint">Detecting state…</span>
+              ) : pinStatus === "found" ? (
+                <span className="mt-1 block text-xs text-success">State filled automatically</span>
+              ) : pinStatus === "notfound" ? (
+                <span className="mt-1 block text-xs text-faint">
+                  Couldn&apos;t detect — please pick your state.
+                </span>
+              ) : null}
+            </label>
+            <label className="block sm:col-span-2">
+              <span className="mb-1.5 block text-sm font-medium">State</span>
+              <select
+                required
+                value={form.state}
+                onChange={set("state")}
+                className={`${inputCls} cursor-pointer`}
+                autoComplete="address-level1"
+              >
+                <option value="" disabled>
+                  Select state
+                </option>
+                {form.state && !INDIAN_STATES.includes(form.state as (typeof INDIAN_STATES)[number]) ? (
+                  <option value={form.state}>{form.state}</option>
+                ) : null}
+                {INDIAN_STATES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
             </label>
             <label className="block sm:col-span-2">
               <span className="mb-1.5 block text-sm font-medium">
