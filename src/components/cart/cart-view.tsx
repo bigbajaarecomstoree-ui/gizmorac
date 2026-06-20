@@ -249,7 +249,7 @@ export function CartView({
           </Link>
           <Link
             href="/shop"
-            className="mt-3 block w-full text-center text-sm font-medium text-muted transition-colors hover:text-accent"
+            className={`${buttonVariants({ variant: "outline" })} mt-3 w-full`}
           >
             Continue shopping
           </Link>
