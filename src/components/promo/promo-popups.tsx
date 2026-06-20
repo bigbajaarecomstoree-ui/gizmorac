@@ -9,7 +9,10 @@ import { formatINR } from "@/lib/format";
 
 const BROWSE_DELAY = 25_000; // ~25s of browsing
 const CART_DELAY = 60_000; // ~1 min with items sitting in the cart
-const SUPPRESS = ["/checkout", "/cart", "/order", "/login", "/signup"];
+// Browse nudge stays off the cart/checkout flow; the cart-waiting reminder is
+// allowed on the cart page (it's the whole point), just not during checkout.
+const BROWSE_SUPPRESS = ["/checkout", "/cart", "/order", "/login", "/signup"];
+const CART_SUPPRESS = ["/checkout", "/order", "/login", "/signup"];
 
 type Kind = "browse" | "cart";
 
@@ -42,20 +45,21 @@ export function PromoPopups({
   const { cartCount, offer, claimOffer, mounted } = useStore();
   const [active, setActive] = React.useState<Kind | null>(null);
 
-  const suppressed = SUPPRESS.some(
-    (p) => pathname === p || pathname.startsWith(`${p}/`),
-  );
+  const isUnder = (list: string[]) =>
+    list.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+  const browseSuppressed = isUnder(BROWSE_SUPPRESS);
+  const cartSuppressed = isUnder(CART_SUPPRESS);
 
   // Latest values for the timeout callbacks (avoids re-arming timers).
-  const ref = React.useRef({ suppressed, offer, cartCount, active });
-  ref.current = { suppressed, offer, cartCount, active };
+  const ref = React.useRef({ browseSuppressed, cartSuppressed, offer, cartCount, active });
+  ref.current = { browseSuppressed, cartSuppressed, offer, cartCount, active };
 
   // Browsing nudge — once per session, after a short delay.
   React.useEffect(() => {
     if (!mounted || !browse.enabled || browse.amount <= 0 || seen("browse")) return;
     const t = setTimeout(() => {
       const c = ref.current;
-      if (c.suppressed || c.offer || c.active) return;
+      if (c.browseSuppressed || c.offer || c.active) return;
       markSeen("browse");
       setActive("browse");
     }, BROWSE_DELAY);
@@ -68,14 +72,15 @@ export function PromoPopups({
     if (cartCount <= 0 || seen("cart")) return;
     const t = setTimeout(() => {
       const c = ref.current;
-      if (c.cartCount <= 0 || c.suppressed || c.offer || c.active) return;
+      if (c.cartCount <= 0 || c.cartSuppressed || c.offer || c.active) return;
       markSeen("cart");
       setActive("cart");
     }, CART_DELAY);
     return () => clearTimeout(t);
   }, [mounted, cart.enabled, cart.amount, cartCount]);
 
-  if (!active || suppressed) return null;
+  const activeSuppressed = active === "browse" ? browseSuppressed : cartSuppressed;
+  if (!active || activeSuppressed) return null;
 
   const amount = active === "browse" ? browse.amount : cart.amount;
   const isCart = active === "cart";
