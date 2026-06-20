@@ -62,7 +62,15 @@ export default function RootLayout({
       lang="en"
       className={`${plexSans.variable} ${dmSans.variable} ${plexMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full">{children}</body>
+      <body className="min-h-full">
+        {/* Track input modality so focus rings show for keyboard users only. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var d=document.documentElement;function m(){d.setAttribute('data-input','mouse')}function k(e){if(e.key==='Tab'||e.key==='Enter'||e.key===' '||e.key.indexOf('Arrow')===0){d.setAttribute('data-input','keyboard')}}window.addEventListener('mousedown',m,true);window.addEventListener('pointerdown',m,true);window.addEventListener('touchstart',m,true);window.addEventListener('keydown',k,true);})();`,
+          }}
+        />
+        {children}
+      </body>
     </html>
   );
 }

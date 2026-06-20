@@ -153,3 +153,10 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Show focus rings for keyboard navigation only — suppress the outline after a
+   mouse/touch interaction. Unlayered so it overrides Tailwind's focus-visible
+   utilities. Keyboard users keep full focus indicators. */
+html[data-input="mouse"] :focus-visible {
+  outline: none !important;
+}
