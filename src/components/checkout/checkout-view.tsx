@@ -204,7 +204,7 @@ export function CheckoutView({
                 </span>
               </label>
               <p className="mt-3 text-xs text-faint">
-                Online payment (UPI / cards) is coming soon.
+                Online payment via PhonePe is coming soon.
               </p>
             </>
           ) : (

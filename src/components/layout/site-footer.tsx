@@ -226,15 +226,15 @@ export function SiteFooter({
           <p className="text-xs text-faint">
             © {new Date().getFullYear()} GIZMORAC. All rights reserved.
           </p>
-          <div className="flex items-center gap-2 font-mono text-[0.625rem] uppercase tracking-wider text-faint">
-            {["UPI", "Visa", "Mastercard", "GoKwik", "PhonePe", "COD"].map((m) => (
-              <span
-                key={m}
-                className="rounded border border-border bg-surface px-2 py-1"
-              >
-                {m}
-              </span>
-            ))}
+          <div className="flex items-center gap-2.5">
+            <span className="tech-label">Payment partner</span>
+            <Image
+              src="/phonepe-payment-gateway.png"
+              alt="PhonePe Payment Gateway"
+              width={431}
+              height={117}
+              className="h-7 w-auto"
+            />
           </div>
         </div>
       </div>

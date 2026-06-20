@@ -8,7 +8,7 @@ export const siteFaqs: FaqItem[] = [
   },
   {
     q: "What payment methods do you accept?",
-    a: "We accept UPI, all major credit and debit cards, net banking, and Cash on Delivery on eligible pincodes.",
+    a: "We currently accept Cash on Delivery on eligible pincodes. Secure online payments via our partner PhonePe Payment Gateway are coming soon.",
   },
   {
     q: "Are your products covered by warranty?",
