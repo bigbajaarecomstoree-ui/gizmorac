@@ -14,22 +14,33 @@ export function OrderTracker({ currentStep }: { currentStep: number }) {
   const step = Math.min(Math.max(currentStep, 0), last);
   const target = step / last; // 0..1 position along the track
 
-  // Animate from the start on mount so the truck "drives in" to the current stage.
-  const [progress, setProgress] = React.useState(0);
+  // Only orders still in progress animate the truck "driving in". A completed
+  // (Delivered) order renders parked at the final stop with no motion — so a
+  // page refresh never replays the drive.
+  const isComplete = step >= last;
+  const [progress, setProgress] = React.useState(isComplete ? target : 0);
   React.useEffect(() => {
+    if (isComplete) return; // no animation once delivered
     const t = setTimeout(() => setProgress(target), 200);
     return () => clearTimeout(t);
-  }, [target]);
+  }, [target, isComplete]);
 
   // Stops sit at column centres: 10%, 30%, 50%, 70%, 90% → track spans 10%–90%.
   const leftAt = (p: number) => `calc(10% + 80% * ${p})`;
+  // Transition classes only while in progress; static when complete.
+  const move = isComplete
+    ? ""
+    : "transition-[width] duration-[1400ms] ease-out motion-reduce:transition-none";
+  const slide = isComplete
+    ? ""
+    : "transition-[left] duration-[1400ms] ease-out motion-reduce:transition-none";
 
   return (
     <div className="relative pt-1">
       {/* base track + filled progress, centred on the circle row (≈16px down) */}
       <div className="absolute left-[10%] right-[10%] top-4 h-1 -translate-y-1/2 rounded-full bg-border" />
       <div
-        className="absolute left-[10%] top-4 h-1 -translate-y-1/2 rounded-full bg-accent transition-[width] duration-[1400ms] ease-out motion-reduce:transition-none"
+        className={`absolute left-[10%] top-4 h-1 -translate-y-1/2 rounded-full bg-accent ${move}`}
         style={{ width: `calc(80% * ${progress})` }}
       />
 
@@ -64,7 +75,7 @@ export function OrderTracker({ currentStep }: { currentStep: number }) {
 
       {/* the travelling delivery truck (parks on the current stop) */}
       <div
-        className="absolute top-4 z-10 -translate-x-1/2 -translate-y-1/2 transition-[left] duration-[1400ms] ease-out motion-reduce:transition-none"
+        className={`absolute top-4 z-10 -translate-x-1/2 -translate-y-1/2 ${slide}`}
         style={{ left: leftAt(progress) }}
       >
         <span className="grid h-9 w-9 place-items-center rounded-full bg-accent text-on-accent shadow-lg ring-4 ring-surface">
