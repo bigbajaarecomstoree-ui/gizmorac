@@ -2,6 +2,8 @@ import type { NextRequest } from "next/server";
 import { getCurrentCustomer } from "@/lib/customer-auth";
 import { getOrderByNumber } from "@/lib/data/orders";
 import { prisma } from "@/lib/prisma";
+import { getSettings } from "@/lib/data/settings";
+import { businessFromSettings } from "@/lib/invoice/business";
 import { buildInvoicePdf, type TaxInfo } from "@/lib/invoice/generate";
 
 export const dynamic = "force-dynamic";
@@ -47,7 +49,8 @@ export async function GET(
     products.map((p) => [p.id, { hsn: p.hsn, gstRate: p.gstRate }]),
   );
 
-  const pdf = await buildInvoicePdf(order, tax);
+  const settings = await getSettings();
+  const pdf = await buildInvoicePdf(order, tax, businessFromSettings(settings));
   return new Response(Buffer.from(pdf), {
     status: 200,
     headers: {

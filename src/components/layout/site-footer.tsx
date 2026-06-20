@@ -13,12 +13,10 @@ const TRUST = [
   { icon: Headset, label: "WhatsApp support" },
 ];
 
-// Registered business contact details.
-const COMPANY = "BIG BAJAAR ECOM STOREE";
-const ADDRESS =
-  "D-12, Bhagwan Dass Nagar, Near East Punjabi Bagh, New Delhi-110026.";
-const CARE_PHONE = "+91 99999 99999";
-const CARE_EMAIL = "care@gizmorac.com";
+// Fallbacks used only until the admin fills these in under Settings → Company.
+const FALLBACK_COMPANY = "BIG BAJAAR ECOM STOREE";
+const FALLBACK_PHONE = "+91 99999 99999";
+const FALLBACK_EMAIL = "care@gizmorac.com";
 
 // Brand glyphs as inline SVG (lucide dropped brand/logo icons).
 type IconProps = { size?: number; className?: string };
@@ -60,6 +58,10 @@ export function SiteFooter({
   facebookUrl,
   youtubeUrl,
   twitterUrl,
+  legalName,
+  companyAddress,
+  supportPhone,
+  supportEmail,
 }: {
   whatsappHref?: string;
   categories?: Category[];
@@ -67,7 +69,15 @@ export function SiteFooter({
   facebookUrl?: string;
   youtubeUrl?: string;
   twitterUrl?: string;
+  legalName?: string;
+  companyAddress?: string;
+  supportPhone?: string;
+  supportEmail?: string;
 } = {}) {
+  const company = legalName?.trim() || FALLBACK_COMPANY;
+  const address = companyAddress?.trim() || "";
+  const phone = supportPhone?.trim() || FALLBACK_PHONE;
+  const email = supportEmail?.trim() || FALLBACK_EMAIL;
   const socials = [
     { url: instagramUrl, Icon: InstagramIcon, label: "Instagram" },
     { url: facebookUrl, Icon: FacebookIcon, label: "Facebook" },
@@ -193,24 +203,24 @@ export function SiteFooter({
             <div className="space-y-3 text-sm">
               <div className="flex gap-2.5">
                 <MapPin size={16} className="mt-0.5 shrink-0 text-accent" />
-                <p className="text-muted">
-                  <span className="block font-semibold text-foreground">{COMPANY}</span>
-                  {ADDRESS}
+                <p className="whitespace-pre-line text-muted">
+                  <span className="block font-semibold text-foreground">{company}</span>
+                  {address}
                 </p>
               </div>
               <a
-                href={`tel:${CARE_PHONE.replace(/\s+/g, "")}`}
+                href={`tel:${phone.replace(/\s+/g, "")}`}
                 className="flex items-center gap-2.5 text-muted transition-colors hover:text-accent"
               >
                 <Phone size={16} className="shrink-0 text-accent" />
-                {CARE_PHONE}
+                {phone}
               </a>
               <a
-                href={`mailto:${CARE_EMAIL}`}
+                href={`mailto:${email}`}
                 className="flex items-center gap-2.5 text-muted transition-colors hover:text-accent"
               >
                 <Mail size={16} className="shrink-0 text-accent" />
-                {CARE_EMAIL}
+                {email}
               </a>
             </div>
 

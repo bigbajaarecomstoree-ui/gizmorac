@@ -6,6 +6,12 @@ export interface StoreSettings {
   supportEmail: string;
   supportPhone: string;
   whatsappNumber: string;
+  legalName: string;
+  companyAddress: string;
+  companyState: string;
+  companyStateCode: string;
+  companyPan: string;
+  companyGstin: string;
   announcementText: string;
   announcementEnabled: boolean;
   announcementScroll: boolean;
@@ -35,6 +41,13 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   supportEmail: "",
   supportPhone: "",
   whatsappNumber: "919999999999",
+  legalName: "BIG BAJAAR ECOM STOREE",
+  companyAddress:
+    "Plot No. 33, Block A, Mohan Cooperative Industrial Estate, New Delhi, Delhi - 110044, India",
+  companyState: "Delhi",
+  companyStateCode: "07",
+  companyPan: "ABEFB8495P",
+  companyGstin: "07ABEFB8495P1ZL",
   announcementText: "Free shipping over ₹999 · PAN India delivery · COD available",
   announcementEnabled: true,
   announcementScroll: false,
@@ -63,6 +76,12 @@ function toSettings(r: StoreSetting): StoreSettings {
     supportEmail: r.supportEmail,
     supportPhone: r.supportPhone,
     whatsappNumber: r.whatsappNumber,
+    legalName: r.legalName,
+    companyAddress: r.companyAddress,
+    companyState: r.companyState,
+    companyStateCode: r.companyStateCode,
+    companyPan: r.companyPan,
+    companyGstin: r.companyGstin,
     announcementText: r.announcementText,
     announcementEnabled: r.announcementEnabled,
     announcementScroll: r.announcementScroll,

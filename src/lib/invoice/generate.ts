@@ -7,7 +7,7 @@ import {
   type RGB,
 } from "pdf-lib";
 import type { Order } from "@/lib/types";
-import { INVOICE_BUSINESS as BIZ } from "./business";
+import { DEFAULT_BUSINESS, type InvoiceBusiness } from "./business";
 
 // A4 in points.
 const PAGE_W = 595.28;
@@ -106,10 +106,35 @@ function fitLines(
   return lines;
 }
 
+/** Wrap a string to the given pixel width for the chosen font/size. */
+function wrapText(
+  s: string,
+  font: PDFFont,
+  size: number,
+  maxWidth: number,
+): string[] {
+  const words = s.split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let cur = "";
+  for (const w of words) {
+    const test = cur ? `${cur} ${w}` : w;
+    if (cur && font.widthOfTextAtSize(test, size) > maxWidth) {
+      lines.push(cur);
+      cur = w;
+    } else {
+      cur = test;
+    }
+  }
+  if (cur) lines.push(cur);
+  return lines.length ? lines : [s];
+}
+
 export async function buildInvoicePdf(
   order: Order,
   tax: TaxInfo,
+  business: InvoiceBusiness = DEFAULT_BUSINESS,
 ): Promise<Uint8Array> {
+  const BIZ = business;
   const doc = await PDFDocument.create();
   doc.setTitle(`Tax Invoice ${order.orderNumber}`);
   doc.setAuthor(BIZ.legalName);
@@ -163,9 +188,12 @@ export async function buildInvoicePdf(
   let ly = y - 14;
   text(BIZ.legalName, M, ly, { font: bold, size: 9 });
   ly -= 12;
-  for (const ln of BIZ.addressLines) {
-    text(ln, M, ly, { size: 8.5, color: MUTED });
-    ly -= 11;
+  const addrMaxW = colR - M - 12;
+  for (const raw of BIZ.addressLines) {
+    for (const ln of wrapText(raw, reg, 8.5, addrMaxW)) {
+      text(ln, M, ly, { size: 8.5, color: MUTED });
+      ly -= 11;
+    }
   }
   ly -= 3;
   text(`PAN No: ${BIZ.pan}`, M, ly, { size: 8.5 });

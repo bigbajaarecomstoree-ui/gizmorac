@@ -125,7 +125,7 @@ export const policies: Policy[] = [
       {
         heading: "How to raise a request",
         body: [
-          `Contact us at ${POLICY_CONTACT.email} or via WhatsApp with your order number and photos of the issue. We'll arrange a pickup and replacement.`,
+          `Contact us at {{email}} or via WhatsApp with your order number and photos of the issue. We'll arrange a pickup and replacement.`,
         ],
       },
       {
@@ -156,7 +156,7 @@ export const policies: Policy[] = [
       {
         heading: "Need help?",
         body: [
-          `Reach us at ${POLICY_CONTACT.email} or ${POLICY_CONTACT.phone} for any refund or cancellation query.`,
+          `Reach us at {{email}} or {{phone}} for any refund or cancellation query.`,
         ],
       },
     ],
@@ -188,7 +188,7 @@ export const policies: Policy[] = [
       {
         heading: "Questions?",
         body: [
-          `For any question about cookies or your data, contact us at ${POLICY_CONTACT.email}.`,
+          `For any question about cookies or your data, contact us at {{email}}.`,
         ],
       },
     ],

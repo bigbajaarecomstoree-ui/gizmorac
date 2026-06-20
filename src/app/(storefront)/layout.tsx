@@ -38,6 +38,10 @@ export default async function StorefrontLayout({
           facebookUrl={settings.facebookUrl}
           youtubeUrl={settings.youtubeUrl}
           twitterUrl={settings.twitterUrl}
+          legalName={settings.legalName}
+          companyAddress={settings.companyAddress}
+          supportPhone={settings.supportPhone}
+          supportEmail={settings.supportEmail}
         />
         <WhatsAppButton href={waHref} />
         <PromoPopups

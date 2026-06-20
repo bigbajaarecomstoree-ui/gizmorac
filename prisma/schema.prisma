@@ -247,6 +247,14 @@ model StoreSetting {
   freeShippingThreshold Int      @default(999)
   shippingFee           Int      @default(79)
   codEnabled            Boolean  @default(true)
+  // Registered company identity — editable in admin, shown across the
+  // storefront (footer, policies) and on the GST tax invoice.
+  legalName             String   @default("BIG BAJAAR ECOM STOREE")
+  companyAddress        String   @default("Plot No. 33, Block A, Mohan Cooperative Industrial Estate, New Delhi, Delhi - 110044, India")
+  companyState          String   @default("Delhi") // for IGST vs CGST/SGST on invoices
+  companyStateCode      String   @default("07")    // GST state code (first 2 digits of GSTIN)
+  companyPan            String   @default("ABEFB8495P")
+  companyGstin          String   @default("07ABEFB8495P1ZL")
   // Social media profile URLs (blank = icon hidden in the footer).
   instagramUrl          String   @default("")
   facebookUrl           String   @default("")

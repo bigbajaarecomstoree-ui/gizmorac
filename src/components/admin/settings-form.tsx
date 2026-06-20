@@ -207,6 +207,63 @@ export function SettingsForm({ settings }: { settings: StoreSettings }) {
         />
       </Card>
 
+      <Card
+        title="Company details"
+        hint="Your registered business identity. Updates everywhere automatically — footer, policies and the GST tax invoice. (Contact email & phone come from Store details above.)"
+      >
+        <Field
+          label="Registered / legal name"
+          name="legalName"
+          defaultValue={settings.legalName}
+          placeholder="BIG BAJAAR ECOM STOREE"
+        />
+        <label className="block">
+          <span className="mb-1.5 block text-sm font-medium">Registered address</span>
+          <textarea
+            name="companyAddress"
+            rows={3}
+            defaultValue={settings.companyAddress}
+            className={areaCls}
+            placeholder="Plot No. 33, Block A, Mohan Cooperative Industrial Estate, New Delhi, Delhi - 110044, India"
+          />
+          <span className="mt-1 block text-xs text-faint">
+            Shown in the footer and as the &ldquo;Sold By&rdquo; address on invoices.
+          </span>
+        </label>
+        <div className="grid grid-cols-2 gap-4">
+          <Field
+            label="State"
+            name="companyState"
+            defaultValue={settings.companyState}
+            hint="Used to split IGST vs CGST/SGST on invoices."
+            placeholder="Delhi"
+          />
+          <Field
+            label="GST state code"
+            name="companyStateCode"
+            defaultValue={settings.companyStateCode}
+            hint="First 2 digits of the GSTIN (e.g. 07)."
+            inputMode="numeric"
+            maxLength={2}
+            placeholder="07"
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <Field
+            label="PAN"
+            name="companyPan"
+            defaultValue={settings.companyPan}
+            placeholder="ABEFB8495P"
+          />
+          <Field
+            label="GSTIN"
+            name="companyGstin"
+            defaultValue={settings.companyGstin}
+            placeholder="07ABEFB8495P1ZL"
+          />
+        </div>
+      </Card>
+
       <Card title="Announcement bar" hint="The strip at the very top of every page.">
         <label className="block">
           <span className="mb-1.5 block text-sm font-medium">Message</span>
