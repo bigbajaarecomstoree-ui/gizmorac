@@ -249,7 +249,7 @@ export function CartView({
           </Link>
           <Link
             href="/shop"
-            className={`${buttonVariants({ variant: "ghost" })} mt-2 w-full`}
+            className="mt-3 block w-full text-center text-sm font-medium text-muted transition-colors hover:text-accent"
           >
             Continue shopping
           </Link>
