@@ -195,7 +195,7 @@ export function SalesChart({ data }: { data: DashboardChart }) {
       </div>
 
       {/* headline + deltas */}
-      <div className="mt-3 flex flex-wrap items-end gap-x-8 gap-y-3">
+      <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-x-8">
         <div>
           <div className="text-3xl font-bold tracking-tight">
             {headline}
@@ -207,10 +207,12 @@ export function SalesChart({ data }: { data: DashboardChart }) {
             {RANGES.find((r) => r.value === range)?.label}
           </div>
         </div>
-        <Delta cur={series.total} prev={series.prevTotal} label={PREV_LABEL[range]} />
-        {showYoy ? (
-          <Delta cur={series.total} prev={series.yoyTotal} label="last year" />
-        ) : null}
+        <div className="flex flex-wrap items-end gap-x-8 gap-y-2">
+          <Delta cur={series.total} prev={series.prevTotal} label={PREV_LABEL[range]} />
+          {showYoy ? (
+            <Delta cur={series.total} prev={series.yoyTotal} label="last year" />
+          ) : null}
+        </div>
       </div>
 
       {/* chart */}
@@ -239,7 +241,7 @@ export function SalesChart({ data }: { data: DashboardChart }) {
           {series.buckets.map((b, i) => (
             <div
               key={i}
-              className="group relative flex h-full flex-1 items-end"
+              className="group relative flex h-full min-w-0 flex-1 items-end"
               title={b.future ? undefined : `${b.label}: ${fmtFull(b.value)}`}
             >
               {!b.future ? (
@@ -262,7 +264,7 @@ export function SalesChart({ data }: { data: DashboardChart }) {
       {/* x-axis labels */}
       <div className="mt-2 ml-12 flex gap-[3px]">
         {series.buckets.map((b, i) => (
-          <div key={i} className="flex-1 text-center text-xs text-faint">
+          <div key={i} className="min-w-0 flex-1 whitespace-nowrap text-center text-xs text-faint">
             {i % labelEvery === 0 ? b.label : " "}
           </div>
         ))}
