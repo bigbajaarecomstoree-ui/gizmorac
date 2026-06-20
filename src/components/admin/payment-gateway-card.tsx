@@ -68,15 +68,23 @@ function MaskedKeyInput({
   return (
     <div className="relative">
       <input
-        type={reveal ? "text" : "password"}
+        // Always a plain text field — masking is done with CSS, not type=
+        // "password", so the browser's password manager never autofills or
+        // overwrites the value. Revealing just drops the masking class.
+        type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className={keyInputCls}
+        className={cn(keyInputCls, !reveal && "key-mask")}
         placeholder={placeholder}
         autoComplete="off"
+        autoCorrect="off"
+        autoCapitalize="off"
         spellCheck={false}
         inputMode={inputMode}
+        name={`pg-${label.replace(/\s+/g, "-").toLowerCase()}`}
         data-1p-ignore
+        data-lpignore="true"
+        data-form-type="other"
       />
       <button
         type="button"

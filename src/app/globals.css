@@ -160,3 +160,11 @@
 html[data-input="mouse"] :focus-visible {
   outline: none !important;
 }
+
+/* Mask sensitive key inputs as dots WITHOUT type="password" (which invites
+   browser password managers to autofill/overwrite the field). Toggled off to
+   reveal while the eye button is held. */
+.key-mask {
+  -webkit-text-security: disc;
+  text-security: disc;
+}
