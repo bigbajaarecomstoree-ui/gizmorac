@@ -77,22 +77,33 @@ export function ProductCard({ product }: { product: Product }) {
 
         <Price product={product} size="sm" className="mt-0.5" />
 
-        <div className="relative z-20 mt-auto flex gap-2 pt-2">
+        {/* On the narrow 2-col mobile grid the buttons stack so neither is
+            clipped; from sm up (wider cards) they sit side by side. */}
+        <div className="relative z-20 mt-auto flex flex-col gap-2 pt-2 sm:flex-row">
           <BuyNowButton
             id={product.id}
             name={title}
             label="Buy Now"
             variant="primary"
             size="sm"
-            className="flex-1"
+            className="w-full sm:flex-1"
           />
+          {/* mobile: full-width with label */}
+          <AddToCartButton
+            id={product.id}
+            name={title}
+            variant="surface"
+            size="sm"
+            className="w-full sm:hidden"
+          />
+          {/* sm+: compact icon-only square */}
           <AddToCartButton
             id={product.id}
             name={title}
             variant="surface"
             size="sm"
             iconOnly
-            className="w-11 shrink-0 px-0"
+            className="hidden sm:inline-flex sm:w-11 sm:shrink-0 sm:px-0"
           />
         </div>
       </div>
