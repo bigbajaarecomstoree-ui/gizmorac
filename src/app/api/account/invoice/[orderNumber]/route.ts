@@ -1,7 +1,8 @@
 import type { NextRequest } from "next/server";
 import { getCurrentCustomer } from "@/lib/customer-auth";
 import { getOrderByNumber } from "@/lib/data/orders";
-import { buildInvoicePdf } from "@/lib/invoice/generate";
+import { prisma } from "@/lib/prisma";
+import { buildInvoicePdf, type TaxInfo } from "@/lib/invoice/generate";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -36,7 +37,17 @@ export async function GET(
     );
   }
 
-  const pdf = await buildInvoicePdf(order);
+  // Per-product HSN + GST rate for the tax-invoice line items.
+  const ids = order.items.map((i) => i.id);
+  const products = await prisma.product.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, hsn: true, gstRate: true },
+  });
+  const tax: TaxInfo = new Map(
+    products.map((p) => [p.id, { hsn: p.hsn, gstRate: p.gstRate }]),
+  );
+
+  const pdf = await buildInvoicePdf(order, tax);
   return new Response(Buffer.from(pdf), {
     status: 200,
     headers: {

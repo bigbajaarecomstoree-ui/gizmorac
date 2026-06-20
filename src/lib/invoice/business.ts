@@ -1,17 +1,20 @@
-// Registered business identity printed on customer invoices/receipts.
-// Kept in one place so the invoice header always matches the storefront footer.
+// Registered business identity printed on customer tax invoices.
+// The "Sold By" address must match the GST registration.
 export const INVOICE_BUSINESS = {
   brand: "GIZMORAC",
   legalName: "BIG BAJAAR ECOM STOREE",
   addressLines: [
-    "D-12, Bhagwan Dass Nagar,",
-    "Near East Punjabi Bagh,",
-    "New Delhi - 110026",
+    "Plot No. 33, Block A,",
+    "Mohan Cooperative Industrial Estate,",
+    "New Delhi, Delhi - 110044",
+    "India",
   ],
+  pan: "ABEFB8495P",
+  gstin: "07ABEFB8495P1ZL",
+  // GST state code is the first two digits of the GSTIN (07 = Delhi).
+  stateCode: "07",
+  stateName: "Delhi",
   phone: "+91 99999 99999",
   email: "care@gizmorac.com",
   website: "gizmorac.com",
-  // Optional — left blank until the client provides a GSTIN. When set it prints
-  // in the header. (HSN codes / per-item GST rates are NEVER shown to customers.)
-  gstin: "",
 } as const;
