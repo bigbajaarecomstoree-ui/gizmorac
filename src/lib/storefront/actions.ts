@@ -43,6 +43,8 @@ export interface CheckoutPayload {
   pincode: string;
   /** Optional buyer GSTIN for a business invoice. */
   gstin?: string;
+  /** Registered company name — required when a GSTIN is given. */
+  companyName?: string;
 }
 
 export type PlaceOrderResult =
@@ -132,8 +134,12 @@ export async function placeOrder(
     return { ok: false, error: "Please enter a valid 6-digit pincode." };
   }
   const gstin = (payload.gstin ?? "").trim().toUpperCase();
+  const companyName = (payload.companyName ?? "").trim();
   if (gstin && !GSTIN_RE.test(gstin)) {
     return { ok: false, error: "Please enter a valid 15-character GSTIN, or leave it blank." };
+  }
+  if (gstin && !companyName) {
+    return { ok: false, error: "Please enter the company name for the GST invoice." };
   }
   if (!/^\d{10}$/.test(payload.phone.replace(/\D/g, ""))) {
     return { ok: false, error: "Please enter a valid 10-digit phone number." };
@@ -235,6 +241,7 @@ export async function placeOrder(
           state: payload.state.trim(),
           pincode: payload.pincode.trim(),
           gstin,
+          companyName: gstin ? companyName : "",
           items: JSON.stringify(
             lines.map((l) => ({
               id: l.id,

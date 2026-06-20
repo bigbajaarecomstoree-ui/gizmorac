@@ -48,6 +48,7 @@ export function CheckoutView({
     state: customer?.state ?? "",
     pincode: customer?.pincode ?? "",
     gstin: "",
+    companyName: "",
   });
 
   const [pinStatus, setPinStatus] = React.useState<
@@ -184,6 +185,7 @@ export function CheckoutView({
     const payload = {
       ...form,
       gstin: form.gstin.trim().toUpperCase(),
+      companyName: form.companyName.trim(),
       couponCode: coupon?.code,
       instantOffer: offer?.kind,
       items: lines.map((l) => ({ id: l.product.id, qty: l.qty })),
@@ -300,6 +302,21 @@ export function CheckoutView({
                 placeholder="15-digit GSTIN, e.g. 07ABCDE1234F1Z5"
               />
             </label>
+            {form.gstin.trim() ? (
+              <label className="block sm:col-span-2">
+                <span className="mb-1.5 block text-sm font-medium">
+                  Company name <span className="text-danger">*</span>
+                </span>
+                <input
+                  required
+                  value={form.companyName}
+                  onChange={set("companyName")}
+                  className={inputCls}
+                  autoComplete="organization"
+                  placeholder="Registered business name (for the GST invoice)"
+                />
+              </label>
+            ) : null}
           </div>
         </div>
 

@@ -33,6 +33,7 @@ function toOrder(r: OrderRow): Order {
     state: r.state,
     pincode: r.pincode,
     gstin: r.gstin,
+    companyName: r.companyName,
     items,
     subtotal: r.subtotal,
     discount: r.discount,

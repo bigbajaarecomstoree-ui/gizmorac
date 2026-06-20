@@ -178,8 +178,14 @@ export async function buildInvoicePdf(
     `${order.city}, ${order.state} - ${order.pincode}`,
     `Phone: ${order.phone}`,
   ];
-  // Buyer GSTIN appears on the billing address (for input-tax-credit claims).
-  const billAddr = order.gstin ? [...baseAddr, `GSTIN: ${order.gstin}`] : baseAddr;
+  // For a business invoice, lead with the company name and append the GSTIN.
+  const billAddr = order.gstin
+    ? [
+        ...(order.companyName ? [order.companyName] : []),
+        ...baseAddr,
+        `GSTIN: ${order.gstin}`,
+      ]
+    : baseAddr;
   let ry = topY;
   const rW = PAGE_W - M - colR;
   const drawAddr = (heading: string, addrLines: string[]) => {

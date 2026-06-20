@@ -160,6 +160,8 @@ export interface Order {
   pincode: string;
   /** Optional buyer GSTIN for a business / input-tax-credit invoice. */
   gstin: string;
+  /** Registered company name (present when a GSTIN is supplied). */
+  companyName: string;
   items: OrderItem[];
   subtotal: number;
   /** Total discount applied = coupon + instant offer. */

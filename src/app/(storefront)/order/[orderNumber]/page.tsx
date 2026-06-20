@@ -221,7 +221,9 @@ export default async function OrderPage({ params }: { params: Params }) {
                 {order.address}, {order.city}, {order.state} — {order.pincode}
               </p>
               {order.gstin ? (
-                <p className="mt-1 text-muted">GSTIN: {order.gstin}</p>
+                <p className="mt-1 text-muted">
+                  {order.companyName ? `${order.companyName} · ` : ""}GSTIN: {order.gstin}
+                </p>
               ) : null}
             </>
           ) : (

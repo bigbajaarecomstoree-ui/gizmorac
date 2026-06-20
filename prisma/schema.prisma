@@ -78,6 +78,8 @@ model Order {
   pincode       String
   // Optional buyer GSTIN for a business / input-tax-credit invoice.
   gstin         String   @default("")
+  // Registered company name — required when a GSTIN is supplied.
+  companyName   String   @default("")
   items         String   @default("[]") // JSON: [{ id, slug, name, price, qty }]
   subtotal      Int
   // `discount` = total of all discounts (coupon + instant offer).
