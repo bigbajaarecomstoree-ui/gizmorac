@@ -20,6 +20,8 @@ import {
 import type { TicketCategory } from "@/lib/types";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// 15-char GSTIN: 2-digit state + 10-char PAN + entity + 'Z' + checksum.
+const GSTIN_RE = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][0-9A-Z]Z[0-9A-Z]$/;
 
 export interface CartLineRef {
   id: string;
@@ -39,6 +41,8 @@ export interface CheckoutPayload {
   city: string;
   state: string;
   pincode: string;
+  /** Optional buyer GSTIN for a business invoice. */
+  gstin?: string;
 }
 
 export type PlaceOrderResult =
@@ -126,6 +130,10 @@ export async function placeOrder(
   }
   if (!/^\d{6}$/.test(payload.pincode.trim())) {
     return { ok: false, error: "Please enter a valid 6-digit pincode." };
+  }
+  const gstin = (payload.gstin ?? "").trim().toUpperCase();
+  if (gstin && !GSTIN_RE.test(gstin)) {
+    return { ok: false, error: "Please enter a valid 15-character GSTIN, or leave it blank." };
   }
   if (!/^\d{10}$/.test(payload.phone.replace(/\D/g, ""))) {
     return { ok: false, error: "Please enter a valid 10-digit phone number." };
@@ -226,6 +234,7 @@ export async function placeOrder(
           city: payload.city.trim(),
           state: payload.state.trim(),
           pincode: payload.pincode.trim(),
+          gstin,
           items: JSON.stringify(
             lines.map((l) => ({
               id: l.id,

@@ -158,6 +158,8 @@ export interface Order {
   city: string;
   state: string;
   pincode: string;
+  /** Optional buyer GSTIN for a business / input-tax-credit invoice. */
+  gstin: string;
   items: OrderItem[];
   subtotal: number;
   /** Total discount applied = coupon + instant offer. */

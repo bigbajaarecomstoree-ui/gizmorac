@@ -32,6 +32,7 @@ function toOrder(r: OrderRow): Order {
     city: r.city,
     state: r.state,
     pincode: r.pincode,
+    gstin: r.gstin,
     items,
     subtotal: r.subtotal,
     discount: r.discount,

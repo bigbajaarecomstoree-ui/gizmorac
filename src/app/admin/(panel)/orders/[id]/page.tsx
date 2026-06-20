@@ -113,6 +113,9 @@ export default async function OrderDetailPage({ params }: { params: Params }) {
             <p className="text-muted">
               {order.address}, {order.city}, {order.state} — {order.pincode}
             </p>
+            {order.gstin ? (
+              <p className="mt-1 text-muted">GSTIN: {order.gstin}</p>
+            ) : null}
             <hr className="my-3 border-border" />
             <div className="flex justify-between">
               <span className="text-muted">Payment</span>

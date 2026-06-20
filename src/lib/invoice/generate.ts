@@ -172,18 +172,20 @@ export async function buildInvoicePdf(
   text(`GST Registration No: ${BIZ.gstin}`, M, ly, { size: 8.5 });
 
   // right: billing + shipping (same address for our store)
-  const addr = [
+  const baseAddr = [
     `${order.firstName} ${order.lastName}`.trim(),
     order.address,
     `${order.city}, ${order.state} - ${order.pincode}`,
     `Phone: ${order.phone}`,
   ];
+  // Buyer GSTIN appears on the billing address (for input-tax-credit claims).
+  const billAddr = order.gstin ? [...baseAddr, `GSTIN: ${order.gstin}`] : baseAddr;
   let ry = topY;
   const rW = PAGE_W - M - colR;
-  const drawAddr = (heading: string) => {
+  const drawAddr = (heading: string, addrLines: string[]) => {
     text(heading, colR, ry, { font: bold, size: 9.5 });
     ry -= 14;
-    for (const a of addr) {
+    for (const a of addrLines) {
       for (const ln of fitLines(a, reg, 8.5, rW, 2)) {
         text(ln, colR, ry, { size: 8.5, color: MUTED });
         ry -= 11;
@@ -191,8 +193,8 @@ export async function buildInvoicePdf(
     }
     ry -= 6;
   };
-  drawAddr("Billing Address");
-  drawAddr("Shipping Address");
+  drawAddr("Billing Address", billAddr);
+  drawAddr("Shipping Address", baseAddr);
 
   y = Math.min(ly, ry) - 16;
   hline(y);

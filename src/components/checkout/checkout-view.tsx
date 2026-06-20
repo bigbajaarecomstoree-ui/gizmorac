@@ -46,6 +46,7 @@ export function CheckoutView({
     city: customer?.city ?? "",
     state: customer?.state ?? "",
     pincode: customer?.pincode ?? "",
+    gstin: "",
   });
 
   const [coupon, setCoupon] = React.useState<{ code: string; off: number } | null>(null);
@@ -122,6 +123,7 @@ export function CheckoutView({
     setError(null);
     const payload = {
       ...form,
+      gstin: form.gstin.trim().toUpperCase(),
       couponCode: coupon?.code,
       instantOffer: offer?.kind,
       items: lines.map((l) => ({ id: l.product.id, qty: l.qty })),
@@ -188,6 +190,19 @@ export function CheckoutView({
             <label className="block">
               <span className="mb-1.5 block text-sm font-medium">Pincode</span>
               <input required value={form.pincode} onChange={set("pincode")} className={inputCls} inputMode="numeric" autoComplete="postal-code" placeholder="6-digit" />
+            </label>
+            <label className="block sm:col-span-2">
+              <span className="mb-1.5 block text-sm font-medium">
+                GST number <span className="font-normal text-faint">(optional — for a business invoice)</span>
+              </span>
+              <input
+                value={form.gstin}
+                onChange={(e) => setForm((f) => ({ ...f, gstin: e.target.value.toUpperCase() }))}
+                className={inputCls}
+                autoCapitalize="characters"
+                maxLength={15}
+                placeholder="15-digit GSTIN, e.g. 07ABCDE1234F1Z5"
+              />
             </label>
           </div>
         </div>
