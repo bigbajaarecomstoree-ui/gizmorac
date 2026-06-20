@@ -8,6 +8,8 @@ import {
   Plug,
   PlugZap,
   AlertTriangle,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import {
   connectPaymentGateway,
@@ -18,8 +20,88 @@ import { cn } from "@/lib/utils";
 
 const inputCls =
   "h-11 w-full rounded-lg border border-border bg-background px-3 text-sm placeholder:text-faint focus:border-accent focus:outline-none";
+// Same as inputCls but leaves room on the right for the reveal button.
+const keyInputCls =
+  "h-11 w-full rounded-lg border border-border bg-background pl-3 pr-11 text-sm placeholder:text-faint focus:border-accent focus:outline-none";
 
 type Env = "sandbox" | "production";
+
+/**
+ * Masked key field. Shows dots by default; the eye reveals the value ONLY while
+ * it's pressed and held (mouse, touch or keyboard) — releasing hides it again.
+ * Deliberately not a toggle, so a revealed key can't be left on screen.
+ */
+function MaskedKeyInput({
+  value,
+  onChange,
+  placeholder,
+  label,
+  inputMode,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  label: string;
+  inputMode?: "numeric" | "text";
+}) {
+  const [reveal, setReveal] = React.useState(false);
+  const show = () => setReveal(true);
+  const hide = () => setReveal(false);
+
+  // While revealed, hide the moment the press is released ANYWHERE — mouse,
+  // touch, or the window losing focus — so a key can't be left on screen even
+  // if the pointer is dragged off the button before release.
+  React.useEffect(() => {
+    if (!reveal) return;
+    window.addEventListener("mouseup", hide);
+    window.addEventListener("touchend", hide);
+    window.addEventListener("pointerup", hide);
+    window.addEventListener("blur", hide);
+    return () => {
+      window.removeEventListener("mouseup", hide);
+      window.removeEventListener("touchend", hide);
+      window.removeEventListener("pointerup", hide);
+      window.removeEventListener("blur", hide);
+    };
+  }, [reveal]);
+
+  return (
+    <div className="relative">
+      <input
+        type={reveal ? "text" : "password"}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={keyInputCls}
+        placeholder={placeholder}
+        autoComplete="off"
+        spellCheck={false}
+        inputMode={inputMode}
+        data-1p-ignore
+      />
+      <button
+        type="button"
+        aria-label={`Press and hold to reveal ${label}`}
+        title="Press and hold to reveal"
+        onMouseDown={show}
+        onTouchStart={(e) => {
+          e.preventDefault();
+          show();
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            show();
+          }
+        }}
+        onKeyUp={hide}
+        onContextMenu={(e) => e.preventDefault()}
+        className="absolute right-1.5 top-1/2 grid h-8 w-8 -translate-y-1/2 select-none place-items-center rounded-md text-muted transition-colors hover:text-foreground cursor-pointer"
+      >
+        {reveal ? <Eye size={16} /> : <EyeOff size={16} />}
+      </button>
+    </div>
+  );
+}
 
 export function PaymentGatewayCard({
   clientId,
@@ -129,13 +211,11 @@ export function PaymentGatewayCard({
       <div className="mt-4 space-y-4">
         <label className="block">
           <span className="mb-1.5 block text-sm font-medium">Client ID</span>
-          <input
+          <MaskedKeyInput
             value={cid}
-            onChange={(e) => setCid(e.target.value)}
-            className={inputCls}
+            onChange={setCid}
             placeholder="M23ZH2BNW6QXY_2511080834"
-            autoComplete="off"
-            spellCheck={false}
+            label="Client ID"
           />
         </label>
 
@@ -166,14 +246,11 @@ export function PaymentGatewayCard({
 
         <label className="block">
           <span className="mb-1.5 block text-sm font-medium">Client Secret</span>
-          <input
-            type="password"
+          <MaskedKeyInput
             value={secret}
-            onChange={(e) => setSecret(e.target.value)}
-            className={inputCls}
+            onChange={setSecret}
             placeholder={secretStored ? "•••••••• (leave blank to keep current)" : "Paste your client secret"}
-            autoComplete="off"
-            spellCheck={false}
+            label="Client Secret"
           />
           <span className="mt-1 block text-xs text-faint">
             Stored securely on the server — never shown again after saving.
