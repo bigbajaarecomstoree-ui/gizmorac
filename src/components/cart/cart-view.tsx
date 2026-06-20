@@ -249,7 +249,7 @@ export function CartView({
           </Link>
           <Link
             href="/shop"
-            className={`${buttonVariants({ variant: "outline" })} mt-3 w-full`}
+            className={`${buttonVariants({ variant: "surface" })} mt-3 w-full`}
           >
             Continue shopping
           </Link>
