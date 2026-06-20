@@ -206,7 +206,7 @@ export function CheckoutView({
   }
 
   return (
-    <form onSubmit={submit} className="grid gap-8 lg:grid-cols-[1fr_360px]">
+    <form onSubmit={submit} className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_360px]">
       {/* shipping details */}
       <div className="space-y-6">
         {!customer ? (

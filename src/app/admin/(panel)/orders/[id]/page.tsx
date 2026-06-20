@@ -40,7 +40,7 @@ export default async function OrderDetailPage({ params }: { params: Params }) {
       </div>
       <p className="mt-1 text-sm text-muted">Placed {placed}</p>
 
-      <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_320px]">
+      <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-[1fr_320px]">
         {/* items + totals */}
         <div className="rounded-xl border border-border bg-surface">
           <h2 className="border-b border-border px-5 py-3.5 font-semibold">Items</h2>

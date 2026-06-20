@@ -69,7 +69,7 @@ export default async function AdminTicketDetail({ params }: { params: Params }) 
       </div>
       <p className="mt-1 text-sm text-muted">Raised {fmtDate(ticket.createdAt)}</p>
 
-      <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_300px]">
+      <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-[1fr_300px]">
         {/* conversation + reply */}
         <div className="space-y-4">
           <div className="rounded-xl border border-border bg-surface p-5">

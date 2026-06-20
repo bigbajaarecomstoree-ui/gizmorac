@@ -120,7 +120,7 @@ export default async function ShopPage({
         </p>
       </header>
 
-      <div className="mt-8 grid gap-8 lg:grid-cols-[260px_1fr]">
+      <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[260px_1fr]">
         {/* desktop filters */}
         <aside className="hidden lg:block">
           <div className="sticky top-28">

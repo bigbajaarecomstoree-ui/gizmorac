@@ -94,7 +94,7 @@ export function CartView({
   }
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
+    <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_360px]">
       {/* lines */}
       <div className="divide-y divide-border self-start overflow-hidden rounded-xl border border-border bg-surface">
         {lines.map(({ product, qty }) => {

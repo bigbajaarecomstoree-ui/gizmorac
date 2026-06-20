@@ -60,7 +60,7 @@ export default async function AccountPage() {
         </form>
       </div>
 
-      <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_360px]">
+      <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[1fr_360px]">
         {/* order history */}
         <section>
           <h2 className="text-lg font-semibold">Order history</h2>
