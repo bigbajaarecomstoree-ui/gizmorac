@@ -130,10 +130,16 @@ export default async function OrderPage({ params }: { params: Params }) {
               <dt className="text-muted">Subtotal</dt>
               <dd>{formatINR(order.subtotal)}</dd>
             </div>
-            {order.discount > 0 ? (
+            {order.discount - order.instantDiscount > 0 ? (
               <div className="flex justify-between text-success">
                 <dt>Discount{order.couponCode ? ` (${order.couponCode})` : ""}</dt>
-                <dd>−{formatINR(order.discount)}</dd>
+                <dd>−{formatINR(order.discount - order.instantDiscount)}</dd>
+              </div>
+            ) : null}
+            {order.instantDiscount > 0 ? (
+              <div className="flex justify-between text-success">
+                <dt>Instant offer</dt>
+                <dd>−{formatINR(order.instantDiscount)}</dd>
               </div>
             ) : null}
             <div className="flex justify-between">

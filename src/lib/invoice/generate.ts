@@ -248,12 +248,18 @@ export async function buildInvoicePdf(order: Order): Promise<Uint8Array> {
   };
 
   totalRow("Subtotal", rs(order.subtotal));
-  if (order.discount > 0) {
+  const couponPortion = order.discount - order.instantDiscount;
+  if (couponPortion > 0) {
     totalRow(
       `Discount${order.couponCode ? ` (${order.couponCode})` : ""}`,
-      `- ${rs(order.discount)}`,
+      `- ${rs(couponPortion)}`,
       { color: rgb(0.12, 0.55, 0.27) },
     );
+  }
+  if (order.instantDiscount > 0) {
+    totalRow("Instant offer", `- ${rs(order.instantDiscount)}`, {
+      color: rgb(0.12, 0.55, 0.27),
+    });
   }
   totalRow("Shipping", order.shipping === 0 ? "FREE" : rs(order.shipping));
 

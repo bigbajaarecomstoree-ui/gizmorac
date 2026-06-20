@@ -633,6 +633,14 @@ export async function updateSettings(
     facebookUrl: str(formData, "facebookUrl"),
     youtubeUrl: str(formData, "youtubeUrl"),
     twitterUrl: str(formData, "twitterUrl"),
+    landingPopupEnabled: bool(formData, "landingPopupEnabled"),
+    landingPopupTitle: str(formData, "landingPopupTitle"),
+    landingPopupMessage: str(formData, "landingPopupMessage"),
+    landingPopupCode: str(formData, "landingPopupCode").toUpperCase(),
+    browseOfferEnabled: bool(formData, "browseOfferEnabled"),
+    browseOfferAmount: Math.max(0, int(formData, "browseOfferAmount", 100)),
+    cartOfferEnabled: bool(formData, "cartOfferEnabled"),
+    cartOfferAmount: Math.max(0, int(formData, "cartOfferAmount", 100)),
   };
 
   await prisma.storeSetting.upsert({

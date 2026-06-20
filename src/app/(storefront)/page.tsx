@@ -8,12 +8,21 @@ import { DealOfTheDay } from "@/components/home/deal-of-the-day";
 import { Reviews } from "@/components/home/reviews";
 import { FaqAccordion } from "@/components/home/faq";
 import { Newsletter } from "@/components/home/newsletter";
+import { LandingPopup } from "@/components/promo/landing-popup";
 import { getSiteFaqs } from "@/lib/data/queries";
+import { getSettings } from "@/lib/data/settings";
 import { SITE } from "@/lib/constants";
 import { jsonLd } from "@/lib/json-ld";
 
 export default async function HomePage() {
-  const faqs = await getSiteFaqs();
+  const [faqs, settings] = await Promise.all([getSiteFaqs(), getSettings()]);
+  const showLandingPopup =
+    settings.landingPopupEnabled &&
+    Boolean(
+      settings.landingPopupTitle ||
+        settings.landingPopupMessage ||
+        settings.landingPopupCode,
+    );
 
   const orgSchema = {
     "@context": "https://schema.org",
@@ -43,6 +52,13 @@ export default async function HomePage() {
         withSchema
       />
       <Newsletter />
+      {showLandingPopup ? (
+        <LandingPopup
+          title={settings.landingPopupTitle}
+          message={settings.landingPopupMessage}
+          code={settings.landingPopupCode}
+        />
+      ) : null}
     </>
   );
 }

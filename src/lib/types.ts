@@ -160,7 +160,12 @@ export interface Order {
   pincode: string;
   items: OrderItem[];
   subtotal: number;
+  /** Total discount applied = coupon + instant offer. */
   discount: number;
+  /** Portion of `discount` from an instant promo-popup offer. */
+  instantDiscount: number;
+  /** Which instant offer was claimed: "" | "browse" | "cart". */
+  instantOffer: string;
   shipping: number;
   total: number;
   paymentMethod: string;

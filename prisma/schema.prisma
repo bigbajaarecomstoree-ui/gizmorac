@@ -78,7 +78,12 @@ model Order {
   pincode       String
   items         String   @default("[]") // JSON: [{ id, slug, name, price, qty }]
   subtotal      Int
+  // `discount` = total of all discounts (coupon + instant offer).
   discount      Int      @default(0)
+  // Instant promo-popup discount portion (browse/cart offer), part of `discount`.
+  instantDiscount Int    @default(0)
+  // Which instant offer was claimed: "" | "browse" | "cart".
+  instantOffer  String   @default("")
   shipping      Int      @default(0)
   total         Int
   paymentMethod String   @default("COD")
@@ -239,6 +244,17 @@ model StoreSetting {
   facebookUrl           String   @default("")
   youtubeUrl            String   @default("")
   twitterUrl            String   @default("")
+  // Landing-page offer popup (feature 1) — admin-controlled.
+  landingPopupEnabled   Boolean  @default(false)
+  landingPopupTitle     String   @default("")
+  landingPopupMessage   String   @default("")
+  landingPopupCode      String   @default("")
+  // Browsing nudge popup (feature 2) — flat instant discount, admin-controlled.
+  browseOfferEnabled    Boolean  @default(false)
+  browseOfferAmount     Int      @default(100)
+  // Cart-waiting popup (feature 3) — extra instant discount that stacks on coupons.
+  cartOfferEnabled      Boolean  @default(false)
+  cartOfferAmount       Int      @default(100)
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 }

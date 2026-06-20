@@ -35,6 +35,8 @@ function toOrder(r: OrderRow): Order {
     items,
     subtotal: r.subtotal,
     discount: r.discount,
+    instantDiscount: r.instantDiscount,
+    instantOffer: r.instantOffer,
     shipping: r.shipping,
     total: r.total,
     paymentMethod: r.paymentMethod,

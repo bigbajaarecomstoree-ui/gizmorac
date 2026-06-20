@@ -16,6 +16,14 @@ export interface StoreSettings {
   facebookUrl: string;
   youtubeUrl: string;
   twitterUrl: string;
+  landingPopupEnabled: boolean;
+  landingPopupTitle: string;
+  landingPopupMessage: string;
+  landingPopupCode: string;
+  browseOfferEnabled: boolean;
+  browseOfferAmount: number;
+  cartOfferEnabled: boolean;
+  cartOfferAmount: number;
 }
 
 export const SETTINGS_ID = "store";
@@ -35,6 +43,14 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   facebookUrl: "",
   youtubeUrl: "",
   twitterUrl: "",
+  landingPopupEnabled: false,
+  landingPopupTitle: "",
+  landingPopupMessage: "",
+  landingPopupCode: "",
+  browseOfferEnabled: false,
+  browseOfferAmount: 100,
+  cartOfferEnabled: false,
+  cartOfferAmount: 100,
 };
 
 function toSettings(r: StoreSetting): StoreSettings {
@@ -53,6 +69,14 @@ function toSettings(r: StoreSetting): StoreSettings {
     facebookUrl: r.facebookUrl,
     youtubeUrl: r.youtubeUrl,
     twitterUrl: r.twitterUrl,
+    landingPopupEnabled: r.landingPopupEnabled,
+    landingPopupTitle: r.landingPopupTitle,
+    landingPopupMessage: r.landingPopupMessage,
+    landingPopupCode: r.landingPopupCode,
+    browseOfferEnabled: r.browseOfferEnabled,
+    browseOfferAmount: r.browseOfferAmount,
+    cartOfferEnabled: r.cartOfferEnabled,
+    cartOfferAmount: r.cartOfferAmount,
   };
 }
 

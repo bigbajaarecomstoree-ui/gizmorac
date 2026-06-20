@@ -29,6 +29,8 @@ export interface CartLineRef {
 export interface CheckoutPayload {
   items: CartLineRef[];
   couponCode?: string;
+  /** Claimed instant promo-popup offer; re-validated against store settings. */
+  instantOffer?: "browse" | "cart";
   firstName: string;
   lastName: string;
   email: string;
@@ -155,10 +157,28 @@ export async function placeOrder(
     }
   }
 
-  const afterCoupon = Math.max(0, subtotal - discount);
+  // Instant promo-popup discount — amount comes from store settings (never the
+  // client), stacks on top of the coupon, and is capped so the order stays ≥ ₹0.
+  let instantDiscount = 0;
+  let instantOffer = "";
+  if (payload.instantOffer === "browse" && settings.browseOfferEnabled) {
+    instantDiscount = settings.browseOfferAmount;
+    instantOffer = "browse";
+  } else if (payload.instantOffer === "cart" && settings.cartOfferEnabled) {
+    instantDiscount = settings.cartOfferAmount;
+    instantOffer = "cart";
+  }
+  instantDiscount = Math.max(
+    0,
+    Math.min(instantDiscount, subtotal - discount),
+  );
+  if (instantDiscount <= 0) instantOffer = "";
+  const totalDiscount = discount + instantDiscount;
+
+  const afterDiscount = Math.max(0, subtotal - totalDiscount);
   const shipping =
-    afterCoupon >= settings.freeShippingThreshold ? 0 : settings.shippingFee;
-  const total = afterCoupon + shipping;
+    afterDiscount >= settings.freeShippingThreshold ? 0 : settings.shippingFee;
+  const total = afterDiscount + shipping;
 
   const customer = await getCurrentCustomer();
 
@@ -216,7 +236,9 @@ export async function placeOrder(
             })),
           ),
           subtotal,
-          discount,
+          discount: totalDiscount,
+          instantDiscount,
+          instantOffer,
           shipping,
           total,
           paymentMethod: "COD",

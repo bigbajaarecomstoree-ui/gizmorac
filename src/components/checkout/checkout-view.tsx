@@ -34,7 +34,7 @@ export function CheckoutView({
   codEnabled?: boolean;
 }) {
   const router = useRouter();
-  const { cart, clearCart, mounted } = useStore();
+  const { cart, clearCart, mounted, offer, clearOffer } = useStore();
 
   const [first, last] = customer ? splitName(customer.fullName) : ["", ""];
   const [form, setForm] = React.useState({
@@ -103,9 +103,14 @@ export function CheckoutView({
   }
 
   const discount = coupon?.off ?? 0;
-  const afterCoupon = Math.max(0, subtotal - discount);
-  const shipping = afterCoupon >= freeShippingThreshold ? 0 : shippingFee;
-  const total = afterCoupon + shipping;
+  // Instant promo-popup discount stacks on top of any coupon (capped so the
+  // order can't go below ₹0). The server re-validates the amount on submit.
+  const instantOff = offer
+    ? Math.min(offer.amount, Math.max(0, subtotal - discount))
+    : 0;
+  const afterDiscount = Math.max(0, subtotal - discount - instantOff);
+  const shipping = afterDiscount >= freeShippingThreshold ? 0 : shippingFee;
+  const total = afterDiscount + shipping;
 
   function set(key: keyof typeof form) {
     return (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -118,12 +123,14 @@ export function CheckoutView({
     const payload = {
       ...form,
       couponCode: coupon?.code,
+      instantOffer: offer?.kind,
       items: lines.map((l) => ({ id: l.product.id, qty: l.qty })),
     };
     startPlacing(async () => {
       const res = await placeOrder(payload);
       if (res.ok) {
         clearCart();
+        clearOffer();
         try {
           localStorage.removeItem(COUPON_STORAGE_KEY);
         } catch {}
@@ -247,6 +254,22 @@ export function CheckoutView({
             </div>
           ) : null}
 
+          {instantOff > 0 ? (
+            <div className="mt-2 flex items-center justify-between rounded-lg border border-accent/30 bg-accent-soft/40 px-3 py-2 text-sm">
+              <span className="flex items-center gap-1.5 font-medium text-accent-bright">
+                <Tag size={14} /> Instant offer −{formatINR(instantOff)}
+              </span>
+              <button
+                type="button"
+                onClick={clearOffer}
+                className="text-faint hover:text-danger cursor-pointer"
+                aria-label="Remove instant offer"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          ) : null}
+
           <dl className="mt-4 space-y-3 border-t border-border pt-4 text-sm">
             <div className="flex justify-between">
               <dt className="text-muted">Subtotal</dt>
@@ -256,6 +279,12 @@ export function CheckoutView({
               <div className="flex justify-between text-success">
                 <dt>Coupon</dt>
                 <dd>−{formatINR(discount)}</dd>
+              </div>
+            ) : null}
+            {instantOff > 0 ? (
+              <div className="flex justify-between text-success">
+                <dt>Instant offer</dt>
+                <dd>−{formatINR(instantOff)}</dd>
               </div>
             ) : null}
             <div className="flex justify-between">

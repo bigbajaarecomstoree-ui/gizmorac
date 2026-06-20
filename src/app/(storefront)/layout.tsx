@@ -2,6 +2,7 @@ import { StoreProvider } from "@/components/store/store-provider";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { WhatsAppButton } from "@/components/layout/whatsapp-button";
+import { PromoPopups } from "@/components/promo/promo-popups";
 import { getCurrentCustomer } from "@/lib/customer-auth";
 import { getSettings, whatsappLink } from "@/lib/data/settings";
 import { getCategories } from "@/lib/data/queries";
@@ -39,6 +40,10 @@ export default async function StorefrontLayout({
           twitterUrl={settings.twitterUrl}
         />
         <WhatsAppButton href={waHref} />
+        <PromoPopups
+          browse={{ enabled: settings.browseOfferEnabled, amount: settings.browseOfferAmount }}
+          cart={{ enabled: settings.cartOfferEnabled, amount: settings.cartOfferAmount }}
+        />
       </div>
     </StoreProvider>
   );

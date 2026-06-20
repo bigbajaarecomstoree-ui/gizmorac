@@ -8,6 +8,12 @@ interface CartLine {
   qty: number;
 }
 
+/** An instant promo-popup discount the shopper has claimed (browse/cart offer). */
+export interface ClaimedOffer {
+  kind: "browse" | "cart";
+  amount: number;
+}
+
 interface Toast {
   id: number;
   message: string;
@@ -20,17 +26,21 @@ interface StoreState {
   cartCount: number;
   wishlistCount: number;
   mounted: boolean;
+  offer: ClaimedOffer | null;
   addToCart: (id: string, qty?: number, name?: string) => void;
   setQty: (id: string, qty: number) => void;
   removeFromCart: (id: string) => void;
   clearCart: () => void;
   toggleWishlist: (id: string, name?: string) => void;
   isInWishlist: (id: string) => boolean;
+  claimOffer: (kind: ClaimedOffer["kind"], amount: number) => void;
+  clearOffer: () => void;
   toast: (message: string, icon?: Toast["icon"]) => void;
 }
 
 const CART_KEY = "gizmorac.cart";
 const WISH_KEY = "gizmorac.wishlist";
+const OFFER_KEY = "gizmorac.offer";
 
 const StoreContext = React.createContext<StoreState | null>(null);
 
@@ -43,6 +53,7 @@ export function useStore() {
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [cart, setCart] = React.useState<CartLine[]>([]);
   const [wishlist, setWishlist] = React.useState<string[]>([]);
+  const [offer, setOffer] = React.useState<ClaimedOffer | null>(null);
   const [toasts, setToasts] = React.useState<Toast[]>([]);
   const [mounted, setMounted] = React.useState(false);
   const toastId = React.useRef(0);
@@ -55,8 +66,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     try {
       const c = localStorage.getItem(CART_KEY);
       const w = localStorage.getItem(WISH_KEY);
+      const o = localStorage.getItem(OFFER_KEY);
       if (c) setCart(JSON.parse(c));
       if (w) setWishlist(JSON.parse(w));
+      if (o) setOffer(JSON.parse(o));
     } catch {
       // ignore malformed storage
     }
@@ -70,6 +83,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     if (mounted) localStorage.setItem(WISH_KEY, JSON.stringify(wishlist));
   }, [wishlist, mounted]);
+  React.useEffect(() => {
+    if (!mounted) return;
+    if (offer) localStorage.setItem(OFFER_KEY, JSON.stringify(offer));
+    else localStorage.removeItem(OFFER_KEY);
+  }, [offer, mounted]);
 
   const toast = React.useCallback(
     (message: string, icon: Toast["icon"] = "info") => {
@@ -131,18 +149,31 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     [wishlist],
   );
 
+  const claimOffer = React.useCallback(
+    (kind: ClaimedOffer["kind"], amount: number) => {
+      setOffer({ kind, amount });
+      toast(`₹${amount} off applied — it's added at checkout`, "cart");
+    },
+    [toast],
+  );
+
+  const clearOffer = React.useCallback(() => setOffer(null), []);
+
   const value: StoreState = {
     cart,
     wishlist,
     cartCount: cart.reduce((n, l) => n + l.qty, 0),
     wishlistCount: wishlist.length,
     mounted,
+    offer,
     addToCart,
     setQty,
     removeFromCart,
     clearCart,
     toggleWishlist,
     isInWishlist,
+    claimOffer,
+    clearOffer,
     toast,
   };
 

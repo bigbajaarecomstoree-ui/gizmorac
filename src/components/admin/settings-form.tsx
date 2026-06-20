@@ -130,6 +130,51 @@ function Toggle({
   );
 }
 
+// A plain switch that saves with the main "Save settings" button (unlike the
+// instant-save Toggle, which is limited to an allow-list of flags).
+function FormToggle({
+  label,
+  name,
+  defaultChecked,
+  hint,
+}: {
+  label: string;
+  name: string;
+  defaultChecked: boolean;
+  hint?: string;
+}) {
+  const [on, setOn] = useState(defaultChecked);
+  return (
+    <label className="flex cursor-pointer items-start gap-3">
+      <span className="relative mt-0.5 inline-flex shrink-0 select-none">
+        <input
+          type="checkbox"
+          name={name}
+          checked={on}
+          onChange={(e) => setOn(e.target.checked)}
+          className="peer sr-only"
+        />
+        <span
+          className={cn(
+            "block h-6 w-11 rounded-full transition-colors duration-300 ease-out",
+            on ? "bg-accent" : "bg-border-bright",
+          )}
+        />
+        <span
+          className={cn(
+            "pointer-events-none absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-300 ease-out",
+            on ? "translate-x-5" : "translate-x-0",
+          )}
+        />
+      </span>
+      <span>
+        <span className="text-sm font-medium">{label}</span>
+        {hint ? <span className="block text-xs text-faint">{hint}</span> : null}
+      </span>
+    </label>
+  );
+}
+
 export function SettingsForm({ settings }: { settings: StoreSettings }) {
   const [state, formAction, pending] = useActionState<
     SettingsState | undefined,
@@ -243,6 +288,76 @@ export function SettingsForm({ settings }: { settings: StoreSettings }) {
           type="url"
           defaultValue={settings.twitterUrl}
           placeholder="https://x.com/gizmorac"
+        />
+      </Card>
+
+      <Card
+        title="Landing offer popup"
+        hint="A welcome popup shown once per visit on the home page, with a promo code customers can copy."
+      >
+        <FormToggle
+          label="Show landing popup"
+          name="landingPopupEnabled"
+          defaultChecked={settings.landingPopupEnabled}
+          hint="Turn on to greet visitors with your current offer."
+        />
+        <Field
+          label="Title"
+          name="landingPopupTitle"
+          defaultValue={settings.landingPopupTitle}
+          placeholder="Welcome to GIZMORAC 🎉"
+        />
+        <label className="block">
+          <span className="mb-1.5 block text-sm font-medium">Message</span>
+          <textarea
+            name="landingPopupMessage"
+            rows={2}
+            defaultValue={settings.landingPopupMessage}
+            className={areaCls}
+            placeholder="Get 10% off your first order. Use the code below at checkout."
+          />
+        </label>
+        <Field
+          label="Promo code"
+          name="landingPopupCode"
+          defaultValue={settings.landingPopupCode}
+          hint="The code shown with a copy button. Create the matching coupon in Promotions."
+          placeholder="WELCOME10"
+        />
+      </Card>
+
+      <Card
+        title="Promo popups (auto discounts)"
+        hint="Instant rupee discounts nudged via popups while customers browse — applied automatically at checkout, no code needed."
+      >
+        <FormToggle
+          label="Browsing nudge popup"
+          name="browseOfferEnabled"
+          defaultChecked={settings.browseOfferEnabled}
+          hint="Shows after ~25s of browsing with a 'Claim now' button."
+        />
+        <Field
+          label="Browsing discount (₹)"
+          name="browseOfferAmount"
+          type="number"
+          min={0}
+          defaultValue={settings.browseOfferAmount}
+          hint="Flat amount taken off at checkout when claimed (e.g. 100–150)."
+        />
+        <hr className="border-border" />
+        <FormToggle
+          label="Cart-waiting popup"
+          name="cartOfferEnabled"
+          defaultChecked={settings.cartOfferEnabled}
+          hint="Shows ~1 min after items sit in the cart — stacks on any coupon."
+        />
+        <Field
+          label="Cart discount (₹)"
+          name="cartOfferAmount"
+          type="number"
+          min={0}
+          defaultValue={settings.cartOfferAmount}
+          hint="Extra amount off, added on top of any coupon already applied."
         />
       </Card>
 
