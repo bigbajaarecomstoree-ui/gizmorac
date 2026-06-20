@@ -24,6 +24,7 @@ type Params = Promise<{ id: string }>;
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
     day: "numeric",
     month: "short",
     year: "numeric",

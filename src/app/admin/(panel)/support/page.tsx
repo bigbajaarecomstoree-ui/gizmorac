@@ -20,6 +20,7 @@ const FILTERS: { value: TicketStatus | "all"; label: string }[] = [
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
     day: "numeric",
     month: "short",
     year: "numeric",

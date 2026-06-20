@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
     const items = o.items.map((i) => `${i.name} x${i.qty}`).join("; ");
     return [
       o.orderNumber,
-      new Date(o.createdAt).toLocaleString("en-IN"),
+      new Date(o.createdAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }),
       `${o.firstName} ${o.lastName}`,
       o.email,
       o.phone,

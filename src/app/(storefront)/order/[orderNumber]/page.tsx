@@ -43,6 +43,7 @@ export default async function OrderPage({ params }: { params: Params }) {
   );
 
   const placed = new Date(order.createdAt).toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
     day: "numeric",
     month: "short",
     year: "numeric",

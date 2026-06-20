@@ -6,6 +6,7 @@ export const dynamic = "force-dynamic";
 
 function fmtDateTime(iso: string) {
   return new Date(iso).toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
     day: "numeric",
     month: "short",
     year: "numeric",

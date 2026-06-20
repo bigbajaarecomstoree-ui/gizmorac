@@ -18,6 +18,7 @@ export default async function OrderDetailPage({ params }: { params: Params }) {
   if (!order) notFound();
 
   const placed = new Date(order.createdAt).toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
     day: "numeric",
     month: "short",
     year: "numeric",

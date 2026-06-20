@@ -33,6 +33,7 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 
 function fmtDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-IN", {
+    timeZone: "Asia/Kolkata",
     day: "2-digit",
     month: "short",
     year: "numeric",

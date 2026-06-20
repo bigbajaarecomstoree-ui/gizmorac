@@ -22,6 +22,7 @@ export function RewardCouponCard({
   const inactive = used || expired;
   const expiry = expiresAt
     ? new Date(expiresAt).toLocaleDateString("en-IN", {
+        timeZone: "Asia/Kolkata",
         day: "numeric",
         month: "short",
         year: "numeric",

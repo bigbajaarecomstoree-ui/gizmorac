@@ -8,6 +8,7 @@ function isVideo(url: string): boolean {
 
 function fmt(iso: string): string {
   return new Date(iso).toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
     day: "numeric",
     month: "short",
     hour: "2-digit",

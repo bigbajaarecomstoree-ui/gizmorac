@@ -52,7 +52,7 @@ export function formatCount(n: number): string {
 /** Estimated delivery window from today, returned as a readable range. */
 export function deliveryWindow(fromDays = 2, toDays = 5): string {
   const fmt = (d: Date) =>
-    d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+    d.toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short" });
   const start = new Date();
   start.setDate(start.getDate() + fromDays);
   const end = new Date();

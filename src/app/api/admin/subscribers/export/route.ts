@@ -18,7 +18,7 @@ export async function GET() {
 
   const header = ["Serial Number", "Email", "Subscribed On"];
   const rows = subscribers.map((s, i) =>
-    [i + 1, s.email, new Date(s.createdAt).toLocaleString("en-IN")]
+    [i + 1, s.email, new Date(s.createdAt).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })]
       .map(csv)
       .join(","),
   );

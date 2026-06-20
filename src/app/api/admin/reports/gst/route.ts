@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
       rows.push(
         [
           o.orderNumber,
-          new Date(o.createdAt).toLocaleDateString("en-IN"),
+          new Date(o.createdAt).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" }),
           `${o.firstName} ${o.lastName}`,
           o.state,
           stateCode,

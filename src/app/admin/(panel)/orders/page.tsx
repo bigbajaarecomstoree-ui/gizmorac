@@ -35,6 +35,7 @@ type SearchParams = Promise<{
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-IN", {
+    timeZone: "Asia/Kolkata",
     day: "numeric",
     month: "short",
     year: "numeric",
