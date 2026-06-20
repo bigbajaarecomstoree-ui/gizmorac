@@ -20,8 +20,7 @@ export function CartView({
   freeShippingThreshold?: number;
   shippingFee?: number;
 }) {
-  const { cart, setQty, removeFromCart } = useStore();
-  const { mounted } = useStore();
+  const { cart, setQty, removeFromCart, offer, mounted } = useStore();
   const [code, setCode] = React.useState("");
   const [coupon, setCoupon] = React.useState<{ code: string; off: number } | null>(null);
   const [couponError, setCouponError] = React.useState<string | null>(null);
@@ -60,9 +59,22 @@ export function CartView({
   const mrpTotal = lines.reduce((s, l) => s + l.product.mrp * l.qty, 0);
   const productDiscount = mrpTotal - subtotal;
   const couponDiscount = coupon ? coupon.off : 0;
-  const afterCoupon = Math.max(0, subtotal - couponDiscount);
-  const shipping = afterCoupon >= freeShippingThreshold ? 0 : shippingFee;
-  const total = afterCoupon + shipping;
+  // Instant promo-popup discount stacks on the coupon (capped at the subtotal).
+  const instantOff = offer
+    ? Math.min(offer.amount, Math.max(0, subtotal - couponDiscount))
+    : 0;
+  const afterDiscount = Math.max(0, subtotal - couponDiscount - instantOff);
+  const shipping = afterDiscount >= freeShippingThreshold ? 0 : shippingFee;
+  const total = afterDiscount + shipping;
+  // GST already included in the tax-inclusive prices shown.
+  const gstIncl = Math.round(
+    lines.reduce((s, l) => {
+      const rate = l.product.gstRate || 18;
+      const inc = l.product.price * l.qty;
+      return s + (inc - inc / (1 + rate / 100));
+    }, 0),
+  );
+  const savings = productDiscount + couponDiscount + instantOff;
 
   function submitCoupon(e: React.FormEvent) {
     e.preventDefault();
@@ -233,6 +245,12 @@ export function CartView({
                 <dd>−{formatINR(coupon.off)}</dd>
               </div>
             ) : null}
+            {instantOff > 0 ? (
+              <div className="flex justify-between text-success">
+                <dt>Instant offer</dt>
+                <dd>−{formatINR(instantOff)}</dd>
+              </div>
+            ) : null}
             <div className="flex justify-between">
               <dt className="text-muted">Shipping</dt>
               <dd>{shipping === 0 ? "Free" : formatINR(shipping)}</dd>
@@ -241,6 +259,16 @@ export function CartView({
               <dt>Total</dt>
               <dd className="readout">{formatINR(total)}</dd>
             </div>
+            <div className="flex justify-between text-xs text-faint">
+              <dt>Includes GST</dt>
+              <dd>{formatINR(gstIncl)}</dd>
+            </div>
+            {savings > 0 ? (
+              <div className="flex justify-between text-xs font-medium text-success">
+                <dt>You saved</dt>
+                <dd>{formatINR(savings)}</dd>
+              </div>
+            ) : null}
           </dl>
 
           <Link href="/checkout" className={`${buttonVariants({ size: "lg" })} mt-5 w-full`}>
