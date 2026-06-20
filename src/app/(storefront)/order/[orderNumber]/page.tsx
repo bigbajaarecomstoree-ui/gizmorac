@@ -191,7 +191,7 @@ export default async function OrderPage({ params }: { params: Params }) {
         {isOwner && isDelivered ? (
           <div className="mt-5 rounded-xl border border-border bg-surface p-5">
             <div className="flex items-center gap-2">
-              <ShieldAlert size={18} className="text-accent" />
+              <ShieldAlert size={18} className="text-danger" />
               <h2 className="font-semibold">Need help with this order?</h2>
             </div>
             <p className="mt-1 text-sm text-muted">

@@ -21,7 +21,7 @@ const RESOLUTION_COPY: Record<string, string> = {
 function NewTicketForm({ orderNumber }: { orderNumber: string }) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
-  const [category, setCategory] = React.useState("Damaged");
+  const [category, setCategory] = React.useState("");
   const [description, setDescription] = React.useState("");
   const [attachments, setAttachments] = React.useState<string[]>([]);
   const [busy, setBusy] = React.useState(false);
@@ -29,8 +29,16 @@ function NewTicketForm({ orderNumber }: { orderNumber: string }) {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!category) {
+      setError("Please select what went wrong.");
+      return;
+    }
     if (!description.trim()) {
       setError("Please describe the problem.");
+      return;
+    }
+    if (attachments.length === 0) {
+      setError("Please add at least one photo or video as proof of the issue.");
       return;
     }
     setBusy(true);
@@ -62,12 +70,18 @@ function NewTicketForm({ orderNumber }: { orderNumber: string }) {
 
   return (
     <form onSubmit={onSubmit} className="rounded-lg border border-border bg-background p-4">
-      <label className="text-xs font-medium text-muted">What went wrong?</label>
+      <label className="text-xs font-medium text-muted">
+        What went wrong? <span className="text-danger">*</span>
+      </label>
       <select
         value={category}
         onChange={(e) => setCategory(e.target.value)}
+        required
         className="mt-1.5 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-accent"
       >
+        <option value="" disabled>
+          Select an issue…
+        </option>
         {CATEGORIES.map((c) => (
           <option key={c} value={c}>
             {c}
@@ -75,18 +89,22 @@ function NewTicketForm({ orderNumber }: { orderNumber: string }) {
         ))}
       </select>
 
+      <label className="mt-3 block text-xs font-medium text-muted">
+        Describe the problem <span className="text-danger">*</span>
+      </label>
       <textarea
         value={description}
         onChange={(e) => setDescription(e.target.value)}
         rows={3}
         maxLength={4000}
         placeholder="Tell us what's wrong with your order…"
-        className="mt-3 w-full resize-y rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-accent"
+        className="mt-1.5 w-full resize-y rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-accent"
       />
 
       <div className="mt-3">
         <p className="mb-1.5 text-xs font-medium text-muted">
-          Add photos or a video (optional, helps us resolve it faster)
+          Add photos or a video <span className="text-danger">*</span>{" "}
+          <span className="font-normal text-faint">(proof of the issue — required)</span>
         </p>
         <ProofUploader endpoint={UPLOAD} value={attachments} onChange={setAttachments} />
       </div>

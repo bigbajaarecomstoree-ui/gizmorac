@@ -389,13 +389,21 @@ export async function raiseTicket(input: {
     };
   }
 
-  const category: TicketCategory = (TICKET_CATEGORIES as string[]).includes(
-    input.category,
-  )
-    ? (input.category as TicketCategory)
-    : "Other";
+  // All three are compulsory to raise a claim: a chosen issue, a description,
+  // and at least one photo/video as proof.
+  if (!(TICKET_CATEGORIES as string[]).includes(input.category)) {
+    return { ok: false, error: "Please select what went wrong." };
+  }
+  const category = input.category as TicketCategory;
   const description = (input.description ?? "").trim().slice(0, 4000);
   if (!description) return { ok: false, error: "Please describe the problem." };
+  const attachments = cleanAttachments(input.attachments);
+  if (attachments.length === 0) {
+    return {
+      ok: false,
+      error: "Please add at least one photo or video as proof of the issue.",
+    };
+  }
 
   const ticket = await createTicket({
     orderId: order.id,
@@ -405,7 +413,7 @@ export async function raiseTicket(input: {
     name: `${order.firstName} ${order.lastName}`.trim() || customer.fullName,
     category,
     description,
-    attachments: cleanAttachments(input.attachments),
+    attachments,
   });
 
   revalidatePath(`/order/${order.orderNumber}`);
