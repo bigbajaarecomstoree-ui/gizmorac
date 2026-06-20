@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getCurrentCustomer } from "@/lib/customer-auth";
-import { AuthForm } from "@/components/account/auth-form";
+import { AuthScreen } from "@/components/account/auth-screen";
 
 export const metadata: Metadata = {
   title: "Log in",
@@ -11,9 +11,5 @@ export const metadata: Metadata = {
 
 export default async function LoginPage() {
   if (await getCurrentCustomer()) redirect("/account");
-  return (
-    <div className="shell flex justify-center py-14 sm:py-20">
-      <AuthForm mode="login" />
-    </div>
-  );
+  return <AuthScreen mode="login" />;
 }

@@ -25,14 +25,18 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
 
   return (
     <div className="mx-auto w-full max-w-md">
-      <div className="flex flex-col items-center text-center">
-        <Link href="/" className="flex items-center gap-1.5" aria-label="GIZMORAC home">
+      <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
+        <Link
+          href="/"
+          className="flex items-center gap-1.5 lg:hidden"
+          aria-label="GIZMORAC home"
+        >
           <Image src="/logo.png" alt="" width={523} height={586} className="h-12 w-auto" />
           <span className="font-display text-xl font-bold tracking-tight">
             GIZMO<span className="text-accent">RAC</span>
           </span>
         </Link>
-        <h1 className="mt-6 text-2xl font-bold tracking-tight">
+        <h1 className="mt-6 text-2xl font-bold tracking-tight lg:mt-0">
           {isSignup ? "Create your account" : "Welcome back"}
         </h1>
         <p className="mt-1.5 text-sm text-muted">
@@ -44,7 +48,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
 
       <form
         action={formAction}
-        className="mt-8 space-y-4 rounded-2xl border border-border bg-surface p-6 sm:p-8"
+        className="mt-8 space-y-4 rounded-2xl border border-border bg-surface p-6 sm:p-8 lg:border-0 lg:bg-transparent lg:p-0"
       >
         {isSignup ? (
           <label className="block">
