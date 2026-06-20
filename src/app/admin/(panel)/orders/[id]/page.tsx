@@ -2,11 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { getOrderById, ORDER_STATUSES } from "@/lib/data/orders";
-import { updateOrderStatus } from "@/lib/admin/actions";
 import { formatINR } from "@/lib/format";
 import { OrderStatusBadge } from "@/components/admin/order-status-badge";
-import { Button } from "@/components/ui/button";
-import { Select } from "@/components/ui/select";
+import { OrderStatusForm } from "@/components/admin/order-status-form";
 
 type Params = Promise<{ id: string }>;
 
@@ -90,18 +88,11 @@ export default async function OrderDetailPage({ params }: { params: Params }) {
         <div className="space-y-5">
           <div className="rounded-xl border border-border bg-surface p-5">
             <h2 className="mb-3 font-semibold">Update status</h2>
-            <form action={updateOrderStatus} className="flex gap-2">
-              <input type="hidden" name="id" value={order.id} />
-              <Select
-                key={order.status}
-                name="status"
-                defaultValue={order.status}
-                options={ORDER_STATUSES.map((s) => ({ value: s, label: s }))}
-                className="flex-1"
-                triggerClassName="bg-background"
-              />
-              <Button type="submit" size="md">Save</Button>
-            </form>
+            <OrderStatusForm
+              orderId={order.id}
+              status={order.status}
+              statuses={ORDER_STATUSES}
+            />
           </div>
 
           <div className="rounded-xl border border-border bg-surface p-5 text-sm">
