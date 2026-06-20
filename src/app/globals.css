@@ -101,11 +101,15 @@
   .shell {
     margin-inline: auto;
     width: 100%;
-    max-width: 1240px;
+    max-width: 1440px;
     padding-inline: 1.25rem;
   }
   @media (min-width: 768px) {
     .shell { padding-inline: 2rem; }
+  }
+  /* Use more of very wide desktops so content isn't lost in side gutters. */
+  @media (min-width: 1440px) {
+    .shell { padding-inline: 3rem; }
   }
 
   /* Monospace technical label — SKUs, eyebrows, data tags */
