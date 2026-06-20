@@ -41,8 +41,16 @@ export default async function StorefrontLayout({
         />
         <WhatsAppButton href={waHref} />
         <PromoPopups
-          browse={{ enabled: settings.browseOfferEnabled, amount: settings.browseOfferAmount }}
-          cart={{ enabled: settings.cartOfferEnabled, amount: settings.cartOfferAmount }}
+          browse={{
+            enabled: settings.browseOfferEnabled,
+            amount: settings.browseOfferAmount,
+            delaySec: settings.browseOfferDelay,
+          }}
+          cart={{
+            enabled: settings.cartOfferEnabled,
+            amount: settings.cartOfferAmount,
+            delaySec: settings.cartOfferDelay,
+          }}
         />
       </div>
     </StoreProvider>

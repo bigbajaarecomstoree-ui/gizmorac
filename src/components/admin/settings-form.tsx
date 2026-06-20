@@ -334,31 +334,53 @@ export function SettingsForm({ settings }: { settings: StoreSettings }) {
           label="Browsing nudge popup"
           name="browseOfferEnabled"
           defaultChecked={settings.browseOfferEnabled}
-          hint="Shows after ~25s of browsing with a 'Claim now' button."
+          hint="Shows after a set time of browsing with a 'Claim now' button."
         />
-        <Field
-          label="Browsing discount (₹)"
-          name="browseOfferAmount"
-          type="number"
-          min={0}
-          defaultValue={settings.browseOfferAmount}
-          hint="Flat amount taken off at checkout when claimed (e.g. 100–150)."
-        />
+        <div className="grid grid-cols-2 gap-4">
+          <Field
+            label="Browsing discount (₹)"
+            name="browseOfferAmount"
+            type="number"
+            min={0}
+            defaultValue={settings.browseOfferAmount}
+            hint="Flat amount off at checkout (e.g. 100–150)."
+          />
+          <Field
+            label="Show after (seconds)"
+            name="browseOfferDelay"
+            type="number"
+            min={1}
+            max={3600}
+            defaultValue={settings.browseOfferDelay}
+            hint="Browsing time before it pops up (e.g. 25)."
+          />
+        </div>
         <hr className="border-border" />
         <FormToggle
           label="Cart-waiting popup"
           name="cartOfferEnabled"
           defaultChecked={settings.cartOfferEnabled}
-          hint="Shows ~1 min after items sit in the cart — stacks on any coupon."
+          hint="Shows after items sit in the cart a while — stacks on any coupon."
         />
-        <Field
-          label="Cart discount (₹)"
-          name="cartOfferAmount"
-          type="number"
-          min={0}
-          defaultValue={settings.cartOfferAmount}
-          hint="Extra amount off, added on top of any coupon already applied."
-        />
+        <div className="grid grid-cols-2 gap-4">
+          <Field
+            label="Cart discount (₹)"
+            name="cartOfferAmount"
+            type="number"
+            min={0}
+            defaultValue={settings.cartOfferAmount}
+            hint="Extra amount off, on top of any coupon."
+          />
+          <Field
+            label="Show after (seconds)"
+            name="cartOfferDelay"
+            type="number"
+            min={1}
+            max={3600}
+            defaultValue={settings.cartOfferDelay}
+            hint="Time items wait in cart before it pops up (e.g. 60)."
+          />
+        </div>
       </Card>
 
       <div className="flex items-center gap-3 lg:col-span-2">

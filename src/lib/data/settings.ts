@@ -22,8 +22,10 @@ export interface StoreSettings {
   landingPopupCode: string;
   browseOfferEnabled: boolean;
   browseOfferAmount: number;
+  browseOfferDelay: number;
   cartOfferEnabled: boolean;
   cartOfferAmount: number;
+  cartOfferDelay: number;
 }
 
 export const SETTINGS_ID = "store";
@@ -49,8 +51,10 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   landingPopupCode: "",
   browseOfferEnabled: false,
   browseOfferAmount: 100,
+  browseOfferDelay: 25,
   cartOfferEnabled: false,
   cartOfferAmount: 100,
+  cartOfferDelay: 60,
 };
 
 function toSettings(r: StoreSetting): StoreSettings {
@@ -75,8 +79,10 @@ function toSettings(r: StoreSetting): StoreSettings {
     landingPopupCode: r.landingPopupCode,
     browseOfferEnabled: r.browseOfferEnabled,
     browseOfferAmount: r.browseOfferAmount,
+    browseOfferDelay: r.browseOfferDelay,
     cartOfferEnabled: r.cartOfferEnabled,
     cartOfferAmount: r.cartOfferAmount,
+    cartOfferDelay: r.cartOfferDelay,
   };
 }
 

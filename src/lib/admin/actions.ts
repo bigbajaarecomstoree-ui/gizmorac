@@ -640,8 +640,10 @@ export async function updateSettings(
     landingPopupCode: str(formData, "landingPopupCode").toUpperCase(),
     browseOfferEnabled: bool(formData, "browseOfferEnabled"),
     browseOfferAmount: Math.max(0, int(formData, "browseOfferAmount", 100)),
+    browseOfferDelay: Math.min(3600, Math.max(1, int(formData, "browseOfferDelay", 25))),
     cartOfferEnabled: bool(formData, "cartOfferEnabled"),
     cartOfferAmount: Math.max(0, int(formData, "cartOfferAmount", 100)),
+    cartOfferDelay: Math.min(3600, Math.max(1, int(formData, "cartOfferDelay", 60))),
   };
 
   await prisma.storeSetting.upsert({

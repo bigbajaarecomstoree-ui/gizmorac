@@ -260,9 +260,11 @@ model StoreSetting {
   // Browsing nudge popup (feature 2) — flat instant discount, admin-controlled.
   browseOfferEnabled    Boolean  @default(false)
   browseOfferAmount     Int      @default(100)
+  browseOfferDelay      Int      @default(25) // seconds of browsing before it shows
   // Cart-waiting popup (feature 3) — extra instant discount that stacks on coupons.
   cartOfferEnabled      Boolean  @default(false)
   cartOfferAmount       Int      @default(100)
+  cartOfferDelay        Int      @default(60) // seconds items sit in cart before it shows
   // PhonePe payment gateway — admin-managed online payments (server-only secret).
   phonepeClientId       String   @default("")
   phonepeClientVersion  String   @default("1")

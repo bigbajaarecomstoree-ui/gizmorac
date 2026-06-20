@@ -7,8 +7,6 @@ import { Gift, ShoppingCart, X } from "lucide-react";
 import { useStore } from "@/components/store/store-provider";
 import { formatINR } from "@/lib/format";
 
-const BROWSE_DELAY = 25_000; // ~25s of browsing
-const CART_DELAY = 60_000; // ~1 min with items sitting in the cart
 // Browse nudge stays off the cart/checkout flow; the cart-waiting reminder is
 // allowed on the cart page (it's the whole point), just not during checkout.
 const BROWSE_SUPPRESS = ["/checkout", "/cart", "/order", "/login", "/signup"];
@@ -38,8 +36,8 @@ export function PromoPopups({
   browse,
   cart,
 }: {
-  browse: { enabled: boolean; amount: number };
-  cart: { enabled: boolean; amount: number };
+  browse: { enabled: boolean; amount: number; delaySec: number };
+  cart: { enabled: boolean; amount: number; delaySec: number };
 }) {
   const pathname = usePathname();
   const { cartCount, offer, claimOffer, mounted } = useStore();
@@ -62,9 +60,9 @@ export function PromoPopups({
       if (c.browseSuppressed || c.offer || c.active) return;
       markSeen("browse");
       setActive("browse");
-    }, BROWSE_DELAY);
+    }, Math.max(1, browse.delaySec) * 1000);
     return () => clearTimeout(t);
-  }, [mounted, browse.enabled, browse.amount]);
+  }, [mounted, browse.enabled, browse.amount, browse.delaySec]);
 
   // Cart-waiting — arms whenever items are present; fires after the dwell time.
   React.useEffect(() => {
@@ -75,9 +73,9 @@ export function PromoPopups({
       if (c.cartCount <= 0 || c.cartSuppressed || c.offer || c.active) return;
       markSeen("cart");
       setActive("cart");
-    }, CART_DELAY);
+    }, Math.max(1, cart.delaySec) * 1000);
     return () => clearTimeout(t);
-  }, [mounted, cart.enabled, cart.amount, cartCount]);
+  }, [mounted, cart.enabled, cart.amount, cart.delaySec, cartCount]);
 
   const activeSuppressed = active === "browse" ? browseSuppressed : cartSuppressed;
   if (!active || activeSuppressed) return null;
