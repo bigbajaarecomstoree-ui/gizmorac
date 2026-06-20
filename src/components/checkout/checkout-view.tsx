@@ -50,6 +50,9 @@ export function CheckoutView({
   });
 
   const [coupon, setCoupon] = React.useState<{ code: string; off: number } | null>(null);
+  const [code, setCode] = React.useState("");
+  const [couponError, setCouponError] = React.useState<string | null>(null);
+  const [couponPending, startCoupon] = React.useTransition();
   const [error, setError] = React.useState<string | null>(null);
   const [placing, startPlacing] = React.useTransition();
 
@@ -112,6 +115,40 @@ export function CheckoutView({
   const afterDiscount = Math.max(0, subtotal - discount - instantOff);
   const shipping = afterDiscount >= freeShippingThreshold ? 0 : shippingFee;
   const total = afterDiscount + shipping;
+  const savings = discount + instantOff;
+
+  // GST is included in the displayed (tax-inclusive) prices; show how much.
+  const gstIncl = Math.round(
+    lines.reduce((s, l) => {
+      const rate = l.product.gstRate || 18;
+      const inc = l.product.price * l.qty;
+      return s + (inc - inc / (1 + rate / 100));
+    }, 0),
+  );
+
+  function submitCoupon() {
+    const c = code.trim();
+    if (!c) return;
+    setCouponError(null);
+    startCoupon(async () => {
+      const refs = lines.map((l) => ({ id: l.product.id, qty: l.qty }));
+      const res = await applyCoupon(c, refs);
+      if (res.ok && res.discount) {
+        setCoupon({ code: res.code ?? c, off: res.discount });
+        setCode("");
+        try { localStorage.setItem(COUPON_STORAGE_KEY, res.code ?? c); } catch {}
+      } else {
+        setCoupon(null);
+        setCouponError(res.error ?? "Invalid coupon code");
+        try { localStorage.removeItem(COUPON_STORAGE_KEY); } catch {}
+      }
+    });
+  }
+  function clearCoupon() {
+    setCoupon(null);
+    setCouponError(null);
+    try { localStorage.removeItem(COUPON_STORAGE_KEY); } catch {}
+  }
 
   function set(key: keyof typeof form) {
     return (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -250,23 +287,54 @@ export function CheckoutView({
             ))}
           </div>
 
+          {/* coupon code */}
           {coupon ? (
-            <div className="mt-4 flex items-center justify-between rounded-lg border border-success/30 bg-success/10 px-3 py-2 text-sm">
+            <div className="mt-4 flex items-center justify-between rounded-lg border border-success/30 bg-success/10 px-3 py-2.5 text-sm">
               <span className="flex items-center gap-1.5 font-medium text-success">
-                <Tag size={14} /> {coupon.code}
+                <Tag size={14} /> {coupon.code} applied
               </span>
               <button
                 type="button"
-                onClick={() => {
-                  setCoupon(null);
-                  try { localStorage.removeItem(COUPON_STORAGE_KEY); } catch {}
-                }}
+                onClick={clearCoupon}
                 className="text-faint hover:text-danger cursor-pointer"
                 aria-label="Remove coupon"
               >
                 <X size={14} />
               </button>
             </div>
+          ) : (
+            <div className="mt-4 flex gap-2">
+              <div className="relative flex-1">
+                <Tag
+                  size={15}
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint"
+                />
+                <input
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.toUpperCase())}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      submitCoupon();
+                    }
+                  }}
+                  placeholder="Coupon code"
+                  aria-label="Coupon code"
+                  className="h-10 w-full rounded-lg border border-border bg-background pl-9 pr-3 text-sm uppercase placeholder:normal-case placeholder:text-faint focus:border-accent focus:outline-none"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={submitCoupon}
+                disabled={couponPending}
+                className="h-10 rounded-lg border border-border-bright px-4 text-sm font-medium hover:border-accent hover:text-accent disabled:opacity-50 cursor-pointer"
+              >
+                {couponPending ? "…" : "Apply"}
+              </button>
+            </div>
+          )}
+          {couponError ? (
+            <p className="mt-2 text-xs text-danger" role="alert">{couponError}</p>
           ) : null}
 
           {instantOff > 0 ? (
@@ -292,7 +360,7 @@ export function CheckoutView({
             </div>
             {discount > 0 ? (
               <div className="flex justify-between text-success">
-                <dt>Coupon</dt>
+                <dt>Coupon{coupon ? ` (${coupon.code})` : ""}</dt>
                 <dd>−{formatINR(discount)}</dd>
               </div>
             ) : null}
@@ -310,6 +378,16 @@ export function CheckoutView({
               <dt>Total</dt>
               <dd className="readout">{formatINR(total)}</dd>
             </div>
+            <div className="flex justify-between text-xs text-faint">
+              <dt>Includes GST</dt>
+              <dd>{formatINR(gstIncl)}</dd>
+            </div>
+            {savings > 0 ? (
+              <div className="flex justify-between text-xs font-medium text-success">
+                <dt>You saved</dt>
+                <dd>{formatINR(savings)}</dd>
+              </div>
+            ) : null}
           </dl>
 
           {error ? (
