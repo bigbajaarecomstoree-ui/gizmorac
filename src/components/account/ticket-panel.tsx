@@ -57,13 +57,15 @@ function NewTicketForm({ orderNumber }: { orderNumber: string }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex w-full items-center justify-between gap-3 rounded-lg border border-border bg-background px-3.5 py-3 text-left text-sm transition-colors hover:border-accent cursor-pointer"
+        className="group flex w-full items-center justify-between gap-3 rounded-lg border border-border bg-background px-3.5 py-3 text-left text-sm transition-colors hover:border-danger cursor-pointer"
       >
         <span className="flex items-center gap-2">
-          <ShieldAlert size={16} className="text-accent" />
+          <ShieldAlert size={16} className="text-danger" />
           <span className="font-medium">Received a damaged or defective item?</span>
         </span>
-        <span className="text-xs font-medium text-accent-bright">Report a problem</span>
+        <span className="text-xs font-medium text-accent-bright transition-colors group-hover:text-danger">
+          Report a problem
+        </span>
       </button>
     );
   }
