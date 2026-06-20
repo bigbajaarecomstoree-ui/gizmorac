@@ -17,18 +17,21 @@ import {
   getSalesByWeekday,
 } from "@/lib/data/orders";
 import { getOpenTicketCount } from "@/lib/data/tickets";
+import { getDashboardChart } from "@/lib/data/dashboard-chart";
 import { formatINR } from "@/lib/format";
 import { buttonVariants } from "@/components/ui/button";
 import { OrderStatusBadge } from "@/components/admin/order-status-badge";
+import { SalesChart } from "@/components/admin/sales-chart";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboard() {
-  const [stats, orders, byWeekday, openTickets] = await Promise.all([
+  const [stats, orders, byWeekday, openTickets, chart] = await Promise.all([
     getAdminStats(),
     getOrders(),
     getSalesByWeekday(),
     getOpenTicketCount(),
+    getDashboardChart(),
   ]);
   const recent = orders.slice(0, 5);
 
@@ -74,6 +77,11 @@ export default async function AdminDashboard() {
             <div className="tech-label mt-1">{c.label}</div>
           </Link>
         ))}
+      </div>
+
+      {/* sales trend — metric + range selectable, auto-scaled axis */}
+      <div className="mt-3">
+        <SalesChart data={chart} />
       </div>
 
       {/* support tickets needing action */}
