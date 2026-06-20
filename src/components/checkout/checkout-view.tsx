@@ -9,7 +9,7 @@ import { useStore } from "@/components/store/store-provider";
 import { ProductArt } from "@/components/product/product-art";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { formatINR, shortTitle } from "@/lib/format";
-import { applyCoupon, placeOrder } from "@/lib/storefront/actions";
+import { applyCoupon, placeOrder, startPhonePePayment } from "@/lib/storefront/actions";
 import { COUPON_STORAGE_KEY } from "@/lib/checkout-shared";
 import { INDIAN_STATES, lookupPincode } from "@/lib/india";
 
@@ -27,12 +27,14 @@ export function CheckoutView({
   freeShippingThreshold = 999,
   shippingFee = 79,
   codEnabled = true,
+  phonepeEnabled = false,
 }: {
   products: Product[];
   customer: Customer | null;
   freeShippingThreshold?: number;
   shippingFee?: number;
   codEnabled?: boolean;
+  phonepeEnabled?: boolean;
 }) {
   const router = useRouter();
   const { cart, clearCart, mounted, offer, clearOffer } = useStore();
@@ -54,6 +56,10 @@ export function CheckoutView({
   const [pinStatus, setPinStatus] = React.useState<
     "idle" | "checking" | "found" | "notfound"
   >("idle");
+  // Default to online payment when available, else COD.
+  const [payMethod, setPayMethod] = React.useState<"PhonePe" | "COD">(
+    phonepeEnabled ? "PhonePe" : "COD",
+  );
   const [coupon, setCoupon] = React.useState<{ code: string; off: number } | null>(null);
   const [code, setCode] = React.useState("");
   const [couponError, setCouponError] = React.useState<string | null>(null);
@@ -188,19 +194,37 @@ export function CheckoutView({
       companyName: form.companyName.trim(),
       couponCode: coupon?.code,
       instantOffer: offer?.kind,
+      paymentMethod: payMethod,
       items: lines.map((l) => ({ id: l.product.id, qty: l.qty })),
+    };
+    const finishCod = (orderNumber: string) => {
+      clearCart();
+      clearOffer();
+      try {
+        localStorage.removeItem(COUPON_STORAGE_KEY);
+      } catch {}
+      router.push(`/order/${orderNumber}`);
     };
     startPlacing(async () => {
       const res = await placeOrder(payload);
-      if (res.ok) {
-        clearCart();
-        clearOffer();
-        try {
-          localStorage.removeItem(COUPON_STORAGE_KEY);
-        } catch {}
-        router.push(`/order/${res.orderNumber}`);
-      } else {
+      if (!res.ok) {
         setError(res.error);
+        return;
+      }
+      if (res.paymentMethod === "PhonePe") {
+        const pay = await startPhonePePayment(res.orderNumber);
+        if (pay.ok) {
+          clearCart();
+          clearOffer();
+          try {
+            localStorage.removeItem(COUPON_STORAGE_KEY);
+          } catch {}
+          window.location.href = pay.redirectUrl; // hand off to PhonePe
+        } else {
+          setError(`${pay.error} Your order ${res.orderNumber} is saved as pending.`);
+        }
+      } else {
+        finishCod(res.orderNumber);
       }
     });
   }
@@ -322,23 +346,58 @@ export function CheckoutView({
 
         <div className="rounded-xl border border-border bg-surface p-5">
           <h2 className="mb-3 font-semibold">Payment</h2>
-          {codEnabled ? (
-            <>
-              <label className="flex items-start gap-3 rounded-lg border border-accent bg-accent-soft/50 p-3">
-                <input type="radio" name="payment" defaultChecked className="mt-1 h-4 w-4 accent-[var(--color-accent)]" />
-                <span>
-                  <span className="block text-sm font-medium">Cash on Delivery</span>
-                  <span className="block text-xs text-muted">Pay in cash when your order arrives.</span>
-                </span>
-              </label>
-              <p className="mt-3 text-xs text-faint">
-                Online payment via PhonePe is coming soon.
-              </p>
-            </>
+          {phonepeEnabled || codEnabled ? (
+            <div className="space-y-2.5">
+              {phonepeEnabled ? (
+                <label
+                  className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${
+                    payMethod === "PhonePe"
+                      ? "border-accent bg-accent-soft/50"
+                      : "border-border hover:border-border-bright"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="payment"
+                    checked={payMethod === "PhonePe"}
+                    onChange={() => setPayMethod("PhonePe")}
+                    className="mt-1 h-4 w-4 accent-[var(--color-accent)]"
+                  />
+                  <span>
+                    <span className="block text-sm font-medium">
+                      Pay online — UPI, Cards &amp; more
+                    </span>
+                    <span className="block text-xs text-muted">
+                      Secure payment via PhonePe. Pay now and your order is confirmed instantly.
+                    </span>
+                  </span>
+                </label>
+              ) : null}
+              {codEnabled ? (
+                <label
+                  className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${
+                    payMethod === "COD"
+                      ? "border-accent bg-accent-soft/50"
+                      : "border-border hover:border-border-bright"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="payment"
+                    checked={payMethod === "COD"}
+                    onChange={() => setPayMethod("COD")}
+                    className="mt-1 h-4 w-4 accent-[var(--color-accent)]"
+                  />
+                  <span>
+                    <span className="block text-sm font-medium">Cash on Delivery</span>
+                    <span className="block text-xs text-muted">Pay in cash when your order arrives.</span>
+                  </span>
+                </label>
+              ) : null}
+            </div>
           ) : (
             <p className="rounded-lg border border-danger/30 bg-danger/5 px-3 py-3 text-sm text-danger">
-              Online payments are coming soon and Cash on Delivery is currently
-              paused. Please check back shortly.
+              Payments are paused right now. Please check back shortly.
             </p>
           )}
         </div>
@@ -476,14 +535,18 @@ export function CheckoutView({
             type="submit"
             size="lg"
             className="mt-5 w-full"
-            disabled={placing || !codEnabled}
+            disabled={placing || (!phonepeEnabled && !codEnabled)}
           >
             {placing ? <Loader2 size={16} className="animate-spin" /> : <Lock size={15} />}
-            {!codEnabled
-              ? "Ordering paused"
+            {!phonepeEnabled && !codEnabled
+              ? "Payments paused"
               : placing
-                ? "Placing order…"
-                : `Place order · ${formatINR(total)}`}
+                ? payMethod === "PhonePe"
+                  ? "Redirecting to PhonePe…"
+                  : "Placing order…"
+                : payMethod === "PhonePe"
+                  ? `Pay ${formatINR(total)}`
+                  : `Place order · ${formatINR(total)}`}
           </Button>
           <p className="mt-3 text-center text-xs text-faint">
             By placing this order you agree to our{" "}

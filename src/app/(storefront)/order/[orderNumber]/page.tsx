@@ -13,6 +13,7 @@ import { OrderStatusBadge } from "@/components/admin/order-status-badge";
 import { OrderTracker } from "@/components/order/order-tracker";
 import { OrderItemReview } from "@/components/account/order-review";
 import { RewardCouponCard } from "@/components/account/reward-coupon";
+import { ResumePayment } from "@/components/order/resume-payment";
 import { TicketPanel } from "@/components/account/ticket-panel";
 import { buttonVariants } from "@/components/ui/button";
 import type { OrderStatus } from "@/lib/types";
@@ -88,6 +89,39 @@ export default async function OrderPage({ params }: { params: Params }) {
           </div>
         </div>
 
+        {/* online payment status */}
+        {order.paymentMethod === "PhonePe" ? (
+          <div className="mt-5">
+            {order.paymentStatus === "Paid" ? (
+              <div className="flex items-center gap-3 rounded-xl border border-success/30 bg-success/5 px-4 py-3 text-sm font-medium text-success">
+                <CheckCircle2 size={18} /> Payment successful — paid online via PhonePe.
+              </div>
+            ) : order.paymentStatus === "Failed" ? (
+              <div className="rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 text-sm">
+                <p className="flex items-center gap-2 font-medium text-danger">
+                  <XCircle size={18} /> Payment failed or was cancelled.
+                </p>
+                {isOwner ? (
+                  <div className="mt-3">
+                    <ResumePayment orderNumber={order.orderNumber} />
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <div className="rounded-xl border border-accent/40 bg-accent-soft/40 px-4 py-3 text-sm">
+                <p className="font-medium text-accent-bright">
+                  Payment pending — complete your payment to confirm this order.
+                </p>
+                {isOwner ? (
+                  <div className="mt-3">
+                    <ResumePayment orderNumber={order.orderNumber} />
+                  </div>
+                ) : null}
+              </div>
+            )}
+          </div>
+        ) : null}
+
         {/* status timeline */}
         <div className="mt-5 rounded-xl border border-border bg-surface p-6">
           <h2 className="mb-5 font-semibold">Order status</h2>
@@ -152,7 +186,11 @@ export default async function OrderPage({ params }: { params: Params }) {
             </div>
             <div className="flex justify-between pt-1 text-xs text-muted">
               <dt>Payment</dt>
-              <dd>{order.paymentMethod}</dd>
+              <dd>
+                {order.paymentMethod === "PhonePe"
+                  ? `PhonePe · ${order.paymentStatus || "Pending"}`
+                  : "Cash on Delivery"}
+              </dd>
             </div>
           </dl>
         </div>

@@ -1,10 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { getCurrentCustomer } from "@/lib/customer-auth";
 import { getSettings } from "@/lib/data/settings";
 import { MAX_QTY } from "@/lib/checkout-shared";
+import { initiatePayment, phonepeConfigured } from "@/lib/phonepe";
 import {
   validateAndPriceCoupon,
   type CouponResult,
@@ -45,10 +47,12 @@ export interface CheckoutPayload {
   gstin?: string;
   /** Registered company name — required when a GSTIN is given. */
   companyName?: string;
+  /** "COD" (default) or "PhonePe" online payment. */
+  paymentMethod?: "COD" | "PhonePe";
 }
 
 export type PlaceOrderResult =
-  | { ok: true; orderNumber: string }
+  | { ok: true; orderNumber: string; paymentMethod: "COD" | "PhonePe" }
   | { ok: false; error: string };
 
 /** Fetch authoritative prices for a set of cart line refs. */
@@ -104,10 +108,14 @@ export async function placeOrder(
   }
 
   const settings = await getSettings();
-  if (!settings.codEnabled) {
+  const wantsOnline = payload.paymentMethod === "PhonePe";
+  if (wantsOnline && !phonepeConfigured()) {
+    return { ok: false, error: "Online payment is unavailable right now." };
+  }
+  if (!wantsOnline && !settings.codEnabled) {
     return {
       ok: false,
-      error: "Ordering is paused right now. Please check back shortly.",
+      error: "Cash on Delivery is paused right now. Please pay online instead.",
     };
   }
 
@@ -229,9 +237,8 @@ export async function placeOrder(
       await tx.order.create({
         data: {
           orderNumber,
-          // Auto-confirmed on placement so customers immediately see their order
-          // is accepted (a "Pending" state reads as unconfirmed and risks drop-off).
-          status: "Confirmed",
+          // COD auto-confirms; online orders stay Pending until payment clears.
+          status: wantsOnline ? "Pending" : "Confirmed",
           firstName: payload.firstName.trim(),
           lastName: payload.lastName.trim(),
           email: payload.email.trim().toLowerCase(),
@@ -257,7 +264,8 @@ export async function placeOrder(
           instantOffer,
           shipping,
           total,
-          paymentMethod: "COD",
+          paymentMethod: wantsOnline ? "PhonePe" : "COD",
+          paymentStatus: wantsOnline ? "Pending" : "",
           couponCode: appliedCode,
           customerId: customer?.id ?? null,
         },
@@ -287,7 +295,55 @@ export async function placeOrder(
   revalidatePath("/admin/orders");
   revalidatePath("/admin/reports");
   revalidatePath("/admin/inventory");
-  return { ok: true, orderNumber };
+  return {
+    ok: true,
+    orderNumber,
+    paymentMethod: wantsOnline ? "PhonePe" : "COD",
+  };
+}
+
+export type StartPaymentResult =
+  | { ok: true; redirectUrl: string }
+  | { ok: false; error: string };
+
+/**
+ * Start a PhonePe payment for a placed (Pending) online order and return the
+ * hosted-checkout redirect URL. The callback verifies the result server-side.
+ */
+export async function startPhonePePayment(
+  orderNumber: string,
+): Promise<StartPaymentResult> {
+  const order = await prisma.order.findUnique({ where: { orderNumber } });
+  if (!order) return { ok: false, error: "Order not found." };
+  if (order.paymentStatus === "Paid") {
+    return { ok: false, error: "This order is already paid." };
+  }
+
+  const h = await headers();
+  const host = h.get("host");
+  const proto =
+    h.get("x-forwarded-proto") ??
+    (host && host.includes("localhost") ? "http" : "https");
+  const origin = host
+    ? `${proto}://${host}`
+    : (process.env.NEXT_PUBLIC_SITE_URL ?? "");
+  const redirectUrl = `${origin}/api/payments/phonepe/callback?order=${encodeURIComponent(orderNumber)}`;
+
+  const res = await initiatePayment({
+    merchantOrderId: orderNumber,
+    amountPaise: order.total * 100,
+    redirectUrl,
+  });
+  if (!res.ok || !res.redirectUrl) {
+    return { ok: false, error: res.error ?? "Could not start payment." };
+  }
+  if (res.orderId) {
+    await prisma.order.update({
+      where: { id: order.id },
+      data: { paymentRef: res.orderId },
+    });
+  }
+  return { ok: true, redirectUrl: res.redirectUrl };
 }
 
 export type ReviewResult = { ok: true } | { ok: false; error: string };

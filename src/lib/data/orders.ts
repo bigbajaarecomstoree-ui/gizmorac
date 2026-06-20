@@ -42,6 +42,8 @@ function toOrder(r: OrderRow): Order {
     shipping: r.shipping,
     total: r.total,
     paymentMethod: r.paymentMethod,
+    paymentStatus: r.paymentStatus,
+    paymentRef: r.paymentRef,
     couponCode: r.couponCode,
     customerId: r.customerId,
     createdAt: r.createdAt.toISOString(),

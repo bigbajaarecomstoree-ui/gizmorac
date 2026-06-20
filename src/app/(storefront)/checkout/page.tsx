@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getAllProducts } from "@/lib/data/queries";
 import { getCurrentCustomer } from "@/lib/customer-auth";
 import { getSettings } from "@/lib/data/settings";
+import { phonepeConfigured } from "@/lib/phonepe";
 import { CheckoutView } from "@/components/checkout/checkout-view";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 
@@ -37,6 +38,7 @@ export default async function CheckoutPage() {
           freeShippingThreshold={settings.freeShippingThreshold}
           shippingFee={settings.shippingFee}
           codEnabled={settings.codEnabled}
+          phonepeEnabled={phonepeConfigured()}
         />
       </div>
     </div>

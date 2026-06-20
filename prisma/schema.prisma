@@ -91,6 +91,10 @@ model Order {
   shipping      Int      @default(0)
   total         Int
   paymentMethod String   @default("COD")
+  // Online-payment status: "" (COD) | "Pending" | "Paid" | "Failed".
+  paymentStatus String   @default("")
+  // Gateway reference (PhonePe transaction / order id) once paid.
+  paymentRef    String   @default("")
   couponCode    String?
   // Optional link to a registered customer (guest checkout leaves this null).
   customerId    String?

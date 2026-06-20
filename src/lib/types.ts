@@ -173,6 +173,10 @@ export interface Order {
   shipping: number;
   total: number;
   paymentMethod: string;
+  /** Online-payment status: "" (COD) | "Pending" | "Paid" | "Failed". */
+  paymentStatus: string;
+  /** Gateway reference (PhonePe transaction/order id). */
+  paymentRef: string;
   couponCode?: string | null;
   customerId?: string | null;
   createdAt: string;
