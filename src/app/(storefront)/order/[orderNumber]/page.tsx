@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CheckCircle2, XCircle, Package, Star, ShieldAlert } from "lucide-react";
+import { CheckCircle2, XCircle, Package, Star, ShieldAlert, FileDown } from "lucide-react";
 import { getOrderByNumber } from "@/lib/data/orders";
 import { getReviewsForOrder } from "@/lib/data/customer-reviews";
 import { getRewardForOrder } from "@/lib/data/rewards";
@@ -235,9 +235,18 @@ export default async function OrderPage({ params }: { params: Params }) {
             <Package size={16} /> Continue shopping
           </Link>
           {isOwner ? (
-            <Link href="/account" className={buttonVariants()}>
-              View all orders
-            </Link>
+            <>
+              <a
+                href={`/api/account/invoice/${order.orderNumber}`}
+                className={buttonVariants({ variant: "outline" })}
+                download
+              >
+                <FileDown size={16} /> Download invoice
+              </a>
+              <Link href="/account" className={buttonVariants()}>
+                View all orders
+              </Link>
+            </>
           ) : null}
         </div>
       </div>
