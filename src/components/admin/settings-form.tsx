@@ -22,11 +22,12 @@ export interface PaymentGatewayProps {
   hasSecret: boolean;
 }
 
-type TabKey = "store" | "company" | "payments" | "marketing";
+type TabKey = "store" | "company" | "shipping" | "payment" | "marketing";
 const SETTINGS_TABS: { key: TabKey; label: string }[] = [
   { key: "store", label: "Store" },
   { key: "company", label: "Company" },
-  { key: "payments", label: "Payments & shipping" },
+  { key: "shipping", label: "Shipping" },
+  { key: "payment", label: "Payment gateway" },
   { key: "marketing", label: "Marketing" },
 ];
 
@@ -378,9 +379,9 @@ export function SettingsForm({
         </Card>
       </div>
 
-      {/* PAYMENTS & SHIPPING */}
-      <div className={panel("payments", false)}>
-        <Card title="Shipping & payment" hint="Applied to the cart and checkout totals.">
+      {/* SHIPPING */}
+      <div className={panel("shipping", false)}>
+        <Card title="Shipping & Cash on Delivery" hint="Applied to the cart and checkout totals.">
           <div className="grid grid-cols-2 gap-4">
             <Field
               label="Free shipping over (₹)"
@@ -404,7 +405,10 @@ export function SettingsForm({
             hint="Turn off to pause new orders until online payments are live."
           />
         </Card>
+      </div>
 
+      {/* PAYMENT GATEWAY — its own dedicated tab */}
+      <div className={panel("payment", false)}>
         <PaymentGatewayCard
           clientIdLast4={phonepe.clientIdLast4}
           hasClientId={phonepe.hasClientId}
