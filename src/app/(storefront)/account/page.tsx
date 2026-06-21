@@ -181,9 +181,9 @@ export default async function AccountPage() {
         ) : null}
       </div>
 
-      <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[1fr_360px]">
+      <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
         {/* order history */}
-        <section>
+        <section className="min-w-0">
           <h2 className="text-lg font-semibold">Order history</h2>
           {orders.length === 0 ? (
             <div className="mt-4 flex flex-col items-center rounded-2xl border border-dashed border-border bg-surface px-6 py-16 text-center">
