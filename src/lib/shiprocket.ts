@@ -431,3 +431,55 @@ export async function shipShipment(shipmentId: string): Promise<ShipResult> {
     return { ok: false, error: e instanceof Error ? e.message : "Shiprocket error" };
   }
 }
+
+export interface CancelResult {
+  ok: boolean;
+  error?: string;
+}
+
+/**
+ * Cancel an order in Shiprocket. When an AWB has already been assigned, the
+ * shipment is cancelled first — for a parcel that hasn't been picked up yet,
+ * that releases the AWB and refunds the freight to the Shiprocket wallet. The
+ * order is then cancelled. A missing Shiprocket order is treated as success
+ * (nothing to cancel). We only report failure if the order cancel call fails.
+ */
+export async function cancelShiprocketOrder(input: {
+  shiprocketOrderId: string;
+  awb?: string;
+}): Promise<CancelResult> {
+  const { shiprocketOrderId, awb } = input;
+  if (!shiprocketOrderId) return { ok: true };
+
+  const token = await getToken();
+  if (!token) return { ok: false, error: "Could not authenticate with Shiprocket." };
+  const auth = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
+
+  try {
+    // 1) Cancel the shipment if an AWB exists — refunds freight to the wallet
+    //    for shipments that haven't been picked up. Best-effort.
+    if (awb) {
+      await fetch(`${BASE}/orders/cancel/shipment/awbs`, {
+        method: "POST",
+        headers: auth,
+        body: JSON.stringify({ awbs: [awb] }),
+        cache: "no-store",
+      }).catch(() => {});
+    }
+
+    // 2) Cancel the order itself.
+    const res = await fetch(`${BASE}/orders/cancel`, {
+      method: "POST",
+      headers: auth,
+      body: JSON.stringify({ ids: [Number(shiprocketOrderId)] }),
+      cache: "no-store",
+    });
+    const data = (await res.json().catch(() => ({}))) as { message?: string };
+    if (!res.ok) {
+      return { ok: false, error: data.message || `Shiprocket cancel failed (${res.status})` };
+    }
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Shiprocket error" };
+  }
+}

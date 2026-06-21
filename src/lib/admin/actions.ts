@@ -19,6 +19,7 @@ import {
   getTracking,
   fetchPickupPincode,
   shipShipment,
+  cancelShiprocketOrder,
 } from "@/lib/shiprocket";
 import { getOrderById } from "@/lib/data/orders";
 import { recordShipmentUpdate } from "@/lib/data/shipments";
@@ -555,6 +556,29 @@ export async function updateOrderStatus(formData: FormData): Promise<void> {
       id: updated.id,
       customerId: updated.customerId,
       email: updated.email,
+    });
+  }
+
+  // Cancelling the order also cancels the Shiprocket shipment — which refunds
+  // the freight to the Shiprocket wallet when the parcel hasn't been picked up.
+  if (status === "Cancelled" && updated.shiprocketOrderId) {
+    const c = await cancelShiprocketOrder({
+      shiprocketOrderId: updated.shiprocketOrderId,
+      awb: updated.awb || undefined,
+    });
+    if (c.ok) {
+      await prisma.order.update({
+        where: { id },
+        data: { shipmentStatus: "Cancelled" },
+      });
+    }
+    await logEvent({
+      actor: "admin",
+      action: "admin.shipping.cancel",
+      message: c.ok
+        ? `Shiprocket shipment cancelled for ${updated.orderNumber}`
+        : `Shiprocket cancel failed for ${updated.orderNumber}: ${c.error}`,
+      meta: { orderNumber: updated.orderNumber, awb: updated.awb, ok: c.ok },
     });
   }
 
