@@ -120,87 +120,84 @@ export default async function ReportsPage({
 
   return (
     <div className="mx-auto max-w-5xl">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <BarChart3 size={22} className="text-accent" />
-            <h1 className="text-2xl font-bold tracking-tight">Reports</h1>
-          </div>
-          <p className="mt-1 text-sm text-muted">
-            Sales and order performance · {rangeLabel}
-          </p>
+      <div className="flex items-center gap-2">
+        <BarChart3 size={22} className="text-accent" />
+        <h1 className="text-2xl font-bold tracking-tight">Reports</h1>
+      </div>
+      <p className="mt-1 text-sm text-muted">
+        Sales and order performance · {rangeLabel}
+      </p>
+
+      {/* Unified controls: date presets + custom range + export, all in one bar */}
+      <div className="mt-5 rounded-xl border border-border bg-surface p-3">
+        {/* row 1: presets + export */}
+        <div className="flex flex-wrap items-center gap-2">
+          {DATE_RANGES.map((r) => (
+            <Link
+              key={r.value}
+              href={`/admin/reports?range=${r.value}`}
+              className={
+                !custom && r.value === range
+                  ? "rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-on-accent"
+                  : "rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-muted transition-colors hover:border-accent hover:text-accent"
+              }
+            >
+              {r.label}
+            </Link>
+          ))}
+          <a
+            href={exportHref}
+            download
+            className="ml-auto inline-flex items-center gap-2 rounded-lg border border-accent px-3 py-1.5 text-sm font-semibold text-accent transition-colors hover:bg-accent hover:text-on-accent"
+          >
+            <Download size={16} /> Export
+          </a>
         </div>
-        <a
-          href={exportHref}
-          className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-on-accent transition-colors hover:bg-accent-hover"
-          download
-        >
-          <Download size={16} /> Export orders
-        </a>
-      </div>
 
-      {/* preset range chips */}
-      <div className="mt-5 flex flex-wrap gap-2">
-        {DATE_RANGES.map((r) => (
-          <Link
-            key={r.value}
-            href={`/admin/reports?range=${r.value}`}
-            className={
-              !custom && r.value === range
-                ? "rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-on-accent"
-                : "rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-muted transition-colors hover:border-accent hover:text-accent"
-            }
-          >
-            {r.label}
-          </Link>
-        ))}
-      </div>
-
-      {/* custom date range */}
-      <form
-        method="get"
-        action="/admin/reports"
-        className={`mt-3 flex flex-wrap items-end gap-3 rounded-xl border bg-surface p-3 ${
-          custom ? "border-accent" : "border-border"
-        }`}
-      >
-        <label className="flex flex-col gap-1">
-          <span className="tech-label">From</span>
-          <input
-            type="date"
-            name="from"
-            defaultValue={custom ? sp.from : ""}
-            max={todayYMD}
-            required
-            className="h-9 rounded-lg border border-border bg-background px-2 text-sm focus:border-accent focus:outline-none"
-          />
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className="tech-label">To</span>
-          <input
-            type="date"
-            name="to"
-            defaultValue={custom ? sp.to : ""}
-            max={todayYMD}
-            required
-            className="h-9 rounded-lg border border-border bg-background px-2 text-sm focus:border-accent focus:outline-none"
-          />
-        </label>
-        <button
-          type="submit"
-          className="h-9 rounded-lg bg-accent px-4 text-sm font-semibold text-on-accent transition-colors hover:bg-accent-hover"
+        {/* row 2: custom range */}
+        <form
+          method="get"
+          action="/admin/reports"
+          className="mt-3 flex flex-wrap items-end gap-2 border-t border-border pt-3"
         >
-          Apply range
-        </button>
-        {custom ? (
-          <Link
-            href="/admin/reports?range=30d"
-            className="inline-flex h-9 items-center rounded-lg px-3 text-sm text-muted transition-colors hover:text-foreground"
+          <label className="flex flex-col gap-1">
+            <span className="tech-label">From</span>
+            <input
+              type="date"
+              name="from"
+              defaultValue={custom ? sp.from : ""}
+              max={todayYMD}
+              required
+              className="h-9 rounded-lg border border-border bg-background px-2 text-sm focus:border-accent focus:outline-none"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="tech-label">To</span>
+            <input
+              type="date"
+              name="to"
+              defaultValue={custom ? sp.to : ""}
+              max={todayYMD}
+              required
+              className="h-9 rounded-lg border border-border bg-background px-2 text-sm focus:border-accent focus:outline-none"
+            />
+          </label>
+          <button
+            type="submit"
+            className="h-9 rounded-lg bg-accent px-4 text-sm font-semibold text-on-accent transition-colors hover:bg-accent-hover"
           >
-            Reset
-          </Link>
-        ) : null}
-      </form>
+            Apply
+          </button>
+          {custom ? (
+            <Link
+              href="/admin/reports?range=30d"
+              className="inline-flex h-9 items-center rounded-lg px-3 text-sm text-muted transition-colors hover:text-foreground"
+            >
+              Reset
+            </Link>
+          ) : null}
+        </form>
+      </div>
 
       {/* Sales */}
       <KpiGroup title="Sales" items={salesKpis} />
