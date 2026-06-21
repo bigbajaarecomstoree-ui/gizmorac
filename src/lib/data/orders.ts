@@ -70,6 +70,7 @@ function toOrder(r: OrderRow): Order {
     replacementLabelUrl: r.replacementLabelUrl,
     replacementTrackingUrl: r.replacementTrackingUrl,
     replacementStatus: r.replacementStatus,
+    deliveredAt: r.deliveredAt ? r.deliveredAt.toISOString() : null,
     couponCode: r.couponCode,
     customerId: r.customerId,
     createdAt: r.createdAt.toISOString(),

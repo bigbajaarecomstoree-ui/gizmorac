@@ -214,6 +214,8 @@ export interface Order {
   replacementLabelUrl: string;
   replacementTrackingUrl: string;
   replacementStatus: string;
+  /** When the order was marked Delivered (drives the 48h dispute window). */
+  deliveredAt: string | null;
   couponCode?: string | null;
   customerId?: string | null;
   createdAt: string;

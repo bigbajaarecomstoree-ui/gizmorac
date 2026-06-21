@@ -131,6 +131,8 @@ model Order {
   replacementLabelUrl    String @default("")
   replacementTrackingUrl String @default("")
   replacementStatus      String @default("")
+  // Set when the order is marked Delivered — drives the 48h dispute window.
+  deliveredAt   DateTime?
   couponCode    String?
   // Optional link to a registered customer (guest checkout leaves this null).
   customerId    String?

@@ -8,6 +8,8 @@ import { getSettings } from "@/lib/data/settings";
 import { MAX_QTY } from "@/lib/checkout-shared";
 import { initiatePayment, getPhonePeConfig } from "@/lib/phonepe";
 import { checkServiceability } from "@/lib/shiprocket";
+import { cancelOrderEverywhere } from "@/lib/data/order-fulfillment";
+import { canCancelOrder, isDisputeWindowOpen } from "@/lib/orders-policy";
 import { logEvent } from "@/lib/data/logs";
 import {
   validateAndPriceCoupon,
@@ -502,6 +504,12 @@ export async function raiseTicket(input: {
       error: "You can report a problem once your order is delivered.",
     };
   }
+  if (!isDisputeWindowOpen(order.status, order.deliveredAt)) {
+    return {
+      ok: false,
+      error: "The 48-hour window to raise a dispute has closed for this order.",
+    };
+  }
 
   const existing = await getTicketForOrder(order.id);
   if (existing) {
@@ -553,6 +561,63 @@ export async function raiseTicket(input: {
   revalidatePath("/admin");
   revalidatePath("/admin/support");
   return { ok: true, ticketNumber: ticket.ticketNumber };
+}
+
+export interface CustomerCancelResult {
+  ok: boolean;
+  message?: string;
+  error?: string;
+}
+
+/**
+ * Customer cancels their own order. Allowed only before the parcel is handed to
+ * the courier (Pending / Confirmed / Packed). On success it reverses everything
+ * — refunds the payment to the original method and cancels the Shiprocket
+ * shipment (freight back to the wallet).
+ */
+export async function cancelMyOrder(
+  orderNumber: string,
+): Promise<CustomerCancelResult> {
+  const customer = await getCurrentCustomer();
+  if (!customer) return { ok: false, error: "Please log in to cancel an order." };
+
+  const order = await prisma.order.findUnique({ where: { orderNumber } });
+  if (!order) return { ok: false, error: "Order not found." };
+
+  const owns =
+    order.customerId === customer.id ||
+    order.email.toLowerCase() === customer.email.toLowerCase();
+  if (!owns) {
+    return { ok: false, error: "You can only cancel your own orders." };
+  }
+  if (!canCancelOrder(order.status)) {
+    return {
+      ok: false,
+      error:
+        order.status === "Cancelled"
+          ? "This order is already cancelled."
+          : "This order can no longer be cancelled — it's already on its way.",
+    };
+  }
+
+  const res = await cancelOrderEverywhere(order.id);
+  if (!res.ok) {
+    return { ok: false, error: res.error ?? "Couldn't cancel the order. Please try again." };
+  }
+
+  await logEvent({
+    actor: "customer",
+    actorId: customer.id,
+    actorEmail: order.email,
+    action: "order.cancelled",
+    message: `Order ${order.orderNumber} cancelled by customer. ${res.note}`,
+    meta: { orderNumber: order.orderNumber },
+  });
+
+  revalidatePath("/account");
+  revalidatePath(`/order/${order.orderNumber}`);
+  revalidatePath("/admin/orders");
+  return { ok: true, message: res.note };
 }
 
 /** Customer adds a reply / uploads requested proof to their own ticket. */

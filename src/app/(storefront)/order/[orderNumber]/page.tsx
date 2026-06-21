@@ -16,6 +16,8 @@ import { RewardCouponCard } from "@/components/account/reward-coupon";
 import { ResumePayment } from "@/components/order/resume-payment";
 import { BuyAgainButton } from "@/components/account/buy-again";
 import { TicketPanel } from "@/components/account/ticket-panel";
+import { OrderActions } from "@/components/account/order-actions";
+import { canCancelOrder, isDisputeWindowOpen } from "@/lib/orders-policy";
 import { buttonVariants } from "@/components/ui/button";
 import type { OrderStatus } from "@/lib/types";
 
@@ -102,6 +104,20 @@ export default async function OrderPage({ params }: { params: Params }) {
             <OrderStatusBadge status={order.status} />
           </div>
         </div>
+
+        {/* customer actions */}
+        {isOwner ? (
+          <div className="mt-5 rounded-xl border border-border bg-surface px-4 py-3.5">
+            <OrderActions
+              orderNumber={order.orderNumber}
+              items={order.items.map((i) => ({ id: i.id, qty: i.qty }))}
+              canCancel={canCancelOrder(order.status)}
+              canDispute={isDisputeWindowOpen(order.status, order.deliveredAt)}
+              hasOpenTicket={Boolean(ticket)}
+              showTrack={false}
+            />
+          </div>
+        ) : null}
 
         {/* online payment status */}
         {order.paymentMethod === "PhonePe" ? (
@@ -361,7 +377,7 @@ export default async function OrderPage({ params }: { params: Params }) {
 
         {/* support — raise / track a damage or defect ticket (delivered, owner) */}
         {isOwner && isDelivered ? (
-          <div className="mt-5 rounded-xl border border-border bg-surface p-5">
+          <div id="raise-dispute" className="mt-5 scroll-mt-24 rounded-xl border border-border bg-surface p-5">
             <div className="flex items-center gap-2">
               <ShieldAlert size={18} className="text-danger" />
               <h2 className="font-semibold">Need help with this order?</h2>

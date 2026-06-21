@@ -12,17 +12,17 @@ import {
 import { parseCsv } from "@/lib/products-csv";
 import { mapAmazonReportToProducts } from "@/lib/amazon-import";
 import { issueRepeatCoupon } from "@/lib/data/rewards";
-import { verifyPhonePeKeys, initiateRefund, type PhonePeEnv } from "@/lib/phonepe";
+import { verifyPhonePeKeys, type PhonePeEnv } from "@/lib/phonepe";
 import {
   verifyShiprocket,
   createShiprocketOrder,
   getTracking,
   fetchPickupPincode,
   shipShipment,
-  cancelShiprocketOrder,
   createReturnOrder,
   shipReturn,
 } from "@/lib/shiprocket";
+import { refundOrderPayment, cancelOrderEverywhere } from "@/lib/data/order-fulfillment";
 import { getOrderById } from "@/lib/data/orders";
 import { recordShipmentUpdate } from "@/lib/data/shipments";
 import { logEvent } from "@/lib/data/logs";
@@ -540,51 +540,6 @@ export async function bulkUpdateInventory(
 // --- orders ---
 
 /**
- * Send a real refund for an order paid online via PhonePe and record it on the
- * order. Cash / unpaid / already-refunded orders need no money movement
- * (`moved: false`). Returns `ok: false` only when a refund was attempted and
- * the gateway rejected it, so callers can avoid mislabelling the order.
- */
-async function refundOrderPayment(orderId: string): Promise<{
-  ok: boolean;
-  moved: boolean;
-  amount: number;
-  error?: string;
-}> {
-  const order = await prisma.order.findUnique({ where: { id: orderId } });
-  if (!order) return { ok: false, moved: false, amount: 0, error: "Order not found." };
-
-  // Nothing to return online for cash orders or anything not actually paid.
-  if (order.paymentMethod !== "PhonePe" || order.paymentStatus !== "Paid") {
-    return { ok: true, moved: false, amount: 0 };
-  }
-  // Already refunding / refunded — never fire a second refund.
-  if (order.refundStatus === "Initiated" || order.refundStatus === "Completed") {
-    return { ok: true, moved: false, amount: order.refundAmount || order.total };
-  }
-  if (order.total <= 0) return { ok: true, moved: false, amount: 0 };
-
-  const merchantRefundId = `RF-${order.orderNumber}-${Date.now().toString(36)}`;
-  const res = await initiateRefund({
-    merchantRefundId,
-    merchantOrderId: order.orderNumber,
-    amountPaise: order.total * 100,
-  });
-  if (!res.ok) {
-    return { ok: false, moved: false, amount: order.total, error: res.error };
-  }
-  await prisma.order.update({
-    where: { id: order.id },
-    data: {
-      refundStatus: "Initiated",
-      refundRef: merchantRefundId,
-      refundAmount: order.total,
-    },
-  });
-  return { ok: true, moved: true, amount: order.total };
-}
-
-/**
  * Run the two-leg replacement for an order: a reverse pickup (customer →
  * warehouse) to collect the faulty unit, and a fresh forward shipment
  * (warehouse → customer) for the new one. Each leg is independent and
@@ -731,7 +686,22 @@ export async function updateOrderStatus(formData: FormData): Promise<OrderStatus
     replacementNote = r.note;
   }
 
-  const updated = await prisma.order.update({ where: { id }, data: { status } });
+  // Cancelling reverses everything: refund the customer, cancel the Shiprocket
+  // shipment (freight back to wallet), and mark it Cancelled. Refund runs first,
+  // so a gateway failure leaves the order unchanged.
+  let cancelNote = "";
+  if (status === "Cancelled") {
+    const c = await cancelOrderEverywhere(id);
+    if (!c.ok) {
+      return { ok: false, error: `${c.error} The order was left unchanged.` };
+    }
+    cancelNote = c.note;
+  }
+
+  const updated = await prisma.order.update({
+    where: { id },
+    data: { status, ...(status === "Delivered" ? { deliveredAt: new Date() } : {}) },
+  });
 
   await logEvent({
     actor: "admin",
@@ -767,26 +737,12 @@ export async function updateOrderStatus(formData: FormData): Promise<OrderStatus
     });
   }
 
-  // Cancelling the order also cancels the Shiprocket shipment — which refunds
-  // the freight to the Shiprocket wallet when the parcel hasn't been picked up.
-  if (status === "Cancelled" && updated.shiprocketOrderId) {
-    const c = await cancelShiprocketOrder({
-      shiprocketOrderId: updated.shiprocketOrderId,
-      awb: updated.awb || undefined,
-    });
-    if (c.ok) {
-      await prisma.order.update({
-        where: { id },
-        data: { shipmentStatus: "Cancelled" },
-      });
-    }
+  if (status === "Cancelled") {
     await logEvent({
       actor: "admin",
       action: "admin.shipping.cancel",
-      message: c.ok
-        ? `Shiprocket shipment cancelled for ${updated.orderNumber}`
-        : `Shiprocket cancel failed for ${updated.orderNumber}: ${c.error}`,
-      meta: { orderNumber: updated.orderNumber, awb: updated.awb, ok: c.ok },
+      message: `${cancelNote} (${updated.orderNumber})`,
+      meta: { orderNumber: updated.orderNumber },
     });
   }
 
@@ -797,7 +753,7 @@ export async function updateOrderStatus(formData: FormData): Promise<OrderStatus
   revalidatePath(`/order/${updated.orderNumber}`);
   revalidatePath("/account");
 
-  return { ok: true, note: replacementNote || refundNote || undefined };
+  return { ok: true, note: replacementNote || refundNote || cancelNote || undefined };
 }
 
 // --- coupons / promotions ---

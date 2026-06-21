@@ -4,7 +4,6 @@ import { redirect } from "next/navigation";
 import {
   LogOut,
   Package,
-  ChevronRight,
   Gift,
   ShoppingBag,
   IndianRupee,
@@ -24,7 +23,8 @@ import { OrderStatusBadge } from "@/components/admin/order-status-badge";
 import { ProductArt } from "@/components/product/product-art";
 import { ProfileForm } from "@/components/account/profile-form";
 import { RewardCouponCard } from "@/components/account/reward-coupon";
-import { BuyAgainButton } from "@/components/account/buy-again";
+import { OrderActions } from "@/components/account/order-actions";
+import { canCancelOrder, isDisputeWindowOpen } from "@/lib/orders-policy";
 import { buttonVariants } from "@/components/ui/button";
 import type { DeviceArt } from "@/lib/types";
 
@@ -248,15 +248,14 @@ export default async function AccountPage() {
                       </div>
                     </div>
 
-                    <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3">
-                      <Link
-                        href={`/order/${o.orderNumber}`}
-                        className="inline-flex items-center gap-1 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-on-accent transition-colors hover:bg-accent-hover"
-                      >
-                        {o.status === "Delivered" ? "View order" : "Track order"}
-                        <ChevronRight size={14} />
-                      </Link>
-                      <BuyAgainButton items={o.items.map((i) => ({ id: i.id, qty: i.qty }))} />
+                    <div className="mt-3 border-t border-border pt-3">
+                      <OrderActions
+                        orderNumber={o.orderNumber}
+                        items={o.items.map((i) => ({ id: i.id, qty: i.qty }))}
+                        canCancel={canCancelOrder(o.status)}
+                        canDispute={isDisputeWindowOpen(o.status, o.deliveredAt)}
+                        trackLabel={o.status === "Delivered" ? "View order" : "Track order"}
+                      />
                     </div>
                   </div>
                 );
