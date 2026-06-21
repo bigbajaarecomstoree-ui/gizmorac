@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getOrderStatus } from "@/lib/phonepe";
+import { logEvent } from "@/lib/data/logs";
 
 async function restoreStock(itemsJson: string) {
   let items: { id: string; qty: number }[] = [];
@@ -50,6 +51,13 @@ export async function reconcilePhonePeOrder(
         paymentRef: status.transactionId ?? order.paymentRef,
       },
     });
+    await logEvent({
+      actor: "customer",
+      actorEmail: order.email,
+      action: "payment.paid",
+      message: `Payment received for ${orderNumber} (PhonePe)`,
+      meta: { orderNumber, transactionId: status.transactionId ?? "" },
+    });
     revalidate(orderNumber);
     return "Paid";
   }
@@ -59,6 +67,14 @@ export async function reconcilePhonePeOrder(
       data: { status: "Cancelled", paymentStatus: "Failed" },
     });
     await restoreStock(order.items);
+    await logEvent({
+      level: "warn",
+      actor: "customer",
+      actorEmail: order.email,
+      action: "payment.failed",
+      message: `Payment failed/cancelled for ${orderNumber} (PhonePe)`,
+      meta: { orderNumber },
+    });
     revalidate(orderNumber);
     return "Failed";
   }

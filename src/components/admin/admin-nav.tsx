@@ -15,6 +15,7 @@ import {
   Mail,
   BarChart3,
   Wallet,
+  ScrollText,
   Settings,
   Store,
   LogOut,
@@ -34,6 +35,7 @@ const NAV = [
   { label: "Promotions", href: "/admin/promotions", icon: Ticket, exact: false },
   { label: "Reports", href: "/admin/reports", icon: BarChart3, exact: false },
   { label: "Finance", href: "/admin/finance", icon: Wallet, exact: false },
+  { label: "Logs", href: "/admin/logs", icon: ScrollText, exact: false },
 ];
 
 export function AdminNav() {

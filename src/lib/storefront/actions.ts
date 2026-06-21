@@ -7,6 +7,7 @@ import { getCurrentCustomer } from "@/lib/customer-auth";
 import { getSettings } from "@/lib/data/settings";
 import { MAX_QTY } from "@/lib/checkout-shared";
 import { initiatePayment, getPhonePeConfig } from "@/lib/phonepe";
+import { logEvent } from "@/lib/data/logs";
 import {
   validateAndPriceCoupon,
   type CouponResult,
@@ -290,6 +291,14 @@ export async function placeOrder(
     return { ok: false, error: "Could not place order, please try again." };
   }
 
+  await logEvent({
+    actor: "customer",
+    actorEmail: payload.email.trim(),
+    action: "order.placed",
+    message: `Order ${orderNumber} placed · ₹${total} · ${wantsOnline ? "PhonePe" : "COD"}`,
+    meta: { orderNumber, total, payment: wantsOnline ? "PhonePe" : "COD" },
+  });
+
   revalidatePath("/account");
   revalidatePath("/admin");
   revalidatePath("/admin/orders");
@@ -508,6 +517,16 @@ export async function raiseTicket(input: {
     category,
     description,
     attachments,
+  });
+
+  await logEvent({
+    level: "warn",
+    actor: "customer",
+    actorId: customer.id,
+    actorEmail: order.email,
+    action: "ticket.raised",
+    message: `Support ticket ${ticket.ticketNumber} · ${category} · order ${order.orderNumber}`,
+    meta: { ticketNumber: ticket.ticketNumber, orderNumber: order.orderNumber, category },
   });
 
   revalidatePath(`/order/${order.orderNumber}`);

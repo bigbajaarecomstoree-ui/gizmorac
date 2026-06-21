@@ -282,3 +282,24 @@ model StoreSetting {
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 }
+
+// Activity + error log for support/debugging. Records customer & admin actions
+// and captured server errors so issues can be traced and fixed.
+model EventLog {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+  level      String   @default("info")   // info | warn | error
+  actor      String   @default("system") // customer | admin | system
+  actorId    String   @default("")
+  actorEmail String   @default("")
+  action     String                       // e.g. order.placed, admin.login, server.error
+  message    String   @default("")
+  meta       String   @default("")        // JSON details
+  ip         String   @default("")
+  path       String   @default("")
+
+  @@index([createdAt])
+  @@index([level])
+  @@index([actor])
+  @@index([action])
+}

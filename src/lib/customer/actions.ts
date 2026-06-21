@@ -9,6 +9,7 @@ import {
   clearCustomerCookie,
   getCurrentCustomer,
 } from "@/lib/customer-auth";
+import { logEvent } from "@/lib/data/logs";
 
 export interface AuthState {
   error?: string;
@@ -45,6 +46,13 @@ export async function signupAction(
     data: { fullName, email, phone, passwordHash: hashPassword(password) },
   });
   await setCustomerCookie(customer.id);
+  await logEvent({
+    actor: "customer",
+    actorId: customer.id,
+    actorEmail: customer.email,
+    action: "customer.signup",
+    message: "New customer account created",
+  });
   redirect("/account");
 }
 
@@ -62,10 +70,24 @@ export async function loginAction(
     : verifyPassword(password, `x:${"0".repeat(128)}`);
 
   if (!customer || !ok) {
+    await logEvent({
+      level: "warn",
+      actor: "customer",
+      actorEmail: email,
+      action: "customer.login.failed",
+      message: "Failed customer login",
+    });
     return { error: "Incorrect email or password." };
   }
 
   await setCustomerCookie(customer.id);
+  await logEvent({
+    actor: "customer",
+    actorId: customer.id,
+    actorEmail: customer.email,
+    action: "customer.login",
+    message: "Customer signed in",
+  });
   redirect("/account");
 }
 

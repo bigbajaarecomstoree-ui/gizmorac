@@ -13,6 +13,17 @@ import { parseCsv } from "@/lib/products-csv";
 import { mapAmazonReportToProducts } from "@/lib/amazon-import";
 import { issueRepeatCoupon } from "@/lib/data/rewards";
 import { verifyPhonePeKeys, type PhonePeEnv } from "@/lib/phonepe";
+import { logEvent } from "@/lib/data/logs";
+import { headers } from "next/headers";
+
+async function clientIp(): Promise<string> {
+  try {
+    const h = await headers();
+    return (h.get("x-forwarded-for")?.split(",")[0] ?? h.get("x-real-ip") ?? "").trim();
+  } catch {
+    return "";
+  }
+}
 import {
   addTicketMessage,
   setTicketStatus,
@@ -149,10 +160,25 @@ export async function loginAction(
   formData: FormData,
 ): Promise<{ error?: string }> {
   const password = (formData.get("password") ?? "").toString();
+  const ip = await clientIp();
   if (!checkPassword(password)) {
+    await logEvent({
+      level: "warn",
+      actor: "admin",
+      action: "admin.login.failed",
+      message: "Failed admin login attempt",
+      ip,
+    });
     return { error: "Incorrect password. Please try again." };
   }
   await setSessionCookie();
+  await logEvent({
+    level: "info",
+    actor: "admin",
+    action: "admin.login",
+    message: "Admin signed in",
+    ip,
+  });
   redirect("/admin");
 }
 
@@ -503,6 +529,13 @@ export async function updateOrderStatus(formData: FormData): Promise<void> {
   const status = str(formData, "status");
   const updated = await prisma.order.update({ where: { id }, data: { status } });
 
+  await logEvent({
+    actor: "admin",
+    action: "admin.order.status",
+    message: `Order ${updated.orderNumber} → ${status}`,
+    meta: { orderNumber: updated.orderNumber, status, email: updated.email },
+  });
+
   // Reward the customer with a repeat-order coupon the moment it's delivered.
   if (status === "Delivered") {
     await issueRepeatCoupon({ id: updated.id, customerId: updated.customerId });
@@ -658,6 +691,12 @@ export async function updateSettings(
     create: { id: "store", ...data },
   });
 
+  await logEvent({
+    actor: "admin",
+    action: "admin.settings.update",
+    message: "Store settings updated",
+  });
+
   // Settings drive the header, footer, WhatsApp, cart and checkout.
   revalidatePath("/", "layout");
   revalidatePath("/admin/settings");
@@ -753,6 +792,13 @@ export async function connectPaymentGateway(input: {
     create: { id: "store", ...data },
   });
 
+  await logEvent({
+    actor: "admin",
+    action: "admin.payment.connect",
+    message: `Payment gateway connected (${env})`,
+    meta: { env },
+  });
+
   revalidatePath("/", "layout");
   revalidatePath("/checkout");
   revalidatePath("/admin/settings");
@@ -766,6 +812,13 @@ export async function disconnectPaymentGateway(): Promise<PaymentGatewayState> {
     where: { id: "store" },
     update: { phonepeConnected: false },
     create: { id: "store", phonepeConnected: false },
+  });
+
+  await logEvent({
+    level: "warn",
+    actor: "admin",
+    action: "admin.payment.disconnect",
+    message: "Payment gateway disconnected — online payments off",
   });
 
   revalidatePath("/", "layout");
