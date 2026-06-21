@@ -22,6 +22,7 @@ export function OrderStatusForm({
 }) {
   const [status, setStatus] = React.useState(initial);
   const [savedStatus, setSavedStatus] = React.useState(initial);
+  const [savedNote, setSavedNote] = React.useState<string | null>(null);
   const [pending, start] = React.useTransition();
   const [saved, setSaved] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -41,8 +42,13 @@ export function OrderStatusForm({
         const fd = new FormData();
         fd.set("id", orderId);
         fd.set("status", status);
-        await updateOrderStatus(fd);
+        const res = await updateOrderStatus(fd);
+        if (!res.ok) {
+          setError(res.error ?? "Couldn't save the status. Please try again.");
+          return;
+        }
         setSavedStatus(status);
+        setSavedNote(res.note ?? null);
         setSaved(true);
       } catch {
         setError("Couldn't save the status. Please try again.");
@@ -66,8 +72,9 @@ export function OrderStatusForm({
         </Button>
       </div>
       {saved ? (
-        <p className="mt-2.5 flex items-center gap-1.5 text-sm font-medium text-success">
-          <Check size={15} /> Status updated to {savedStatus}.
+        <p className="mt-2.5 flex items-start gap-1.5 text-sm font-medium text-success">
+          <Check size={15} className="mt-0.5 shrink-0" />
+          <span>{savedNote ?? `Status updated to ${savedStatus}.`}</span>
         </p>
       ) : null}
       {error ? (

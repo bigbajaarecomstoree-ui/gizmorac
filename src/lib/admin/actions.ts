@@ -537,10 +537,80 @@ export async function bulkUpdateInventory(
 
 // --- orders ---
 
-export async function updateOrderStatus(formData: FormData): Promise<void> {
+/**
+ * Send a real refund for an order paid online via PhonePe and record it on the
+ * order. Cash / unpaid / already-refunded orders need no money movement
+ * (`moved: false`). Returns `ok: false` only when a refund was attempted and
+ * the gateway rejected it, so callers can avoid mislabelling the order.
+ */
+async function refundOrderPayment(orderId: string): Promise<{
+  ok: boolean;
+  moved: boolean;
+  amount: number;
+  error?: string;
+}> {
+  const order = await prisma.order.findUnique({ where: { id: orderId } });
+  if (!order) return { ok: false, moved: false, amount: 0, error: "Order not found." };
+
+  // Nothing to return online for cash orders or anything not actually paid.
+  if (order.paymentMethod !== "PhonePe" || order.paymentStatus !== "Paid") {
+    return { ok: true, moved: false, amount: 0 };
+  }
+  // Already refunding / refunded — never fire a second refund.
+  if (order.refundStatus === "Initiated" || order.refundStatus === "Completed") {
+    return { ok: true, moved: false, amount: order.refundAmount || order.total };
+  }
+  if (order.total <= 0) return { ok: true, moved: false, amount: 0 };
+
+  const merchantRefundId = `RF-${order.orderNumber}-${Date.now().toString(36)}`;
+  const res = await initiateRefund({
+    merchantRefundId,
+    merchantOrderId: order.orderNumber,
+    amountPaise: order.total * 100,
+  });
+  if (!res.ok) {
+    return { ok: false, moved: false, amount: order.total, error: res.error };
+  }
+  await prisma.order.update({
+    where: { id: order.id },
+    data: {
+      refundStatus: "Initiated",
+      refundRef: merchantRefundId,
+      refundAmount: order.total,
+    },
+  });
+  return { ok: true, moved: true, amount: order.total };
+}
+
+export interface OrderStatusResult {
+  ok: boolean;
+  note?: string;
+  error?: string;
+}
+
+export async function updateOrderStatus(formData: FormData): Promise<OrderStatusResult> {
   await assertAdmin();
   const id = str(formData, "id");
   const status = str(formData, "status");
+
+  // Refunds move real money, so fire the refund BEFORE flipping the label: a
+  // gateway failure must not leave an order marked "Refunded" with nothing sent.
+  let refundNote = "";
+  if (status === "Refunded") {
+    const r = await refundOrderPayment(id);
+    if (!r.ok) {
+      return {
+        ok: false,
+        error: r.error
+          ? `Refund failed — ${r.error} The order was left unchanged.`
+          : "Refund couldn't be started. The order was left unchanged.",
+      };
+    }
+    refundNote = r.moved
+      ? `Refund of ₹${r.amount.toLocaleString("en-IN")} sent to the customer's original payment method.`
+      : "Marked refunded — this was a cash order, so refund the customer manually.";
+  }
+
   const updated = await prisma.order.update({ where: { id }, data: { status } });
 
   await logEvent({
@@ -549,6 +619,15 @@ export async function updateOrderStatus(formData: FormData): Promise<void> {
     message: `Order ${updated.orderNumber} → ${status}`,
     meta: { orderNumber: updated.orderNumber, status, email: updated.email },
   });
+
+  if (status === "Refunded") {
+    await logEvent({
+      actor: "admin",
+      action: "admin.order.refund",
+      message: `${refundNote} (${updated.orderNumber})`,
+      meta: { orderNumber: updated.orderNumber },
+    });
+  }
 
   // Reward the customer with a repeat-order coupon the moment it's delivered.
   if (status === "Delivered") {
@@ -588,6 +667,8 @@ export async function updateOrderStatus(formData: FormData): Promise<void> {
   revalidatePath("/admin/reports");
   revalidatePath(`/order/${updated.orderNumber}`);
   revalidatePath("/account");
+
+  return { ok: true, note: refundNote || undefined };
 }
 
 // --- coupons / promotions ---
@@ -1137,49 +1218,31 @@ export async function resolveTicket(formData: FormData): Promise<void> {
 
   // Online refund: if the claim is approved as a Refund and the order was paid
   // online via PhonePe, fire the refund and start tracking it on the order.
+  // Uses the same refund path as the order-status updater so both behave alike.
   if (resolution === "Refund") {
     const ticket = await getTicketById(ticketId);
-    const order = ticket
-      ? await prisma.order.findUnique({ where: { id: ticket.orderId } })
-      : null;
-    const refundable =
-      order &&
-      order.paymentMethod === "PhonePe" &&
-      order.paymentStatus === "Paid" &&
-      order.refundStatus !== "Initiated" &&
-      order.refundStatus !== "Completed" &&
-      order.total > 0;
-    if (order && refundable) {
-      const merchantRefundId = `RF-${order.orderNumber}-${Date.now().toString(36)}`;
-      const res = await initiateRefund({
-        merchantRefundId,
-        merchantOrderId: order.orderNumber,
-        amountPaise: order.total * 100,
-      });
-      if (res.ok) {
+    if (ticket) {
+      const r = await refundOrderPayment(ticket.orderId);
+      if (r.ok && r.moved) {
         await prisma.order.update({
-          where: { id: order.id },
-          data: {
-            status: "Refunded",
-            refundStatus: "Initiated",
-            refundRef: merchantRefundId,
-            refundAmount: order.total,
-          },
+          where: { id: ticket.orderId },
+          data: { status: "Refunded" },
         });
         await addTicketMessage({
           ticketId,
           author: "admin",
-          body: `Refund of ₹${order.total.toLocaleString("en-IN")} initiated to your original payment method. It usually completes in 3–5 business days.`,
+          body: `Refund of ₹${r.amount.toLocaleString("en-IN")} initiated to your original payment method. It usually completes in 3–5 business days.`,
           attachments: [],
         });
-        revalidatePath(`/order/${order.orderNumber}`);
+        const order = await prisma.order.findUnique({ where: { id: ticket.orderId } });
+        if (order) revalidatePath(`/order/${order.orderNumber}`);
         revalidatePath("/account");
         revalidatePath("/admin/orders");
-      } else {
+      } else if (!r.ok) {
         await addTicketMessage({
           ticketId,
           author: "admin",
-          body: `(Internal) Auto-refund could not be started: ${res.error ?? "unknown error"}. Please process it manually.`,
+          body: `(Internal) Auto-refund could not be started: ${r.error ?? "unknown error"}. Please process it manually.`,
           attachments: [],
         });
       }
