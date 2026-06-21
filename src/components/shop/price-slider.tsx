@@ -23,10 +23,15 @@ export function PriceSlider({
 }) {
   const router = useRouter();
   const [val, setVal] = React.useState(value);
+  const [prevValue, setPrevValue] = React.useState(value);
   const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Re-sync when the URL (and so the server value) changes.
-  React.useEffect(() => setVal(value), [value]);
+  // Re-sync when the URL (and so the server value) changes — adjust during
+  // render rather than in an effect (React's recommended pattern).
+  if (value !== prevValue) {
+    setPrevValue(value);
+    setVal(value);
+  }
 
   function onInput(next: number) {
     setVal(next);

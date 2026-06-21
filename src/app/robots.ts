@@ -6,7 +6,8 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/cart", "/wishlist"],
+      // Private / non-public areas kept out of search results.
+      disallow: ["/admin", "/account", "/checkout", "/cart", "/wishlist", "/order/", "/api/"],
     },
     sitemap: `${SITE.url}/sitemap.xml`,
   };

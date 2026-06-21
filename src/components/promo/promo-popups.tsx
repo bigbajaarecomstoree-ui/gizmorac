@@ -48,9 +48,12 @@ export function PromoPopups({
   const browseSuppressed = isUnder(BROWSE_SUPPRESS);
   const cartSuppressed = isUnder(CART_SUPPRESS);
 
-  // Latest values for the timeout callbacks (avoids re-arming timers).
+  // Latest values for the timeout callbacks (avoids re-arming timers). Updated
+  // after each render so the delayed callbacks read fresh values.
   const ref = React.useRef({ browseSuppressed, cartSuppressed, offer, cartCount, active });
-  ref.current = { browseSuppressed, cartSuppressed, offer, cartCount, active };
+  React.useEffect(() => {
+    ref.current = { browseSuppressed, cartSuppressed, offer, cartCount, active };
+  });
 
   // Browsing nudge — once per session, after a short delay.
   React.useEffect(() => {

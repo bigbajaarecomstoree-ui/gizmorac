@@ -3,7 +3,6 @@ import {
   StandardFonts,
   rgb,
   type PDFFont,
-  type PDFPage,
   type RGB,
 } from "pdf-lib";
 import type { Order } from "@/lib/types";
