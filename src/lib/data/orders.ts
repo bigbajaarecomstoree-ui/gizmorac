@@ -44,6 +44,11 @@ function toOrder(r: OrderRow): Order {
     paymentMethod: r.paymentMethod,
     paymentStatus: r.paymentStatus,
     paymentRef: r.paymentRef,
+    paymentInstrument: r.paymentInstrument,
+    paymentError: r.paymentError,
+    refundStatus: r.refundStatus,
+    refundAmount: r.refundAmount,
+    refundRef: r.refundRef,
     couponCode: r.couponCode,
     customerId: r.customerId,
     createdAt: r.createdAt.toISOString(),
@@ -215,6 +220,21 @@ export async function getOrdersForCustomer(
     orderBy: { createdAt: "desc" },
   });
   return rows.map(toOrder);
+}
+
+/** The payment method the customer used most recently, to pre-select at checkout. */
+export async function getLastPaymentMethod(
+  customerId: string,
+  email: string,
+): Promise<"PhonePe" | "COD" | ""> {
+  const last = await prisma.order.findFirst({
+    where: { OR: [{ customerId }, { email: email.toLowerCase() }] },
+    orderBy: { createdAt: "desc" },
+    select: { paymentMethod: true },
+  });
+  return last?.paymentMethod === "PhonePe" || last?.paymentMethod === "COD"
+    ? last.paymentMethod
+    : "";
 }
 
 export interface AdminStats {

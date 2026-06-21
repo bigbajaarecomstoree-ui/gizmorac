@@ -12,7 +12,7 @@ import {
 import { parseCsv } from "@/lib/products-csv";
 import { mapAmazonReportToProducts } from "@/lib/amazon-import";
 import { issueRepeatCoupon } from "@/lib/data/rewards";
-import { verifyPhonePeKeys, type PhonePeEnv } from "@/lib/phonepe";
+import { verifyPhonePeKeys, initiateRefund, type PhonePeEnv } from "@/lib/phonepe";
 import { logEvent } from "@/lib/data/logs";
 import { headers } from "next/headers";
 
@@ -902,6 +902,58 @@ export async function resolveTicket(formData: FormData): Promise<void> {
 
   await addTicketMessage({ ticketId, author: "admin", body, attachments: [] });
   await setTicketResolution(ticketId, resolution, status);
+
+  // Online refund: if the claim is approved as a Refund and the order was paid
+  // online via PhonePe, fire the refund and start tracking it on the order.
+  if (resolution === "Refund") {
+    const ticket = await getTicketById(ticketId);
+    const order = ticket
+      ? await prisma.order.findUnique({ where: { id: ticket.orderId } })
+      : null;
+    const refundable =
+      order &&
+      order.paymentMethod === "PhonePe" &&
+      order.paymentStatus === "Paid" &&
+      order.refundStatus !== "Initiated" &&
+      order.refundStatus !== "Completed" &&
+      order.total > 0;
+    if (order && refundable) {
+      const merchantRefundId = `RF-${order.orderNumber}-${Date.now().toString(36)}`;
+      const res = await initiateRefund({
+        merchantRefundId,
+        merchantOrderId: order.orderNumber,
+        amountPaise: order.total * 100,
+      });
+      if (res.ok) {
+        await prisma.order.update({
+          where: { id: order.id },
+          data: {
+            status: "Refunded",
+            refundStatus: "Initiated",
+            refundRef: merchantRefundId,
+            refundAmount: order.total,
+          },
+        });
+        await addTicketMessage({
+          ticketId,
+          author: "admin",
+          body: `Refund of ₹${order.total.toLocaleString("en-IN")} initiated to your original payment method. It usually completes in 3–5 business days.`,
+          attachments: [],
+        });
+        revalidatePath(`/order/${order.orderNumber}`);
+        revalidatePath("/account");
+        revalidatePath("/admin/orders");
+      } else {
+        await addTicketMessage({
+          ticketId,
+          author: "admin",
+          body: `(Internal) Auto-refund could not be started: ${res.error ?? "unknown error"}. Please process it manually.`,
+          attachments: [],
+        });
+      }
+    }
+  }
+
   await revalidateTicket(ticketId);
 }
 

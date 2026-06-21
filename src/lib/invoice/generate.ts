@@ -365,7 +365,13 @@ export async function buildInvoicePdf(
   y -= 30;
   textRight("Authorized Signatory", PAGE_W - M, y, { size: 8.5, color: MUTED });
   y -= 22;
-  text(`Payment: ${order.paymentMethod === "COD" ? "Cash on Delivery" : order.paymentMethod}`, M, y, { size: 8.5, color: MUTED });
+  const payLine =
+    order.paymentMethod === "COD"
+      ? "Payment: Cash on Delivery"
+      : order.paymentStatus === "Paid"
+        ? `Payment: Paid via ${order.paymentInstrument || "PhonePe"}${order.paymentRef ? ` · Ref ${order.paymentRef}` : ""}`
+        : `Payment: ${order.paymentMethod} (${order.paymentStatus || "Pending"})`;
+  text(payLine, M, y, { size: 8.5, color: MUTED });
   y -= 12;
   text("This is a computer-generated invoice and does not require a physical signature.", M, y, { size: 8, color: MUTED });
   y -= 12;

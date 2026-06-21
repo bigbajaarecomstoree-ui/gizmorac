@@ -28,6 +28,7 @@ export function CheckoutView({
   shippingFee = 79,
   codEnabled = true,
   phonepeEnabled = false,
+  preferredMethod,
 }: {
   products: Product[];
   customer: Customer | null;
@@ -35,6 +36,7 @@ export function CheckoutView({
   shippingFee?: number;
   codEnabled?: boolean;
   phonepeEnabled?: boolean;
+  preferredMethod?: "PhonePe" | "COD";
 }) {
   const router = useRouter();
   const { cart, clearCart, mounted, offer, clearOffer } = useStore();
@@ -56,9 +58,16 @@ export function CheckoutView({
   const [pinStatus, setPinStatus] = React.useState<
     "idle" | "checking" | "found" | "notfound"
   >("idle");
-  // Default to online payment when available, else COD.
+  // Pre-select the customer's last-used method (if still available), else
+  // default to online payment when available, otherwise COD.
   const [payMethod, setPayMethod] = React.useState<"PhonePe" | "COD">(
-    phonepeEnabled ? "PhonePe" : "COD",
+    preferredMethod === "PhonePe" && phonepeEnabled
+      ? "PhonePe"
+      : preferredMethod === "COD" && codEnabled
+        ? "COD"
+        : phonepeEnabled
+          ? "PhonePe"
+          : "COD",
   );
   const [coupon, setCoupon] = React.useState<{ code: string; off: number } | null>(null);
   const [code, setCode] = React.useState("");

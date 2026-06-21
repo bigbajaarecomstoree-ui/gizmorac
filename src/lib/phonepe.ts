@@ -221,6 +221,23 @@ export interface StatusResult {
   state: PhonePeState;
   transactionId?: string;
   amount?: number;
+  /** Friendly instrument the customer paid with (UPI / Card / Netbanking / Wallet). */
+  instrument?: string;
+  /** Best human reference: UPI UTR if present, else the transaction id. */
+  reference?: string;
+  /** Failure reason/code, when the payment failed. */
+  error?: string;
+}
+
+/** Map PhonePe's payment mode to a friendly label for the customer. */
+function friendlyInstrument(mode?: string): string {
+  if (!mode) return "";
+  const m = mode.toUpperCase();
+  if (m.startsWith("UPI")) return "UPI";
+  if (m.includes("CARD")) return "Card";
+  if (m.includes("NET") && m.includes("BANK")) return "Netbanking";
+  if (m.includes("WALLET")) return "Wallet";
+  return mode;
 }
 
 /** Authoritative payment status straight from PhonePe (never trust the redirect alone). */
@@ -239,14 +256,113 @@ export async function getOrderStatus(
     const data = (await res.json().catch(() => ({}))) as {
       state?: PhonePeState;
       amount?: number;
-      paymentDetails?: { transactionId?: string }[];
+      errorCode?: string;
+      detailedErrorCode?: string;
+      paymentDetails?: {
+        transactionId?: string;
+        paymentMode?: string;
+        errorCode?: string;
+        detailedErrorCode?: string;
+        rail?: { utr?: string; type?: string };
+      }[];
     };
     if (!res.ok) return { state: "UNKNOWN" };
+    const pd = data.paymentDetails?.[0];
     return {
       state: data.state ?? "UNKNOWN",
-      transactionId: data.paymentDetails?.[0]?.transactionId,
+      transactionId: pd?.transactionId,
       amount: data.amount,
+      instrument: friendlyInstrument(pd?.paymentMode),
+      reference: pd?.rail?.utr || pd?.transactionId || "",
+      error:
+        data.detailedErrorCode ||
+        data.errorCode ||
+        pd?.detailedErrorCode ||
+        pd?.errorCode ||
+        "",
     };
+  } catch {
+    return { state: "UNKNOWN" };
+  }
+}
+
+export interface RefundResult {
+  ok: boolean;
+  refundId?: string;
+  state?: string;
+  error?: string;
+}
+
+/** Initiate a refund for a previously-paid order. */
+export async function initiateRefund(input: {
+  merchantRefundId: string;
+  merchantOrderId: string;
+  amountPaise: number;
+}): Promise<RefundResult> {
+  try {
+    const cfg = await getPhonePeConfig();
+    if (!cfg.clientId || !cfg.clientSecret) {
+      return { ok: false, error: "Payment gateway is not configured." };
+    }
+    const token = await getToken(cfg);
+    const { base } = endpoints(cfg.env);
+    const res = await fetch(`${base}/payments/v2/refund`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `O-Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        merchantRefundId: input.merchantRefundId,
+        originalMerchantOrderId: input.merchantOrderId,
+        amount: input.amountPaise,
+      }),
+      cache: "no-store",
+    });
+    const data = (await res.json().catch(() => ({}))) as {
+      refundId?: string;
+      state?: string;
+      message?: string;
+      code?: string;
+    };
+    if (!res.ok) {
+      return {
+        ok: false,
+        error: data.message || data.code || `Refund failed (${res.status})`,
+      };
+    }
+    return { ok: true, refundId: data.refundId, state: data.state };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Refund error" };
+  }
+}
+
+export type RefundState = "Initiated" | "Completed" | "Failed";
+
+/** Map PhonePe's refund state to our 3-state model. */
+export function mapRefundState(state?: string): RefundState {
+  const s = (state || "").toUpperCase();
+  if (s === "COMPLETED" || s === "CONFIRMED") return "Completed";
+  if (s === "FAILED") return "Failed";
+  return "Initiated";
+}
+
+/** Check a refund's status straight from PhonePe. */
+export async function getRefundStatus(
+  merchantRefundId: string,
+): Promise<{ state: RefundState | "UNKNOWN" }> {
+  try {
+    const cfg = await getPhonePeConfig();
+    if (!cfg.clientId || !cfg.clientSecret) return { state: "UNKNOWN" };
+    const token = await getToken(cfg);
+    const { base } = endpoints(cfg.env);
+    const res = await fetch(
+      `${base}/payments/v2/refund/${encodeURIComponent(merchantRefundId)}/status`,
+      { headers: { Authorization: `O-Bearer ${token}` }, cache: "no-store" },
+    );
+    const data = (await res.json().catch(() => ({}))) as { state?: string };
+    if (!res.ok) return { state: "UNKNOWN" };
+    return { state: mapRefundState(data.state) };
   } catch {
     return { state: "UNKNOWN" };
   }

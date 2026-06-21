@@ -175,8 +175,16 @@ export interface Order {
   paymentMethod: string;
   /** Online-payment status: "" (COD) | "Pending" | "Paid" | "Failed". */
   paymentStatus: string;
-  /** Gateway reference (PhonePe transaction/order id). */
+  /** Gateway reference (PhonePe transaction / UTR / order id). */
   paymentRef: string;
+  /** Friendly instrument used: "" | "UPI" | "Card" | "Netbanking" | "Wallet". */
+  paymentInstrument: string;
+  /** Failure reason for a failed online payment. */
+  paymentError: string;
+  /** Online refund tracking: "" | "Initiated" | "Completed" | "Failed". */
+  refundStatus: string;
+  refundAmount: number;
+  refundRef: string;
   couponCode?: string | null;
   customerId?: string | null;
   createdAt: string;

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CheckCircle2, XCircle, Package, Star, ShieldAlert, FileDown } from "lucide-react";
+import { CheckCircle2, XCircle, Package, Star, ShieldAlert, FileDown, RotateCcw } from "lucide-react";
 import { getOrderByNumber } from "@/lib/data/orders";
 import { getReviewsForOrder } from "@/lib/data/customer-reviews";
 import { getRewardForOrder } from "@/lib/data/rewards";
@@ -14,6 +14,7 @@ import { OrderTracker } from "@/components/order/order-tracker";
 import { OrderItemReview } from "@/components/account/order-review";
 import { RewardCouponCard } from "@/components/account/reward-coupon";
 import { ResumePayment } from "@/components/order/resume-payment";
+import { BuyAgainButton } from "@/components/account/buy-again";
 import { TicketPanel } from "@/components/account/ticket-panel";
 import { buttonVariants } from "@/components/ui/button";
 import type { OrderStatus } from "@/lib/types";
@@ -29,6 +30,18 @@ export const dynamic = "force-dynamic";
 
 const FLOW: OrderStatus[] = ["Pending", "Confirmed", "Packed", "Shipped", "Delivered"];
 const TERMINAL = ["Cancelled", "Returned", "Refunded"];
+
+/** Turn a PhonePe error code into a plain-English reason. */
+function friendlyPayError(code: string): string {
+  if (!code) return "The payment was cancelled or didn't complete.";
+  const c = code.toUpperCase();
+  if (c.includes("DECLINE")) return "Your bank declined the payment.";
+  if (c.includes("TIMEOUT") || c.includes("EXPIRE")) return "The payment timed out.";
+  if (c.includes("CANCEL")) return "The payment was cancelled.";
+  if (c.includes("INSUFFICIENT")) return "Insufficient balance.";
+  if (code.includes(" ")) return code; // already a sentence
+  return "The payment didn't complete.";
+}
 
 export default async function OrderPage({ params }: { params: Params }) {
   const { orderNumber } = await params;
@@ -92,19 +105,34 @@ export default async function OrderPage({ params }: { params: Params }) {
 
         {/* online payment status */}
         {order.paymentMethod === "PhonePe" ? (
-          <div className="mt-5">
+          <div className="mt-5 space-y-3">
             {order.paymentStatus === "Paid" ? (
-              <div className="flex items-center gap-3 rounded-xl border border-success/30 bg-success/5 px-4 py-3 text-sm font-medium text-success">
-                <CheckCircle2 size={18} /> Payment successful — paid online via PhonePe.
+              <div className="rounded-xl border border-success/30 bg-success/5 px-4 py-3 text-sm">
+                <p className="flex items-center gap-2 font-medium text-success">
+                  <CheckCircle2 size={18} /> Payment successful — paid via{" "}
+                  {order.paymentInstrument || "PhonePe"}.
+                </p>
+                {order.paymentRef ? (
+                  <p className="mt-1 pl-7 text-xs text-muted">
+                    Reference:{" "}
+                    <span className="font-mono text-foreground">{order.paymentRef}</span>
+                  </p>
+                ) : null}
               </div>
             ) : order.paymentStatus === "Failed" ? (
               <div className="rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 text-sm">
                 <p className="flex items-center gap-2 font-medium text-danger">
-                  <XCircle size={18} /> Payment failed or was cancelled.
+                  <XCircle size={18} /> Payment didn&apos;t go through.
+                </p>
+                <p className="mt-1 pl-7 text-xs text-muted">
+                  {friendlyPayError(order.paymentError)} No money was deducted — you can
+                  place the order again.
                 </p>
                 {isOwner ? (
-                  <div className="mt-3">
-                    <ResumePayment orderNumber={order.orderNumber} />
+                  <div className="mt-3 pl-7">
+                    <BuyAgainButton
+                      items={order.items.map((i) => ({ id: i.id, qty: i.qty }))}
+                    />
                   </div>
                 ) : null}
               </div>
@@ -120,6 +148,43 @@ export default async function OrderPage({ params }: { params: Params }) {
                 ) : null}
               </div>
             )}
+
+            {/* refund tracking */}
+            {order.refundStatus ? (
+              <div
+                className={`rounded-xl border px-4 py-3 text-sm ${
+                  order.refundStatus === "Completed"
+                    ? "border-success/30 bg-success/5"
+                    : order.refundStatus === "Failed"
+                      ? "border-danger/30 bg-danger/5"
+                      : "border-border bg-surface"
+                }`}
+              >
+                <p className="flex items-center gap-2 font-medium">
+                  <RotateCcw
+                    size={16}
+                    className={
+                      order.refundStatus === "Completed"
+                        ? "text-success"
+                        : order.refundStatus === "Failed"
+                          ? "text-danger"
+                          : "text-accent"
+                    }
+                  />
+                  {order.refundStatus === "Completed"
+                    ? `Refund of ${formatINR(order.refundAmount)} completed.`
+                    : order.refundStatus === "Failed"
+                      ? `Refund of ${formatINR(order.refundAmount)} couldn't be processed — our team will reach out.`
+                      : `Refund of ${formatINR(order.refundAmount)} initiated — it usually reaches your account in 3–5 business days.`}
+                </p>
+                {order.refundRef ? (
+                  <p className="mt-1 pl-6 text-xs text-muted">
+                    Refund ref:{" "}
+                    <span className="font-mono text-foreground">{order.refundRef}</span>
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         ) : null}
 

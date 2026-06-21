@@ -113,8 +113,34 @@ export default async function OrderDetailPage({ params }: { params: Params }) {
             <hr className="my-3 border-border" />
             <div className="flex justify-between">
               <span className="text-muted">Payment</span>
-              <span className="font-medium">{order.paymentMethod}</span>
+              <span className="font-medium">
+                {order.paymentMethod === "PhonePe"
+                  ? `${order.paymentInstrument || "PhonePe"} · ${order.paymentStatus || "Pending"}`
+                  : "Cash on Delivery"}
+              </span>
             </div>
+            {order.paymentRef ? (
+              <div className="mt-1 flex justify-between text-xs">
+                <span className="text-muted">Reference</span>
+                <span className="font-mono">{order.paymentRef}</span>
+              </div>
+            ) : null}
+            {order.refundStatus ? (
+              <div className="mt-1 flex justify-between text-xs">
+                <span className="text-muted">Refund</span>
+                <span
+                  className={
+                    order.refundStatus === "Completed"
+                      ? "font-medium text-success"
+                      : order.refundStatus === "Failed"
+                        ? "font-medium text-danger"
+                        : "font-medium text-accent"
+                  }
+                >
+                  {formatINR(order.refundAmount)} · {order.refundStatus}
+                </span>
+              </div>
+            ) : null}
           </div>
         </div>
       </div>

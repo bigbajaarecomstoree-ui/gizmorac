@@ -1,6 +1,6 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { getOrderStatus } from "@/lib/phonepe";
+import { getOrderStatus, getRefundStatus } from "@/lib/phonepe";
 import { logEvent } from "@/lib/data/logs";
 
 async function restoreStock(itemsJson: string) {
@@ -48,7 +48,8 @@ export async function reconcilePhonePeOrder(
       data: {
         status: "Confirmed",
         paymentStatus: "Paid",
-        paymentRef: status.transactionId ?? order.paymentRef,
+        paymentRef: status.reference || status.transactionId || order.paymentRef,
+        paymentInstrument: status.instrument || order.paymentInstrument,
       },
     });
     await logEvent({
@@ -64,7 +65,11 @@ export async function reconcilePhonePeOrder(
   if (status.state === "FAILED") {
     await prisma.order.update({
       where: { id: order.id },
-      data: { status: "Cancelled", paymentStatus: "Failed" },
+      data: {
+        status: "Cancelled",
+        paymentStatus: "Failed",
+        paymentError: status.error || "Payment was not completed.",
+      },
     });
     await restoreStock(order.items);
     await logEvent({
@@ -79,4 +84,31 @@ export async function reconcilePhonePeOrder(
     return "Failed";
   }
   return "Pending";
+}
+
+/**
+ * Refresh an order's refund status from PhonePe. Safe to call repeatedly;
+ * stops once the refund is Completed or Failed.
+ */
+export async function reconcileRefund(orderId: string): Promise<void> {
+  const order = await prisma.order.findUnique({ where: { id: orderId } });
+  if (!order || !order.refundRef) return;
+  if (order.refundStatus === "Completed" || order.refundStatus === "Failed") return;
+
+  const { state } = await getRefundStatus(order.refundRef);
+  if (state === "UNKNOWN" || state === order.refundStatus) return;
+
+  await prisma.order.update({
+    where: { id: order.id },
+    data: { refundStatus: state },
+  });
+  if (state === "Completed" || state === "Failed") {
+    await logEvent({
+      actor: "system",
+      action: `refund.${state.toLowerCase()}`,
+      message: `Refund ${state.toLowerCase()} for ${order.orderNumber}`,
+      meta: { orderNumber: order.orderNumber, refundRef: order.refundRef },
+    });
+  }
+  revalidate(order.orderNumber);
 }

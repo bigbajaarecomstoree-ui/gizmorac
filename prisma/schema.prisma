@@ -93,8 +93,16 @@ model Order {
   paymentMethod String   @default("COD")
   // Online-payment status: "" (COD) | "Pending" | "Paid" | "Failed".
   paymentStatus String   @default("")
-  // Gateway reference (PhonePe transaction / order id) once paid.
+  // Gateway reference (PhonePe transaction / UTR / order id) once paid.
   paymentRef    String   @default("")
+  // Friendly instrument the customer paid with: "" | "UPI" | "Card" | "Netbanking" | "Wallet".
+  paymentInstrument String @default("")
+  // Failure reason shown on a failed online payment (for friendly retry).
+  paymentError  String   @default("")
+  // Refund tracking for online (PhonePe) refunds.
+  refundStatus  String   @default("") // "" | "Initiated" | "Completed" | "Failed"
+  refundAmount  Int      @default(0)
+  refundRef     String   @default("") // merchant refund id
   couponCode    String?
   // Optional link to a registered customer (guest checkout leaves this null).
   customerId    String?
