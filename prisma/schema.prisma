@@ -103,6 +103,13 @@ model Order {
   refundStatus  String   @default("") // "" | "Initiated" | "Completed" | "Failed"
   refundAmount  Int      @default(0)
   refundRef     String   @default("") // merchant refund id
+  // Shiprocket shipment tracking.
+  shiprocketOrderId String @default("")
+  shipmentId        String @default("")
+  awb               String @default("")
+  courier           String @default("")
+  trackingUrl       String @default("")
+  shipmentStatus    String @default("") // latest Shiprocket status label
   couponCode    String?
   // Optional link to a registered customer (guest checkout leaves this null).
   customerId    String?
@@ -287,6 +294,17 @@ model StoreSetting {
   phonepeClientSecret   String   @default("")
   phonepeEnv            String   @default("sandbox") // "sandbox" | "production"
   phonepeConnected      Boolean  @default(false)
+  // Shiprocket shipping — admin-managed (API user creds are server-only).
+  shiprocketEmail       String   @default("")
+  shiprocketPassword    String   @default("")
+  shiprocketPickup      String   @default("") // pickup location nickname set in Shiprocket
+  shiprocketWeight      Float    @default(0.5) // default package weight (kg)
+  shiprocketLength      Int      @default(15)  // package dims (cm)
+  shiprocketBreadth     Int      @default(12)
+  shiprocketHeight      Int      @default(5)
+  shiprocketConnected   Boolean  @default(false)
+  shiprocketToken       String   @default("") // cached auth token (server-only)
+  shiprocketTokenExp    DateTime?
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 }

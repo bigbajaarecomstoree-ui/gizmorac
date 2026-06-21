@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CheckCircle2, XCircle, Package, Star, ShieldAlert, FileDown, RotateCcw } from "lucide-react";
+import { CheckCircle2, XCircle, Package, Star, ShieldAlert, FileDown, RotateCcw, Truck } from "lucide-react";
 import { getOrderByNumber } from "@/lib/data/orders";
 import { getReviewsForOrder } from "@/lib/data/customer-reviews";
 import { getRewardForOrder } from "@/lib/data/rewards";
@@ -204,6 +204,35 @@ export default async function OrderPage({ params }: { params: Params }) {
               Estimated delivery:{" "}
               <span className="font-medium text-foreground">{deliveryWindow()}</span>
             </p>
+          ) : null}
+
+          {/* shipment tracking */}
+          {order.trackingUrl || order.awb ? (
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-background px-4 py-3">
+              <div className="text-sm">
+                <p className="font-medium">
+                  {order.courier ? `Shipped via ${order.courier}` : "Shipment created"}
+                  {order.shipmentStatus ? (
+                    <span className="text-muted"> · {order.shipmentStatus}</span>
+                  ) : null}
+                </p>
+                {order.awb ? (
+                  <p className="mt-0.5 text-xs text-muted">
+                    AWB: <span className="font-mono text-foreground">{order.awb}</span>
+                  </p>
+                ) : null}
+              </div>
+              {order.trackingUrl ? (
+                <a
+                  href={order.trackingUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={buttonVariants({ variant: "outline", size: "sm" })}
+                >
+                  <Truck size={15} /> Track shipment
+                </a>
+              ) : null}
+            </div>
           ) : null}
         </div>
 

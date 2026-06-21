@@ -185,6 +185,13 @@ export interface Order {
   refundStatus: string;
   refundAmount: number;
   refundRef: string;
+  /** Shiprocket shipment tracking. */
+  shiprocketOrderId: string;
+  shipmentId: string;
+  awb: string;
+  courier: string;
+  trackingUrl: string;
+  shipmentStatus: string;
   couponCode?: string | null;
   customerId?: string | null;
   createdAt: string;

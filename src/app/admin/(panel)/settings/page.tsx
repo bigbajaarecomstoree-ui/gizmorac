@@ -1,12 +1,17 @@
 import { Settings as SettingsIcon } from "lucide-react";
 import { getSettings } from "@/lib/data/settings";
 import { getPhonePeConfig } from "@/lib/phonepe";
+import { getShiprocketConfig } from "@/lib/shiprocket";
 import { SettingsForm } from "@/components/admin/settings-form";
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
-  const [settings, phonepe] = await Promise.all([getSettings(), getPhonePeConfig()]);
+  const [settings, phonepe, shiprocket] = await Promise.all([
+    getSettings(),
+    getPhonePeConfig(),
+    getShiprocketConfig(),
+  ]);
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -28,6 +33,16 @@ export default async function SettingsPage() {
             env: phonepe.env,
             connected: phonepe.connected,
             hasSecret: Boolean(phonepe.clientSecret),
+          }}
+          shiprocket={{
+            email: shiprocket.email,
+            hasPassword: Boolean(shiprocket.password),
+            pickup: shiprocket.pickup,
+            weight: shiprocket.weight,
+            length: shiprocket.length,
+            breadth: shiprocket.breadth,
+            height: shiprocket.height,
+            connected: shiprocket.connected,
           }}
         />
       </div>

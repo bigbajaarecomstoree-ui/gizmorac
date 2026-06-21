@@ -11,6 +11,7 @@ import {
 import type { StoreSettings } from "@/lib/data/settings";
 import { Button } from "@/components/ui/button";
 import { PaymentGatewayCard } from "@/components/admin/payment-gateway-card";
+import { ShiprocketCard } from "@/components/admin/shiprocket-card";
 import { cn } from "@/lib/utils";
 
 export interface PaymentGatewayProps {
@@ -20,6 +21,17 @@ export interface PaymentGatewayProps {
   env: "sandbox" | "production";
   connected: boolean;
   hasSecret: boolean;
+}
+
+export interface ShiprocketProps {
+  email: string;
+  hasPassword: boolean;
+  pickup: string;
+  weight: number;
+  length: number;
+  breadth: number;
+  height: number;
+  connected: boolean;
 }
 
 type TabKey = "store" | "company" | "shipping" | "payment" | "marketing";
@@ -197,9 +209,11 @@ function FormToggle({
 export function SettingsForm({
   settings,
   phonepe,
+  shiprocket,
 }: {
   settings: StoreSettings;
   phonepe: PaymentGatewayProps;
+  shiprocket: ShiprocketProps;
 }) {
   const [state, formAction, pending] = useActionState<
     SettingsState | undefined,
@@ -405,6 +419,17 @@ export function SettingsForm({
             hint="Turn off to pause new orders until online payments are live."
           />
         </Card>
+
+        <ShiprocketCard
+          email={shiprocket.email}
+          hasPassword={shiprocket.hasPassword}
+          pickup={shiprocket.pickup}
+          weight={shiprocket.weight}
+          length={shiprocket.length}
+          breadth={shiprocket.breadth}
+          height={shiprocket.height}
+          connected={shiprocket.connected}
+        />
       </div>
 
       {/* PAYMENT GATEWAY — its own dedicated tab */}

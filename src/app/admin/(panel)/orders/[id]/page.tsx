@@ -2,9 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { getOrderById, ORDER_STATUSES } from "@/lib/data/orders";
+import { getShiprocketConfig } from "@/lib/shiprocket";
 import { formatINR } from "@/lib/format";
 import { OrderStatusBadge } from "@/components/admin/order-status-badge";
 import { OrderStatusForm } from "@/components/admin/order-status-form";
+import { ShipmentPanel } from "@/components/admin/shipment-panel";
 
 type Params = Promise<{ id: string }>;
 
@@ -14,6 +16,8 @@ export default async function OrderDetailPage({ params }: { params: Params }) {
   const { id } = await params;
   const order = await getOrderById(id);
   if (!order) notFound();
+
+  const shiprocket = await getShiprocketConfig();
 
   const placed = new Date(order.createdAt).toLocaleString("en-IN", {
     timeZone: "Asia/Kolkata",
@@ -94,6 +98,16 @@ export default async function OrderDetailPage({ params }: { params: Params }) {
               statuses={ORDER_STATUSES}
             />
           </div>
+
+          <ShipmentPanel
+            orderId={order.id}
+            connected={shiprocket.configured}
+            shiprocketOrderId={order.shiprocketOrderId}
+            awb={order.awb}
+            courier={order.courier}
+            trackingUrl={order.trackingUrl}
+            shipmentStatus={order.shipmentStatus}
+          />
 
           <div className="rounded-xl border border-border bg-surface p-5 text-sm">
             <h2 className="mb-3 font-semibold">Customer</h2>

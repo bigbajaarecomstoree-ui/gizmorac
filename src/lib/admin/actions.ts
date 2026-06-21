@@ -13,6 +13,13 @@ import { parseCsv } from "@/lib/products-csv";
 import { mapAmazonReportToProducts } from "@/lib/amazon-import";
 import { issueRepeatCoupon } from "@/lib/data/rewards";
 import { verifyPhonePeKeys, initiateRefund, type PhonePeEnv } from "@/lib/phonepe";
+import {
+  verifyShiprocket,
+  createShiprocketOrder,
+  getTracking,
+} from "@/lib/shiprocket";
+import { getOrderById } from "@/lib/data/orders";
+import { recordShipmentUpdate } from "@/lib/data/shipments";
 import { logEvent } from "@/lib/data/logs";
 import { headers } from "next/headers";
 
@@ -829,6 +836,140 @@ export async function disconnectPaymentGateway(): Promise<PaymentGatewayState> {
   revalidatePath("/checkout");
   revalidatePath("/admin/settings");
   return { ok: true, connected: false };
+}
+
+// --- shipping (Shiprocket) ---
+
+export interface ShiprocketState {
+  ok: boolean;
+  error?: string;
+  connected?: boolean;
+}
+
+/** Verify the Shiprocket API user, save the config, and switch it on. */
+export async function connectShiprocket(input: {
+  email: string;
+  password: string;
+  pickup: string;
+  weight: number;
+  length: number;
+  breadth: number;
+  height: number;
+}): Promise<ShiprocketState> {
+  await assertAdmin();
+  const email = (input.email ?? "").trim();
+  const existing = await prisma.storeSetting.findUnique({ where: { id: "store" } });
+  // Blank password = keep the stored one (it's masked in the UI).
+  const password = (input.password ?? "").trim() || existing?.shiprocketPassword || "";
+  if (!email || !password) {
+    return { ok: false, error: "Enter the Shiprocket API email and password." };
+  }
+
+  const verified = await verifyShiprocket({ email, password });
+  if (!verified.ok) {
+    return { ok: false, error: verified.error ?? "Could not verify these credentials." };
+  }
+
+  const data = {
+    shiprocketEmail: email,
+    shiprocketPassword: password,
+    shiprocketPickup: (input.pickup ?? "").trim(),
+    shiprocketWeight: Math.max(0.1, Number(input.weight) || 0.5),
+    shiprocketLength: Math.max(1, Math.round(Number(input.length) || 15)),
+    shiprocketBreadth: Math.max(1, Math.round(Number(input.breadth) || 12)),
+    shiprocketHeight: Math.max(1, Math.round(Number(input.height) || 5)),
+    shiprocketConnected: true,
+    // Force a fresh token on next call.
+    shiprocketToken: "",
+    shiprocketTokenExp: null,
+  };
+  await prisma.storeSetting.upsert({
+    where: { id: "store" },
+    update: data,
+    create: { id: "store", ...data },
+  });
+
+  await logEvent({
+    actor: "admin",
+    action: "admin.shipping.connect",
+    message: "Shiprocket connected",
+  });
+  revalidatePath("/admin/settings");
+  return { ok: true, connected: true };
+}
+
+/** Turn Shiprocket off (orders can no longer be pushed to it). */
+export async function disconnectShiprocket(): Promise<ShiprocketState> {
+  await assertAdmin();
+  await prisma.storeSetting.upsert({
+    where: { id: "store" },
+    update: { shiprocketConnected: false },
+    create: { id: "store", shiprocketConnected: false },
+  });
+  await logEvent({
+    level: "warn",
+    actor: "admin",
+    action: "admin.shipping.disconnect",
+    message: "Shiprocket disconnected",
+  });
+  revalidatePath("/admin/settings");
+  return { ok: true, connected: false };
+}
+
+export interface ShipResult {
+  ok: boolean;
+  error?: string;
+}
+
+/** Push an order into Shiprocket so it can be assigned a courier & shipped. */
+export async function pushToShiprocket(orderId: string): Promise<ShipResult> {
+  await assertAdmin();
+  const order = await getOrderById(orderId);
+  if (!order) return { ok: false, error: "Order not found." };
+  if (order.shiprocketOrderId) {
+    return { ok: false, error: "This order is already in Shiprocket." };
+  }
+
+  const res = await createShiprocketOrder(order);
+  if (!res.ok) return { ok: false, error: res.error };
+
+  await prisma.order.update({
+    where: { id: orderId },
+    data: {
+      shiprocketOrderId: res.shiprocketOrderId ?? "",
+      shipmentId: res.shipmentId ?? "",
+      shipmentStatus: res.status ?? "Created",
+    },
+  });
+  await logEvent({
+    actor: "admin",
+    action: "admin.shipping.push",
+    message: `Order ${order.orderNumber} pushed to Shiprocket`,
+    meta: { orderNumber: order.orderNumber, shipmentId: res.shipmentId ?? "" },
+  });
+  revalidatePath(`/admin/orders/${orderId}`);
+  revalidatePath(`/order/${order.orderNumber}`);
+  return { ok: true };
+}
+
+/** Refresh an order's live tracking from Shiprocket. */
+export async function syncShipment(orderId: string): Promise<ShipResult> {
+  await assertAdmin();
+  const order = await getOrderById(orderId);
+  if (!order) return { ok: false, error: "Order not found." };
+  if (!order.shipmentId) return { ok: false, error: "Push the order to Shiprocket first." };
+
+  const t = await getTracking(order.shipmentId);
+  if (!t) return { ok: false, error: "Couldn't fetch tracking right now." };
+
+  await recordShipmentUpdate({
+    orderNumber: order.orderNumber,
+    status: t.status,
+    awb: t.awb,
+    courier: t.courier,
+    trackingUrl: t.trackingUrl,
+  });
+  return { ok: true };
 }
 
 // --- support tickets (damage / defect claims) ---
