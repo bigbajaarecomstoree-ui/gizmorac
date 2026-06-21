@@ -10,7 +10,25 @@ import {
 } from "@/lib/admin/actions";
 import type { StoreSettings } from "@/lib/data/settings";
 import { Button } from "@/components/ui/button";
+import { PaymentGatewayCard } from "@/components/admin/payment-gateway-card";
 import { cn } from "@/lib/utils";
+
+export interface PaymentGatewayProps {
+  clientIdLast4: string;
+  hasClientId: boolean;
+  clientVersion: string;
+  env: "sandbox" | "production";
+  connected: boolean;
+  hasSecret: boolean;
+}
+
+type TabKey = "store" | "company" | "payments" | "marketing";
+const SETTINGS_TABS: { key: TabKey; label: string }[] = [
+  { key: "store", label: "Store" },
+  { key: "company", label: "Company" },
+  { key: "payments", label: "Payments & shipping" },
+  { key: "marketing", label: "Marketing" },
+];
 
 const inputCls =
   "h-11 w-full rounded-lg border border-border bg-background px-3 text-sm placeholder:text-faint focus:border-accent focus:outline-none";
@@ -175,272 +193,325 @@ function FormToggle({
   );
 }
 
-export function SettingsForm({ settings }: { settings: StoreSettings }) {
+export function SettingsForm({
+  settings,
+  phonepe,
+}: {
+  settings: StoreSettings;
+  phonepe: PaymentGatewayProps;
+}) {
   const [state, formAction, pending] = useActionState<
     SettingsState | undefined,
     FormData
   >(updateSettings, undefined);
+  const [tab, setTab] = useState<TabKey>("store");
+
+  // Inactive panels stay mounted (hidden with CSS) so every field is still
+  // submitted on Save, no matter which tab is open.
+  const panel = (key: TabKey, twoCol: boolean) =>
+    cn("grid gap-5", twoCol && "lg:grid-cols-2", tab !== key && "hidden");
 
   return (
-    <form action={formAction} className="grid gap-5 lg:grid-cols-2">
-      <Card title="Store details" hint="Shown across the storefront and in customer contact.">
-        <Field label="Store name" name="storeName" defaultValue={settings.storeName} />
-        <Field
-          label="Support email"
-          name="supportEmail"
-          type="email"
-          defaultValue={settings.supportEmail}
-          placeholder="support@gizmorac.com"
-        />
-        <Field
-          label="Support phone"
-          name="supportPhone"
-          defaultValue={settings.supportPhone}
-          placeholder="+91 99999 99999"
-        />
-        <Field
-          label="WhatsApp number"
-          name="whatsappNumber"
-          defaultValue={settings.whatsappNumber}
-          hint="Digits with country code, e.g. 919876543210. Powers the chat button."
-          inputMode="numeric"
-        />
-      </Card>
+    <form action={formAction}>
+      {/* tab bar */}
+      <div className="mb-6 flex gap-1 overflow-x-auto border-b border-border [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {SETTINGS_TABS.map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            onClick={() => setTab(t.key)}
+            className={cn(
+              "-mb-px whitespace-nowrap border-b-2 px-4 py-2.5 text-sm font-medium transition-colors",
+              tab === t.key
+                ? "border-accent text-accent"
+                : "border-transparent text-muted hover:text-foreground",
+            )}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
 
-      <Card
-        title="Company details"
-        hint="Your registered business identity. Updates everywhere automatically — footer, policies and the GST tax invoice. (Contact email & phone come from Store details above.)"
-      >
-        <Field
-          label="Registered / legal name"
-          name="legalName"
-          defaultValue={settings.legalName}
-          placeholder="BIG BAJAAR ECOM STOREE"
-        />
-        <label className="block">
-          <span className="mb-1.5 block text-sm font-medium">Registered address</span>
-          <textarea
-            name="companyAddress"
-            rows={3}
-            defaultValue={settings.companyAddress}
-            className={areaCls}
-            placeholder="Plot No. 33, Block A, Mohan Cooperative Industrial Estate, New Delhi, Delhi - 110044, India"
-          />
-          <span className="mt-1 block text-xs text-faint">
-            Shown in the footer and as the &ldquo;Sold By&rdquo; address on invoices.
-          </span>
-        </label>
-        <div className="grid grid-cols-2 gap-4">
+      {/* STORE */}
+      <div className={panel("store", true)}>
+        <Card title="Store details" hint="Shown across the storefront and in customer contact.">
+          <Field label="Store name" name="storeName" defaultValue={settings.storeName} />
           <Field
-            label="State"
-            name="companyState"
-            defaultValue={settings.companyState}
-            hint="Used to split IGST vs CGST/SGST on invoices."
-            placeholder="Delhi"
+            label="Support email"
+            name="supportEmail"
+            type="email"
+            defaultValue={settings.supportEmail}
+            placeholder="support@gizmorac.com"
           />
           <Field
-            label="GST state code"
-            name="companyStateCode"
-            defaultValue={settings.companyStateCode}
-            hint="First 2 digits of the GSTIN (e.g. 07)."
+            label="Support phone"
+            name="supportPhone"
+            defaultValue={settings.supportPhone}
+            placeholder="+91 99999 99999"
+          />
+          <Field
+            label="WhatsApp number"
+            name="whatsappNumber"
+            defaultValue={settings.whatsappNumber}
+            hint="Digits with country code, e.g. 919876543210. Powers the chat button."
             inputMode="numeric"
-            maxLength={2}
-            placeholder="07"
           />
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <Field
-            label="PAN"
-            name="companyPan"
-            defaultValue={settings.companyPan}
-            placeholder="ABEFB8495P"
-          />
-          <Field
-            label="GSTIN"
-            name="companyGstin"
-            defaultValue={settings.companyGstin}
-            placeholder="07ABEFB8495P1ZL"
-          />
-        </div>
-      </Card>
+        </Card>
 
-      <Card title="Announcement bar" hint="The strip at the very top of every page.">
-        <label className="block">
-          <span className="mb-1.5 block text-sm font-medium">Message</span>
-          <textarea
-            name="announcementText"
-            rows={3}
-            defaultValue={settings.announcementText}
-            className={areaCls}
-            placeholder="Free shipping over ₹999 · COD available"
+        <Card title="Announcement bar" hint="The strip at the very top of every page.">
+          <label className="block">
+            <span className="mb-1.5 block text-sm font-medium">Message</span>
+            <textarea
+              name="announcementText"
+              rows={3}
+              defaultValue={settings.announcementText}
+              className={areaCls}
+              placeholder="Free shipping over ₹999 · COD available"
+            />
+          </label>
+          <Toggle
+            label="Show announcement bar"
+            name="announcementEnabled"
+            defaultChecked={settings.announcementEnabled}
+            hint="Hide it to remove the top strip entirely."
           />
-        </label>
-        <Toggle
-          label="Show announcement bar"
-          name="announcementEnabled"
-          defaultChecked={settings.announcementEnabled}
-          hint="Hide it to remove the top strip entirely."
-        />
-        <Toggle
-          label="Scroll the message"
-          name="announcementScroll"
-          defaultChecked={settings.announcementScroll}
-          hint="On: text slides right → left. Off: text stays centered."
-        />
-      </Card>
+          <Toggle
+            label="Scroll the message"
+            name="announcementScroll"
+            defaultChecked={settings.announcementScroll}
+            hint="On: text slides right → left. Off: text stays centered."
+          />
+        </Card>
 
-      <Card title="Shipping & payment" hint="Applied to the cart and checkout totals.">
-        <div className="grid grid-cols-2 gap-4">
+        <Card
+          title="Social media"
+          hint="Paste full profile links. Each icon appears in the footer only when its link is filled in."
+        >
           <Field
-            label="Free shipping over (₹)"
-            name="freeShippingThreshold"
-            type="number"
-            min={0}
-            defaultValue={settings.freeShippingThreshold}
+            label="Instagram"
+            name="instagramUrl"
+            type="url"
+            defaultValue={settings.instagramUrl}
+            placeholder="https://instagram.com/gizmorac"
           />
           <Field
-            label="Shipping fee (₹)"
-            name="shippingFee"
-            type="number"
-            min={0}
-            defaultValue={settings.shippingFee}
+            label="Facebook"
+            name="facebookUrl"
+            type="url"
+            defaultValue={settings.facebookUrl}
+            placeholder="https://facebook.com/gizmorac"
           />
-        </div>
-        <Toggle
-          label="Cash on Delivery available"
-          name="codEnabled"
-          defaultChecked={settings.codEnabled}
-          hint="Turn off to pause new orders until online payments are live."
-        />
-      </Card>
+          <Field
+            label="YouTube"
+            name="youtubeUrl"
+            type="url"
+            defaultValue={settings.youtubeUrl}
+            placeholder="https://youtube.com/@gizmorac"
+          />
+          <Field
+            label="X (Twitter)"
+            name="twitterUrl"
+            type="url"
+            defaultValue={settings.twitterUrl}
+            placeholder="https://x.com/gizmorac"
+          />
+        </Card>
+      </div>
 
-      <Card
-        title="Social media"
-        hint="Paste full profile links. Each icon appears in the footer only when its link is filled in."
-      >
-        <Field
-          label="Instagram"
-          name="instagramUrl"
-          type="url"
-          defaultValue={settings.instagramUrl}
-          placeholder="https://instagram.com/gizmorac"
-        />
-        <Field
-          label="Facebook"
-          name="facebookUrl"
-          type="url"
-          defaultValue={settings.facebookUrl}
-          placeholder="https://facebook.com/gizmorac"
-        />
-        <Field
-          label="YouTube"
-          name="youtubeUrl"
-          type="url"
-          defaultValue={settings.youtubeUrl}
-          placeholder="https://youtube.com/@gizmorac"
-        />
-        <Field
-          label="X (Twitter)"
-          name="twitterUrl"
-          type="url"
-          defaultValue={settings.twitterUrl}
-          placeholder="https://x.com/gizmorac"
-        />
-      </Card>
+      {/* COMPANY */}
+      <div className={panel("company", false)}>
+        <Card
+          title="Company details"
+          hint="Your registered business identity. Updates everywhere automatically — footer, policies and the GST tax invoice. (Contact email & phone come from the Store tab.)"
+        >
+          <Field
+            label="Registered / legal name"
+            name="legalName"
+            defaultValue={settings.legalName}
+            placeholder="BIG BAJAAR ECOM STOREE"
+          />
+          <label className="block">
+            <span className="mb-1.5 block text-sm font-medium">Registered address</span>
+            <textarea
+              name="companyAddress"
+              rows={3}
+              defaultValue={settings.companyAddress}
+              className={areaCls}
+              placeholder="Plot No. 33, Block A, Mohan Cooperative Industrial Estate, New Delhi, Delhi - 110044, India"
+            />
+            <span className="mt-1 block text-xs text-faint">
+              Shown in the footer and as the &ldquo;Sold By&rdquo; address on invoices.
+            </span>
+          </label>
+          <div className="grid grid-cols-2 gap-4">
+            <Field
+              label="State"
+              name="companyState"
+              defaultValue={settings.companyState}
+              hint="Used to split IGST vs CGST/SGST on invoices."
+              placeholder="Delhi"
+            />
+            <Field
+              label="GST state code"
+              name="companyStateCode"
+              defaultValue={settings.companyStateCode}
+              hint="First 2 digits of the GSTIN (e.g. 07)."
+              inputMode="numeric"
+              maxLength={2}
+              placeholder="07"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <Field
+              label="PAN"
+              name="companyPan"
+              defaultValue={settings.companyPan}
+              placeholder="ABEFB8495P"
+            />
+            <Field
+              label="GSTIN"
+              name="companyGstin"
+              defaultValue={settings.companyGstin}
+              placeholder="07ABEFB8495P1ZL"
+            />
+          </div>
+        </Card>
+      </div>
 
-      <Card
-        title="Landing offer popup"
-        hint="A welcome popup shown once per visit on the home page, with a promo code customers can copy."
-      >
-        <FormToggle
-          label="Show landing popup"
-          name="landingPopupEnabled"
-          defaultChecked={settings.landingPopupEnabled}
-          hint="Turn on to greet visitors with your current offer."
-        />
-        <Field
-          label="Title"
-          name="landingPopupTitle"
-          defaultValue={settings.landingPopupTitle}
-          placeholder="Welcome to GIZMORAC 🎉"
-        />
-        <label className="block">
-          <span className="mb-1.5 block text-sm font-medium">Message</span>
-          <textarea
-            name="landingPopupMessage"
-            rows={2}
-            defaultValue={settings.landingPopupMessage}
-            className={areaCls}
-            placeholder="Get 10% off your first order. Use the code below at checkout."
+      {/* PAYMENTS & SHIPPING */}
+      <div className={panel("payments", false)}>
+        <Card title="Shipping & payment" hint="Applied to the cart and checkout totals.">
+          <div className="grid grid-cols-2 gap-4">
+            <Field
+              label="Free shipping over (₹)"
+              name="freeShippingThreshold"
+              type="number"
+              min={0}
+              defaultValue={settings.freeShippingThreshold}
+            />
+            <Field
+              label="Shipping fee (₹)"
+              name="shippingFee"
+              type="number"
+              min={0}
+              defaultValue={settings.shippingFee}
+            />
+          </div>
+          <Toggle
+            label="Cash on Delivery available"
+            name="codEnabled"
+            defaultChecked={settings.codEnabled}
+            hint="Turn off to pause new orders until online payments are live."
           />
-        </label>
-        <Field
-          label="Promo code"
-          name="landingPopupCode"
-          defaultValue={settings.landingPopupCode}
-          hint="The code shown with a copy button. Create the matching coupon in Promotions."
-          placeholder="WELCOME10"
-        />
-      </Card>
+        </Card>
 
-      <Card
-        title="Promo popups (auto discounts)"
-        hint="Instant rupee discounts nudged via popups while customers browse — applied automatically at checkout, no code needed."
-      >
-        <FormToggle
-          label="Browsing nudge popup"
-          name="browseOfferEnabled"
-          defaultChecked={settings.browseOfferEnabled}
-          hint="Shows after a set time of browsing with a 'Claim now' button."
+        <PaymentGatewayCard
+          clientIdLast4={phonepe.clientIdLast4}
+          hasClientId={phonepe.hasClientId}
+          clientVersion={phonepe.clientVersion}
+          env={phonepe.env}
+          connected={phonepe.connected}
+          hasSecret={phonepe.hasSecret}
         />
-        <div className="grid grid-cols-2 gap-4">
-          <Field
-            label="Browsing discount (₹)"
-            name="browseOfferAmount"
-            type="number"
-            min={0}
-            defaultValue={settings.browseOfferAmount}
-            hint="Flat amount off at checkout (e.g. 100–150)."
-          />
-          <Field
-            label="Show after (seconds)"
-            name="browseOfferDelay"
-            type="number"
-            min={1}
-            max={3600}
-            defaultValue={settings.browseOfferDelay}
-            hint="Browsing time before it pops up (e.g. 25)."
-          />
-        </div>
-        <hr className="border-border" />
-        <FormToggle
-          label="Cart-waiting popup"
-          name="cartOfferEnabled"
-          defaultChecked={settings.cartOfferEnabled}
-          hint="Shows after items sit in the cart a while — stacks on any coupon."
-        />
-        <div className="grid grid-cols-2 gap-4">
-          <Field
-            label="Cart discount (₹)"
-            name="cartOfferAmount"
-            type="number"
-            min={0}
-            defaultValue={settings.cartOfferAmount}
-            hint="Extra amount off, on top of any coupon."
-          />
-          <Field
-            label="Show after (seconds)"
-            name="cartOfferDelay"
-            type="number"
-            min={1}
-            max={3600}
-            defaultValue={settings.cartOfferDelay}
-            hint="Time items wait in cart before it pops up (e.g. 60)."
-          />
-        </div>
-      </Card>
+      </div>
 
-      <div className="flex items-center gap-3 lg:col-span-2">
+      {/* MARKETING */}
+      <div className={panel("marketing", true)}>
+        <Card
+          title="Landing offer popup"
+          hint="A welcome popup shown once per visit on the home page, with a promo code customers can copy."
+        >
+          <FormToggle
+            label="Show landing popup"
+            name="landingPopupEnabled"
+            defaultChecked={settings.landingPopupEnabled}
+            hint="Turn on to greet visitors with your current offer."
+          />
+          <Field
+            label="Title"
+            name="landingPopupTitle"
+            defaultValue={settings.landingPopupTitle}
+            placeholder="Welcome to GIZMORAC 🎉"
+          />
+          <label className="block">
+            <span className="mb-1.5 block text-sm font-medium">Message</span>
+            <textarea
+              name="landingPopupMessage"
+              rows={2}
+              defaultValue={settings.landingPopupMessage}
+              className={areaCls}
+              placeholder="Get 10% off your first order. Use the code below at checkout."
+            />
+          </label>
+          <Field
+            label="Promo code"
+            name="landingPopupCode"
+            defaultValue={settings.landingPopupCode}
+            hint="The code shown with a copy button. Create the matching coupon in Promotions."
+            placeholder="WELCOME10"
+          />
+        </Card>
+
+        <Card
+          title="Promo popups (auto discounts)"
+          hint="Instant rupee discounts nudged via popups while customers browse — applied automatically at checkout, no code needed."
+        >
+          <FormToggle
+            label="Browsing nudge popup"
+            name="browseOfferEnabled"
+            defaultChecked={settings.browseOfferEnabled}
+            hint="Shows after a set time of browsing with a 'Claim now' button."
+          />
+          <div className="grid grid-cols-2 gap-4">
+            <Field
+              label="Browsing discount (₹)"
+              name="browseOfferAmount"
+              type="number"
+              min={0}
+              defaultValue={settings.browseOfferAmount}
+              hint="Flat amount off at checkout (e.g. 100–150)."
+            />
+            <Field
+              label="Show after (seconds)"
+              name="browseOfferDelay"
+              type="number"
+              min={1}
+              max={3600}
+              defaultValue={settings.browseOfferDelay}
+              hint="Browsing time before it pops up (e.g. 25)."
+            />
+          </div>
+          <hr className="border-border" />
+          <FormToggle
+            label="Cart-waiting popup"
+            name="cartOfferEnabled"
+            defaultChecked={settings.cartOfferEnabled}
+            hint="Shows after items sit in the cart a while — stacks on any coupon."
+          />
+          <div className="grid grid-cols-2 gap-4">
+            <Field
+              label="Cart discount (₹)"
+              name="cartOfferAmount"
+              type="number"
+              min={0}
+              defaultValue={settings.cartOfferAmount}
+              hint="Extra amount off, on top of any coupon."
+            />
+            <Field
+              label="Show after (seconds)"
+              name="cartOfferDelay"
+              type="number"
+              min={1}
+              max={3600}
+              defaultValue={settings.cartOfferDelay}
+              hint="Time items wait in cart before it pops up (e.g. 60)."
+            />
+          </div>
+        </Card>
+      </div>
+
+      {/* save bar — always visible, saves every tab at once */}
+      <div className="mt-6 flex items-center gap-3">
         <Button type="submit" size="lg" disabled={pending}>
           {pending ? <Loader2 size={16} className="animate-spin" /> : null}
           Save settings

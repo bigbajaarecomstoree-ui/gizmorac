@@ -2,7 +2,6 @@ import { Settings as SettingsIcon } from "lucide-react";
 import { getSettings } from "@/lib/data/settings";
 import { getPhonePeConfig } from "@/lib/phonepe";
 import { SettingsForm } from "@/components/admin/settings-form";
-import { PaymentGatewayCard } from "@/components/admin/payment-gateway-card";
 
 export const dynamic = "force-dynamic";
 
@@ -20,17 +19,16 @@ export default async function SettingsPage() {
       </p>
 
       <div className="mt-6">
-        <SettingsForm settings={settings} />
-      </div>
-
-      <div className="mt-5">
-        <PaymentGatewayCard
-          clientIdLast4={phonepe.clientId ? phonepe.clientId.slice(-4) : ""}
-          hasClientId={Boolean(phonepe.clientId)}
-          clientVersion={phonepe.clientVersion}
-          env={phonepe.env}
-          connected={phonepe.connected}
-          hasSecret={Boolean(phonepe.clientSecret)}
+        <SettingsForm
+          settings={settings}
+          phonepe={{
+            clientIdLast4: phonepe.clientId ? phonepe.clientId.slice(-4) : "",
+            hasClientId: Boolean(phonepe.clientId),
+            clientVersion: phonepe.clientVersion,
+            env: phonepe.env,
+            connected: phonepe.connected,
+            hasSecret: Boolean(phonepe.clientSecret),
+          }}
         />
       </div>
     </div>
