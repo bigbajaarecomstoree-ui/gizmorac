@@ -15,6 +15,7 @@ export interface ShiprocketConfig {
   email: string;
   password: string;
   pickup: string;
+  pickupPin: string;
   connected: boolean;
   /** Has creds AND the admin has switched it on. */
   configured: boolean;
@@ -32,9 +33,94 @@ export async function getShiprocketConfig(): Promise<ShiprocketConfig> {
     email,
     password,
     pickup: (row?.shiprocketPickup || "").trim(),
+    pickupPin: (row?.shiprocketPickupPin || "").trim(),
     connected,
     configured: connected && Boolean(email && password),
   };
+}
+
+/** Look up a pickup location's pincode by nickname (used at connect time). */
+export async function fetchPickupPincode(
+  nickname: string,
+): Promise<string> {
+  if (!nickname) return "";
+  const token = await getToken();
+  if (!token) return "";
+  try {
+    const res = await fetch(`${BASE}/settings/company/pickup`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    const data = (await res.json().catch(() => ({}))) as {
+      data?: { shipping_address?: { pickup_location?: string; pin_code?: string | number }[] };
+    };
+    const match = data.data?.shipping_address?.find(
+      (a) => (a.pickup_location || "").toLowerCase() === nickname.toLowerCase(),
+    );
+    return match?.pin_code ? String(match.pin_code) : "";
+  } catch {
+    return "";
+  }
+}
+
+export interface DeliveryEstimate {
+  serviceable: boolean;
+  days: number;
+  etd: string;
+  codAvailable: boolean;
+}
+
+/** Check courier serviceability + ETA for a delivery pincode. */
+export async function checkServiceability(input: {
+  deliveryPincode: string;
+  weight?: number;
+  cod?: boolean;
+}): Promise<DeliveryEstimate | null> {
+  const cfg = await getShiprocketConfig();
+  if (!cfg.configured || !cfg.pickupPin) return null;
+  if (!/^\d{6}$/.test(input.deliveryPincode)) return null;
+
+  const token = await getToken();
+  if (!token) return null;
+  try {
+    const qs = new URLSearchParams({
+      pickup_postcode: cfg.pickupPin,
+      delivery_postcode: input.deliveryPincode,
+      weight: String(input.weight ?? 0.5),
+      cod: input.cod ? "1" : "0",
+    });
+    const res = await fetch(`${BASE}/courier/serviceability/?${qs}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    const data = (await res.json().catch(() => ({}))) as {
+      data?: {
+        available_courier_companies?: {
+          estimated_delivery_days?: string | number;
+          etd?: string;
+          cod?: number;
+        }[];
+      };
+    };
+    const couriers = data.data?.available_courier_companies ?? [];
+    if (couriers.length === 0) {
+      return { serviceable: false, days: 0, etd: "", codAvailable: false };
+    }
+    // Fastest available option drives the headline ETA.
+    const fastest = couriers.reduce((best, c) => {
+      const d = Number(c.estimated_delivery_days) || 99;
+      const b = Number(best.estimated_delivery_days) || 99;
+      return d < b ? c : best;
+    });
+    return {
+      serviceable: true,
+      days: Number(fastest.estimated_delivery_days) || 0,
+      etd: fastest.etd || "",
+      codAvailable: couriers.some((c) => Number(c.cod) === 1),
+    };
+  } catch {
+    return null;
+  }
 }
 
 export interface ShiprocketAuth {

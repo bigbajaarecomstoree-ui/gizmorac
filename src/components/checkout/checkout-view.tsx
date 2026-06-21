@@ -3,13 +3,13 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2, Lock, ShoppingBag, Tag, X } from "lucide-react";
+import { Loader2, Lock, ShoppingBag, Tag, X, Truck } from "lucide-react";
 import type { Customer, Product } from "@/lib/types";
 import { useStore } from "@/components/store/store-provider";
 import { ProductArt } from "@/components/product/product-art";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { formatINR, shortTitle } from "@/lib/format";
-import { applyCoupon, placeOrder, startPhonePePayment } from "@/lib/storefront/actions";
+import { applyCoupon, placeOrder, startPhonePePayment, getDeliveryEstimate } from "@/lib/storefront/actions";
 import { COUPON_STORAGE_KEY } from "@/lib/checkout-shared";
 import { INDIAN_STATES, lookupPincode } from "@/lib/india";
 
@@ -58,6 +58,11 @@ export function CheckoutView({
   const [pinStatus, setPinStatus] = React.useState<
     "idle" | "checking" | "found" | "notfound"
   >("idle");
+  const [eta, setEta] = React.useState<{
+    serviceable: boolean;
+    days: number;
+    codAvailable: boolean;
+  } | null>(null);
   // Pre-select the customer's last-used method (if still available), else
   // default to online payment when available, otherwise COD.
   const [payMethod, setPayMethod] = React.useState<"PhonePe" | "COD">(
@@ -181,6 +186,7 @@ export function CheckoutView({
     setForm((f) => ({ ...f, pincode: v }));
     if (v.length !== 6) {
       setPinStatus("idle");
+      setEta(null);
       return;
     }
     setPinStatus("checking");
@@ -191,6 +197,11 @@ export function CheckoutView({
       } else {
         setPinStatus("notfound");
       }
+    });
+    // Delivery ETA via Shiprocket (hidden if not connected / unserviceable).
+    setEta(null);
+    getDeliveryEstimate(v).then((res) => {
+      setEta(res.ok ? { serviceable: res.serviceable, days: res.days, codAvailable: res.codAvailable } : null);
     });
   }
 
@@ -298,6 +309,19 @@ export function CheckoutView({
                 <span className="mt-1 block text-xs text-faint">
                   Couldn&apos;t detect — please pick your state.
                 </span>
+              ) : null}
+              {eta ? (
+                eta.serviceable ? (
+                  <span className="mt-1.5 flex items-center gap-1 text-xs font-medium text-accent-bright">
+                    <Truck size={12} className="shrink-0" /> Delivers in ~{eta.days} day
+                    {eta.days === 1 ? "" : "s"}
+                    {eta.codAvailable ? " · COD available" : " · COD not available"}
+                  </span>
+                ) : (
+                  <span className="mt-1.5 block text-xs text-danger">
+                    Sorry, we don&apos;t deliver to this pincode yet.
+                  </span>
+                )
               ) : null}
             </label>
             <label className="block sm:col-span-2">

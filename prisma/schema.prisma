@@ -303,6 +303,7 @@ model StoreSetting {
   shiprocketEmail       String   @default("")
   shiprocketPassword    String   @default("")
   shiprocketPickup      String   @default("") // pickup location nickname set in Shiprocket
+  shiprocketPickupPin   String   @default("") // pickup pincode (for serviceability/ETA)
   shiprocketConnected   Boolean  @default(false)
   shiprocketToken       String   @default("") // cached auth token (server-only)
   shiprocketTokenExp    DateTime?

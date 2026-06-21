@@ -7,6 +7,7 @@ import { getCurrentCustomer } from "@/lib/customer-auth";
 import { getSettings } from "@/lib/data/settings";
 import { MAX_QTY } from "@/lib/checkout-shared";
 import { initiatePayment, getPhonePeConfig } from "@/lib/phonepe";
+import { checkServiceability } from "@/lib/shiprocket";
 import { logEvent } from "@/lib/data/logs";
 import {
   validateAndPriceCoupon,
@@ -309,6 +310,24 @@ export async function placeOrder(
     orderNumber,
     paymentMethod: wantsOnline ? "PhonePe" : "COD",
   };
+}
+
+export type DeliveryEstimateResult =
+  | { ok: true; serviceable: boolean; days: number; etd: string; codAvailable: boolean }
+  | { ok: false };
+
+/**
+ * Delivery ETA + serviceability for a pincode at checkout (via Shiprocket).
+ * Returns { ok: false } when Shiprocket isn't connected or the pin is invalid,
+ * so the UI can simply hide the estimate.
+ */
+export async function getDeliveryEstimate(
+  pincode: string,
+): Promise<DeliveryEstimateResult> {
+  if (!/^\d{6}$/.test(pincode)) return { ok: false };
+  const est = await checkServiceability({ deliveryPincode: pincode });
+  if (!est) return { ok: false };
+  return { ok: true, ...est };
 }
 
 export type StartPaymentResult =

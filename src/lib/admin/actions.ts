@@ -17,6 +17,7 @@ import {
   verifyShiprocket,
   createShiprocketOrder,
   getTracking,
+  fetchPickupPincode,
 } from "@/lib/shiprocket";
 import { getOrderById } from "@/lib/data/orders";
 import { recordShipmentUpdate } from "@/lib/data/shipments";
@@ -884,6 +885,15 @@ export async function connectShiprocket(input: {
     update: data,
     create: { id: "store", ...data },
   });
+
+  // Cache the pickup location's pincode for checkout serviceability/ETA.
+  const pin = await fetchPickupPincode(data.shiprocketPickup);
+  if (pin) {
+    await prisma.storeSetting.update({
+      where: { id: "store" },
+      data: { shiprocketPickupPin: pin },
+    });
+  }
 
   await logEvent({
     actor: "admin",
