@@ -91,16 +91,19 @@ export function ShiprocketCard({
 
       <div className="mt-4 space-y-4">
         <label className="block">
-          <span className="mb-1.5 block text-sm font-medium">API user email</span>
+          <span className="mb-1.5 block text-sm font-medium">Shiprocket account email</span>
           <input
             value={em}
             onChange={(e) => setEm(e.target.value)}
             className={inputCls}
-            placeholder="api-user@yourstore.com"
+            placeholder="the email you log into Shiprocket with"
             autoComplete="off"
             spellCheck={false}
             data-1p-ignore
           />
+          <span className="mt-1 block text-xs text-faint">
+            Your main Shiprocket login email — not the API-user label email.
+          </span>
         </label>
 
         <label className="block">
