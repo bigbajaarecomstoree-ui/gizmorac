@@ -720,12 +720,14 @@ export async function connectPaymentGateway(input: {
 }): Promise<PaymentGatewayState> {
   await assertAdmin();
 
-  const clientId = (input.clientId ?? "").trim();
-  const clientVersion = (input.clientVersion ?? "1").trim() || "1";
   const env: PhonePeEnv = input.env === "production" ? "production" : "sandbox";
 
-  // Reuse the stored secret when the field is left blank (it's masked in the UI).
+  // The key fields are blank in the UI unless the admin is changing them, so a
+  // blank value means "keep what's stored" (the real keys never leave the server).
   const existing = await prisma.storeSetting.findUnique({ where: { id: "store" } });
+  const clientId = (input.clientId ?? "").trim() || existing?.phonepeClientId || "";
+  const clientVersion =
+    (input.clientVersion ?? "").trim() || existing?.phonepeClientVersion || "1";
   const clientSecret = (input.clientSecret ?? "").trim() || existing?.phonepeClientSecret || "";
 
   if (!clientId || !clientSecret) {

@@ -25,7 +25,8 @@ export default async function SettingsPage() {
 
       <div className="mt-5">
         <PaymentGatewayCard
-          clientId={phonepe.clientId}
+          clientIdLast4={phonepe.clientId ? phonepe.clientId.slice(-4) : ""}
+          hasClientId={Boolean(phonepe.clientId)}
           clientVersion={phonepe.clientVersion}
           env={phonepe.env}
           connected={phonepe.connected}

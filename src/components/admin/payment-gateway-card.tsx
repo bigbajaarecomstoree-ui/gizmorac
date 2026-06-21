@@ -112,25 +112,30 @@ function MaskedKeyInput({
 }
 
 export function PaymentGatewayCard({
-  clientId,
+  clientIdLast4,
+  hasClientId,
   clientVersion,
   env,
   connected,
   hasSecret,
 }: {
-  clientId: string;
+  clientIdLast4: string;
+  hasClientId: boolean;
   clientVersion: string;
   env: Env;
   connected: boolean;
   hasSecret: boolean;
 }) {
-  const [cid, setCid] = React.useState(clientId);
+  // The real Client ID / Secret are NEVER sent to the browser. Fields start
+  // blank; leaving them blank on Connect keeps the stored value (server-side).
+  const [cid, setCid] = React.useState("");
   const [cver, setCver] = React.useState(clientVersion || "1");
   const [secret, setSecret] = React.useState("");
   const [cenv, setCenv] = React.useState<Env>(env);
   const [isConnected, setIsConnected] = React.useState(connected);
   const [liveEnv, setLiveEnv] = React.useState<Env>(env);
   const [secretStored, setSecretStored] = React.useState(hasSecret);
+  const [idStored, setIdStored] = React.useState(hasClientId);
   const [pending, start] = React.useTransition();
   const [msg, setMsg] = React.useState<{ type: "ok" | "err"; text: string } | null>(
     null,
@@ -153,7 +158,9 @@ export function PaymentGatewayCard({
         setIsConnected(true);
         setLiveEnv(res.env ?? cenv);
         setSecretStored(true);
-        setSecret(""); // never keep the secret in the field
+        setIdStored(true);
+        setCid(""); // never keep key values in the fields
+        setSecret("");
         setMsg({
           type: "ok",
           text: `Connected — keys verified. Online payments are live on ${(
@@ -222,9 +229,16 @@ export function PaymentGatewayCard({
           <MaskedKeyInput
             value={cid}
             onChange={setCid}
-            placeholder="M23ZH2BNW6QXY_2511080834"
+            placeholder={
+              idStored
+                ? `•••• ${clientIdLast4} — leave blank to keep current`
+                : "M23ZH2BNW6QXY_2511080834"
+            }
             label="Client ID"
           />
+          <span className="mt-1 block text-xs text-faint">
+            Stored securely on the server — never shown in full.
+          </span>
         </label>
 
         <div className="grid grid-cols-2 gap-4">
