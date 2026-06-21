@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { MapPin, Truck, CircleCheck, CircleX } from "lucide-react";
+import { MapPin, Truck, CircleCheck, CircleX, Loader2 } from "lucide-react";
 import { deliveryWindow } from "@/lib/format";
+import { getDeliveryEstimate } from "@/lib/storefront/actions";
 
 type Result =
   | { ok: true; eta: string; cod: boolean }
@@ -11,26 +12,38 @@ type Result =
 export function PincodeChecker() {
   const [pin, setPin] = React.useState("");
   const [result, setResult] = React.useState<Result | null>(null);
+  const [loading, setLoading] = React.useState(false);
 
-  function check(e: React.FormEvent) {
+  async function check(e: React.FormEvent) {
     e.preventDefault();
     if (!/^\d{6}$/.test(pin)) {
       setResult({ ok: false, message: "Enter a valid 6-digit pincode." });
       return;
     }
-    // Mock serviceability: a couple of ranges are non-serviceable.
-    const first = pin[0];
-    if (first === "1" && pin[1] === "9") {
-      setResult({ ok: false, message: "Sorry, we don't deliver here yet." });
-      return;
+    setLoading(true);
+    setResult(null);
+    try {
+      const est = await getDeliveryEstimate(pin);
+      if (est.ok) {
+        if (est.serviceable) {
+          const d = est.days > 0 ? est.days : 3;
+          setResult({ ok: true, eta: deliveryWindow(d, d + 2), cod: est.codAvailable });
+        } else {
+          setResult({ ok: false, message: "Sorry, we don't deliver to this pincode yet." });
+        }
+      } else {
+        // Shiprocket not connected — graceful generic estimate so the PDP still helps.
+        const first = pin[0];
+        const fast = ["4", "5", "1", "7"].includes(first);
+        setResult({
+          ok: true,
+          eta: fast ? deliveryWindow(2, 4) : deliveryWindow(4, 7),
+          cod: first !== "8",
+        });
+      }
+    } finally {
+      setLoading(false);
     }
-    // Metro-ish pincodes get faster delivery.
-    const fast = ["4", "5", "1", "7"].includes(first);
-    setResult({
-      ok: true,
-      eta: fast ? deliveryWindow(2, 4) : deliveryWindow(4, 7),
-      cod: first !== "8",
-    });
   }
 
   return (
@@ -54,8 +67,10 @@ export function PincodeChecker() {
         />
         <button
           type="submit"
-          className="h-10 shrink-0 rounded-lg border border-border-bright px-4 text-sm font-medium text-foreground transition-colors hover:border-accent hover:text-accent cursor-pointer"
+          disabled={loading}
+          className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-lg border border-border-bright px-4 text-sm font-medium text-foreground transition-colors hover:border-accent hover:text-accent disabled:opacity-60 cursor-pointer"
         >
+          {loading ? <Loader2 size={15} className="animate-spin" /> : null}
           Check
         </button>
       </form>
