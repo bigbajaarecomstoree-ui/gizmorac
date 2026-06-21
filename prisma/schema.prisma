@@ -114,6 +114,7 @@ model Order {
   awb               String @default("")
   courier           String @default("")
   trackingUrl       String @default("")
+  labelUrl          String @default("") // Shiprocket shipping-label PDF
   shipmentStatus    String @default("") // latest Shiprocket status label
   couponCode    String?
   // Optional link to a registered customer (guest checkout leaves this null).

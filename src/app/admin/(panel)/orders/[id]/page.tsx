@@ -106,6 +106,7 @@ export default async function OrderDetailPage({ params }: { params: Params }) {
             awb={order.awb}
             courier={order.courier}
             trackingUrl={order.trackingUrl}
+            labelUrl={order.labelUrl}
             shipmentStatus={order.shipmentStatus}
           />
 

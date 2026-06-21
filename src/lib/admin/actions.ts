@@ -18,6 +18,7 @@ import {
   createShiprocketOrder,
   getTracking,
   fetchPickupPincode,
+  shipShipment,
 } from "@/lib/shiprocket";
 import { getOrderById } from "@/lib/data/orders";
 import { recordShipmentUpdate } from "@/lib/data/shipments";
@@ -975,6 +976,66 @@ export async function syncShipment(orderId: string): Promise<ShipResult> {
     courier: t.courier,
     trackingUrl: t.trackingUrl,
   });
+  return { ok: true };
+}
+
+/**
+ * One-click ship: create the Shiprocket order if needed, assign a courier
+ * (AWB), schedule the pickup, and generate the label — then mark the order
+ * Shipped and store the AWB/courier/label/tracking.
+ */
+export async function shipNow(orderId: string): Promise<ShipResult> {
+  await assertAdmin();
+  const order = await getOrderById(orderId);
+  if (!order) return { ok: false, error: "Order not found." };
+
+  let shipmentId = order.shipmentId;
+  let shiprocketOrderId = order.shiprocketOrderId;
+
+  // Create the Shiprocket order first if it isn't there yet.
+  if (!shiprocketOrderId) {
+    const created = await createShiprocketOrder(order);
+    if (!created.ok) return { ok: false, error: created.error };
+    shiprocketOrderId = created.shiprocketOrderId ?? "";
+    shipmentId = created.shipmentId ?? "";
+    await prisma.order.update({
+      where: { id: orderId },
+      data: {
+        shiprocketOrderId,
+        shipmentId,
+        shipmentStatus: created.status ?? "Created",
+      },
+    });
+  }
+  if (!shipmentId) return { ok: false, error: "No shipment id from Shiprocket." };
+
+  // Assign courier + AWB, schedule pickup, generate label.
+  const s = await shipShipment(shipmentId);
+  if (!s.ok) return { ok: false, error: s.error };
+
+  // Pull the public tracking URL now that an AWB exists.
+  const t = await getTracking(shipmentId);
+
+  await prisma.order.update({
+    where: { id: orderId },
+    data: {
+      status: "Shipped",
+      awb: s.awb || t?.awb || order.awb,
+      courier: s.courier || t?.courier || order.courier,
+      labelUrl: s.labelUrl || order.labelUrl,
+      trackingUrl: t?.trackingUrl || order.trackingUrl,
+      shipmentStatus: t?.status || "Ready to ship",
+    },
+  });
+  await logEvent({
+    actor: "admin",
+    action: "admin.shipping.shipped",
+    message: `Order ${order.orderNumber} shipped via ${s.courier || "Shiprocket"} (AWB ${s.awb})`,
+    meta: { orderNumber: order.orderNumber, awb: s.awb ?? "" },
+  });
+  revalidatePath(`/admin/orders/${orderId}`);
+  revalidatePath(`/order/${order.orderNumber}`);
+  revalidatePath("/account");
   return { ok: true };
 }
 

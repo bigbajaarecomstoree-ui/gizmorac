@@ -54,6 +54,7 @@ function toOrder(r: OrderRow): Order {
     awb: r.awb,
     courier: r.courier,
     trackingUrl: r.trackingUrl,
+    labelUrl: r.labelUrl,
     shipmentStatus: r.shipmentStatus,
     couponCode: r.couponCode,
     customerId: r.customerId,

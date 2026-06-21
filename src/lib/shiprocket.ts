@@ -359,3 +359,75 @@ export async function getTracking(
     return null;
   }
 }
+
+export interface ShipResult {
+  ok: boolean;
+  awb?: string;
+  courier?: string;
+  labelUrl?: string;
+  error?: string;
+}
+
+/**
+ * One-click fulfilment for a created shipment: assign the recommended courier
+ * (AWB), schedule the pickup, and generate the shipping label. Pickup is
+ * best-effort (a soft failure there doesn't void the AWB/label).
+ */
+export async function shipShipment(shipmentId: string): Promise<ShipResult> {
+  if (!shipmentId) return { ok: false, error: "Missing shipment id." };
+  const token = await getToken();
+  if (!token) return { ok: false, error: "Could not authenticate with Shiprocket." };
+  const auth = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
+  const sid = Number(shipmentId);
+
+  try {
+    // 1) Assign courier + AWB (Shiprocket picks the recommended courier).
+    const awbRes = await fetch(`${BASE}/courier/assign/awb`, {
+      method: "POST",
+      headers: auth,
+      body: JSON.stringify({ shipment_id: sid }),
+      cache: "no-store",
+    });
+    const awbData = (await awbRes.json().catch(() => ({}))) as {
+      awb_assign_status?: number;
+      response?: { data?: { awb_code?: string; courier_name?: string } };
+      message?: string;
+    };
+    const awb = awbData.response?.data?.awb_code || "";
+    const courier = awbData.response?.data?.courier_name || "";
+    if (!awbRes.ok || !awb) {
+      return {
+        ok: false,
+        error:
+          awbData.message ||
+          "Couldn't assign a courier (often a pending KYC or low Shiprocket wallet balance).",
+      };
+    }
+
+    // 2) Schedule pickup (best-effort).
+    await fetch(`${BASE}/courier/generate/pickup`, {
+      method: "POST",
+      headers: auth,
+      body: JSON.stringify({ shipment_id: [sid] }),
+      cache: "no-store",
+    }).catch(() => {});
+
+    // 3) Generate the shipping label.
+    let labelUrl = "";
+    const labelRes = await fetch(`${BASE}/courier/generate/label`, {
+      method: "POST",
+      headers: auth,
+      body: JSON.stringify({ shipment_id: [sid] }),
+      cache: "no-store",
+    });
+    const labelData = (await labelRes.json().catch(() => ({}))) as {
+      label_created?: number;
+      label_url?: string;
+    };
+    if (labelRes.ok) labelUrl = labelData.label_url || "";
+
+    return { ok: true, awb, courier, labelUrl };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Shiprocket error" };
+  }
+}

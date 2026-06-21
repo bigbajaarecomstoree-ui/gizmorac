@@ -196,6 +196,7 @@ export interface Order {
   awb: string;
   courier: string;
   trackingUrl: string;
+  labelUrl: string;
   shipmentStatus: string;
   couponCode?: string | null;
   customerId?: string | null;
