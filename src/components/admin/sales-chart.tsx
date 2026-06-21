@@ -194,20 +194,24 @@ export function SalesChart({ data }: { data: DashboardChart }) {
         <Dropdown value={range} options={RANGES} onChange={setRange} align="left" />
       </div>
 
-      {/* headline + deltas */}
-      <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-x-8">
-        <div>
-          <div className="text-3xl font-bold tracking-tight">
-            {headline}
-            {headlineSuffix ? (
-              <span className="ml-1.5 text-base font-medium text-faint">{headlineSuffix}</span>
-            ) : null}
-          </div>
-          <div className="tech-label mt-1">
-            {RANGES.find((r) => r.value === range)?.label}
-          </div>
+      {/* headline + deltas — big number on top, comparisons in a fixed 2-up
+          grid below so they always sit side by side (never orphan a line). */}
+      <div className="mt-3">
+        <div className="text-3xl font-bold tracking-tight">
+          {headline}
+          {headlineSuffix ? (
+            <span className="ml-1.5 text-base font-medium text-faint">{headlineSuffix}</span>
+          ) : null}
         </div>
-        <div className="flex flex-wrap items-end gap-x-8 gap-y-2">
+        <div className="tech-label mt-1">
+          {RANGES.find((r) => r.value === range)?.label}
+        </div>
+        <div
+          className={cn(
+            "mt-4 grid max-w-sm gap-4",
+            showYoy ? "grid-cols-2" : "grid-cols-1",
+          )}
+        >
           <Delta cur={series.total} prev={series.prevTotal} label={PREV_LABEL[range]} />
           {showYoy ? (
             <Delta cur={series.total} prev={series.yoyTotal} label="last year" />
