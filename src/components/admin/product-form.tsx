@@ -218,6 +218,28 @@ export function ProductForm({
         </div>
       </Card>
 
+      {/* shipping package — drives Shiprocket rates & labels per order */}
+      <Card
+        title="Shipping package"
+        desc="Per-unit packed size & weight. Used to auto-calculate each order's package for Shiprocket."
+        icon={Package}
+      >
+        <div className="grid gap-4 sm:grid-cols-4">
+          <Field label="Weight (kg)" hint="Packed, per unit.">
+            <input name="weightKg" type="number" min={0.01} step={0.01} defaultValue={p?.weightKg ?? 0.5} className={inputCls} />
+          </Field>
+          <Field label="Length (cm)">
+            <input name="lengthCm" type="number" min={1} defaultValue={p?.lengthCm ?? 15} className={inputCls} />
+          </Field>
+          <Field label="Breadth (cm)">
+            <input name="breadthCm" type="number" min={1} defaultValue={p?.breadthCm ?? 12} className={inputCls} />
+          </Field>
+          <Field label="Height (cm)">
+            <input name="heightCm" type="number" min={1} defaultValue={p?.heightCm ?? 5} className={inputCls} />
+          </Field>
+        </div>
+      </Card>
+
       {/* 6 — visibility & placement */}
       <Card
         title="Visibility & placement"

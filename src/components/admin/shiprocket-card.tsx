@@ -16,28 +16,16 @@ export function ShiprocketCard({
   email,
   hasPassword,
   pickup,
-  weight,
-  length,
-  breadth,
-  height,
   connected,
 }: {
   email: string;
   hasPassword: boolean;
   pickup: string;
-  weight: number;
-  length: number;
-  breadth: number;
-  height: number;
   connected: boolean;
 }) {
   const [em, setEm] = React.useState(email);
   const [pass, setPass] = React.useState("");
   const [pk, setPk] = React.useState(pickup);
-  const [wt, setWt] = React.useState(String(weight));
-  const [l, setL] = React.useState(String(length));
-  const [b, setB] = React.useState(String(breadth));
-  const [h, setH] = React.useState(String(height));
   const [isConnected, setIsConnected] = React.useState(connected);
   const [passStored, setPassStored] = React.useState(hasPassword);
   const [pending, start] = React.useTransition();
@@ -51,10 +39,6 @@ export function ShiprocketCard({
         email: em.trim(),
         password: pass.trim(),
         pickup: pk.trim(),
-        weight: Number(wt) || 0.5,
-        length: Number(l) || 15,
-        breadth: Number(b) || 12,
-        height: Number(h) || 5,
       });
       if (res.ok) {
         setIsConnected(true);
@@ -145,26 +129,11 @@ export function ShiprocketCard({
             placeholder="Nickname from Shiprocket → Pickup Addresses"
             autoComplete="off"
           />
+          <span className="mt-1 block text-xs text-faint">
+            Package size &amp; weight are set per product (Products → edit → Shipping
+            package) and combined automatically for each order.
+          </span>
         </label>
-
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <label className="block">
-            <span className="mb-1.5 block text-sm font-medium">Weight (kg)</span>
-            <input value={wt} onChange={(e) => setWt(e.target.value)} className={inputCls} inputMode="decimal" />
-          </label>
-          <label className="block">
-            <span className="mb-1.5 block text-sm font-medium">Length (cm)</span>
-            <input value={l} onChange={(e) => setL(e.target.value)} className={inputCls} inputMode="numeric" />
-          </label>
-          <label className="block">
-            <span className="mb-1.5 block text-sm font-medium">Breadth (cm)</span>
-            <input value={b} onChange={(e) => setB(e.target.value)} className={inputCls} inputMode="numeric" />
-          </label>
-          <label className="block">
-            <span className="mb-1.5 block text-sm font-medium">Height (cm)</span>
-            <input value={h} onChange={(e) => setH(e.target.value)} className={inputCls} inputMode="numeric" />
-          </label>
-        </div>
 
         {msg ? (
           <p

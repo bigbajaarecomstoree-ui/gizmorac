@@ -4,7 +4,17 @@ import type { Product } from "@/lib/types";
 // are managed in the DB/admin, so they're omitted here and use DB defaults.
 type SeedProduct = Omit<
   Product,
-  "images" | "video" | "lowStockThreshold" | "active" | "cost" | "hsn" | "gstRate"
+  | "images"
+  | "video"
+  | "lowStockThreshold"
+  | "active"
+  | "cost"
+  | "hsn"
+  | "gstRate"
+  | "weightKg"
+  | "lengthCm"
+  | "breadthCm"
+  | "heightCm"
 >;
 
 export const products: SeedProduct[] = [

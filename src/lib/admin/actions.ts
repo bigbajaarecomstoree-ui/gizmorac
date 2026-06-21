@@ -128,6 +128,10 @@ function productDataFromForm(fd: FormData) {
     cost: int(fd, "cost"),
     hsn: str(fd, "hsn"),
     gstRate: num(fd, "gstRate", 18),
+    weightKg: Math.max(0.01, num(fd, "weightKg", 0.5)),
+    lengthCm: Math.max(1, int(fd, "lengthCm", 15)),
+    breadthCm: Math.max(1, int(fd, "breadthCm", 12)),
+    heightCm: Math.max(1, int(fd, "heightCm", 5)),
     rating: num(fd, "rating", 4.5),
     reviewCount: int(fd, "reviewCount"),
     stock: int(fd, "stock"),
@@ -851,10 +855,6 @@ export async function connectShiprocket(input: {
   email: string;
   password: string;
   pickup: string;
-  weight: number;
-  length: number;
-  breadth: number;
-  height: number;
 }): Promise<ShiprocketState> {
   await assertAdmin();
   const email = (input.email ?? "").trim();
@@ -874,10 +874,6 @@ export async function connectShiprocket(input: {
     shiprocketEmail: email,
     shiprocketPassword: password,
     shiprocketPickup: (input.pickup ?? "").trim(),
-    shiprocketWeight: Math.max(0.1, Number(input.weight) || 0.5),
-    shiprocketLength: Math.max(1, Math.round(Number(input.length) || 15)),
-    shiprocketBreadth: Math.max(1, Math.round(Number(input.breadth) || 12)),
-    shiprocketHeight: Math.max(1, Math.round(Number(input.height) || 5)),
     shiprocketConnected: true,
     // Force a fresh token on next call.
     shiprocketToken: "",

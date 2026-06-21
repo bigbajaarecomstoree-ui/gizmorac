@@ -37,6 +37,11 @@ model Product {
   // used for the P&L and GST filing export.
   hsn              String   @default("")
   gstRate          Float    @default(18)
+  // Shipping package dimensions per unit (for Shiprocket rate/label).
+  weightKg         Float    @default(0.5)
+  lengthCm         Int      @default(15)
+  breadthCm        Int      @default(12)
+  heightCm         Int      @default(5)
   rating           Float    @default(4.5)
   reviewCount      Int      @default(0)
   stock            Int      @default(0)
@@ -298,10 +303,6 @@ model StoreSetting {
   shiprocketEmail       String   @default("")
   shiprocketPassword    String   @default("")
   shiprocketPickup      String   @default("") // pickup location nickname set in Shiprocket
-  shiprocketWeight      Float    @default(0.5) // default package weight (kg)
-  shiprocketLength      Int      @default(15)  // package dims (cm)
-  shiprocketBreadth     Int      @default(12)
-  shiprocketHeight      Int      @default(5)
   shiprocketConnected   Boolean  @default(false)
   shiprocketToken       String   @default("") // cached auth token (server-only)
   shiprocketTokenExp    DateTime?

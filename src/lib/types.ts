@@ -80,6 +80,11 @@ export interface Product {
   hsn: string;
   /** GST rate % — admin/internal only (GST filing). Never shown to customers. */
   gstRate: number;
+  /** Shipping package per unit — admin/internal (Shiprocket rate/label). */
+  weightKg: number;
+  lengthCm: number;
+  breadthCm: number;
+  heightCm: number;
   rating: number;
   reviewCount: number;
   stock: number;

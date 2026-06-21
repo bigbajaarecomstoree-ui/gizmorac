@@ -27,10 +27,6 @@ export interface ShiprocketProps {
   email: string;
   hasPassword: boolean;
   pickup: string;
-  weight: number;
-  length: number;
-  breadth: number;
-  height: number;
   connected: boolean;
 }
 
@@ -424,10 +420,6 @@ export function SettingsForm({
           email={shiprocket.email}
           hasPassword={shiprocket.hasPassword}
           pickup={shiprocket.pickup}
-          weight={shiprocket.weight}
-          length={shiprocket.length}
-          breadth={shiprocket.breadth}
-          height={shiprocket.height}
           connected={shiprocket.connected}
         />
       </div>

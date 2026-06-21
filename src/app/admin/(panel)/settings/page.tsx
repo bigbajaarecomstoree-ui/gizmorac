@@ -38,10 +38,6 @@ export default async function SettingsPage() {
             email: shiprocket.email,
             hasPassword: Boolean(shiprocket.password),
             pickup: shiprocket.pickup,
-            weight: shiprocket.weight,
-            length: shiprocket.length,
-            breadth: shiprocket.breadth,
-            height: shiprocket.height,
             connected: shiprocket.connected,
           }}
         />

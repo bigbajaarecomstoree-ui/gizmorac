@@ -15,10 +15,6 @@ export interface ShiprocketConfig {
   email: string;
   password: string;
   pickup: string;
-  weight: number;
-  length: number;
-  breadth: number;
-  height: number;
   connected: boolean;
   /** Has creds AND the admin has switched it on. */
   configured: boolean;
@@ -36,10 +32,6 @@ export async function getShiprocketConfig(): Promise<ShiprocketConfig> {
     email,
     password,
     pickup: (row?.shiprocketPickup || "").trim(),
-    weight: row?.shiprocketWeight ?? 0.5,
-    length: row?.shiprocketLength ?? 15,
-    breadth: row?.shiprocketBreadth ?? 12,
-    height: row?.shiprocketHeight ?? 5,
     connected,
     configured: connected && Boolean(email && password),
   };
@@ -146,6 +138,32 @@ export async function createShiprocketOrder(
     .slice(0, 16)
     .replace("T", " ");
 
+  // Build the package from each product's own dimensions: total weight,
+  // widest L/B, and stacked height. Falls back to a default if a product
+  // record is missing dims.
+  const dims = await prisma.product.findMany({
+    where: { id: { in: order.items.map((i) => i.id) } },
+    select: { id: true, weightKg: true, lengthCm: true, breadthCm: true, heightCm: true },
+  });
+  const dimById = new Map(dims.map((d) => [d.id, d]));
+  let weight = 0;
+  let length = 1;
+  let breadth = 1;
+  let height = 0;
+  for (const it of order.items) {
+    const d = dimById.get(it.id) ?? {
+      weightKg: 0.5,
+      lengthCm: 15,
+      breadthCm: 12,
+      heightCm: 5,
+    };
+    weight += d.weightKg * it.qty;
+    length = Math.max(length, d.lengthCm);
+    breadth = Math.max(breadth, d.breadthCm);
+    height += d.heightCm * it.qty;
+  }
+  weight = Math.max(0.1, Math.round(weight * 100) / 100);
+
   const payload = {
     order_id: order.orderNumber,
     order_date: orderDate,
@@ -168,10 +186,10 @@ export async function createShiprocketOrder(
     })),
     payment_method: order.paymentMethod === "COD" ? "COD" : "Prepaid",
     sub_total: order.total,
-    length: cfg.length,
-    breadth: cfg.breadth,
-    height: cfg.height,
-    weight: cfg.weight,
+    length,
+    breadth,
+    height,
+    weight,
   };
 
   try {
