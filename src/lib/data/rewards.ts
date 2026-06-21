@@ -32,17 +32,41 @@ function toReward(c: CouponRow): RewardCoupon {
 }
 
 /**
- * Issue a one-time repeat-order coupon for a delivered order. Idempotent —
- * a second call for the same order is a no-op, so re-saving "Delivered" is safe.
+ * Reward milestones: the shopper's 1st delivered order, then every 5th
+ * (5th, 10th, 15th, 20th, …) — not every order. This keeps the coupon a
+ * loyalty incentive rather than a permanent discount.
+ */
+export function isRewardMilestone(deliveredCount: number): boolean {
+  return deliveredCount === 1 || (deliveredCount >= 5 && deliveredCount % 5 === 0);
+}
+
+/**
+ * Issue a repeat-order reward coupon when a delivered order lands on a
+ * milestone (1st, 5th, 10th, …). Idempotent per order, so re-saving
+ * "Delivered" is safe, and non-milestone orders never get a coupon.
  */
 export async function issueRepeatCoupon(order: {
   id: string;
   customerId: string | null;
+  email?: string | null;
 }): Promise<void> {
   const existing = await prisma.coupon.findFirst({
     where: { orderId: order.id, kind: "reward" },
   });
   if (existing) return;
+
+  // "Purchase number" = how many delivered orders this shopper now has
+  // (counted by account, falling back to email for guest checkouts).
+  const identity = order.customerId
+    ? { customerId: order.customerId }
+    : order.email
+      ? { email: order.email }
+      : null;
+  if (!identity) return;
+  const deliveredCount = await prisma.order.count({
+    where: { status: "Delivered", ...identity },
+  });
+  if (!isRewardMilestone(deliveredCount)) return;
 
   const expiresAt = new Date(
     Date.now() + REWARD_VALID_DAYS * 24 * 60 * 60 * 1000,

@@ -538,7 +538,11 @@ export async function updateOrderStatus(formData: FormData): Promise<void> {
 
   // Reward the customer with a repeat-order coupon the moment it's delivered.
   if (status === "Delivered") {
-    await issueRepeatCoupon({ id: updated.id, customerId: updated.customerId });
+    await issueRepeatCoupon({
+      id: updated.id,
+      customerId: updated.customerId,
+      email: updated.email,
+    });
   }
 
   revalidatePath("/admin/orders");
