@@ -234,6 +234,39 @@ export default async function OrderPage({ params }: { params: Params }) {
               ) : null}
             </div>
           ) : null}
+
+          {/* replacement tracking */}
+          {order.replacementAwb || order.returnAwb ? (
+            <div className="mt-5 rounded-lg border border-accent/30 bg-accent/5 px-4 py-3 text-sm">
+              <p className="flex items-center gap-1.5 font-medium">
+                <RotateCcw size={15} className="text-accent" /> Replacement in progress
+              </p>
+              {order.returnAwb ? (
+                <p className="mt-1.5 text-xs text-muted">
+                  We&rsquo;ve scheduled a pickup to collect the original item
+                  {order.returnCourier ? ` (${order.returnCourier})` : ""}.
+                </p>
+              ) : null}
+              {order.replacementAwb ? (
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-xs text-muted">
+                    New shipment{order.replacementCourier ? ` via ${order.replacementCourier}` : ""} · AWB{" "}
+                    <span className="font-mono text-foreground">{order.replacementAwb}</span>
+                  </p>
+                  {order.replacementTrackingUrl ? (
+                    <a
+                      href={order.replacementTrackingUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={buttonVariants({ variant: "outline", size: "sm" })}
+                    >
+                      <Truck size={15} /> Track replacement
+                    </a>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
         {/* items + totals */}

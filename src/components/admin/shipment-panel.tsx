@@ -22,6 +22,15 @@ export function ShipmentPanel({
   trackingUrl,
   labelUrl,
   shipmentStatus,
+  returnAwb,
+  returnCourier,
+  returnTrackingUrl,
+  returnStatus,
+  replacementAwb,
+  replacementCourier,
+  replacementTrackingUrl,
+  replacementLabelUrl,
+  replacementStatus,
 }: {
   orderId: string;
   connected: boolean;
@@ -31,11 +40,23 @@ export function ShipmentPanel({
   trackingUrl: string;
   labelUrl: string;
   shipmentStatus: string;
+  returnAwb: string;
+  returnCourier: string;
+  returnTrackingUrl: string;
+  returnStatus: string;
+  replacementAwb: string;
+  replacementCourier: string;
+  replacementTrackingUrl: string;
+  replacementLabelUrl: string;
+  replacementStatus: string;
 }) {
   const [pending, start] = React.useTransition();
   const [error, setError] = React.useState<string | null>(null);
   const pushed = Boolean(shiprocketOrderId);
   const shipped = Boolean(awb);
+  const hasReplacement = Boolean(
+    returnAwb || replacementAwb || returnStatus || replacementStatus,
+  );
 
   function run(fn: () => Promise<{ ok: boolean; error?: string }>) {
     setError(null);
@@ -138,6 +159,90 @@ export function ShipmentPanel({
           </div>
         </div>
       )}
+
+      {hasReplacement ? (
+        <div className="mt-4 space-y-3 border-t border-border pt-4">
+          <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-faint">
+            <RefreshCw size={13} className="text-accent" /> Replacement
+          </h3>
+
+          {/* Reverse pickup: customer → warehouse */}
+          <div className="space-y-1.5">
+            <p className="text-xs font-medium text-muted">Return pickup · customer → warehouse</p>
+            <div className="flex justify-between">
+              <span className="text-muted">Status</span>
+              <span className="font-medium">{returnStatus || "—"}</span>
+            </div>
+            {returnCourier ? (
+              <div className="flex justify-between">
+                <span className="text-muted">Courier</span>
+                <span className="font-medium">{returnCourier}</span>
+              </div>
+            ) : null}
+            {returnAwb ? (
+              <div className="flex justify-between">
+                <span className="text-muted">AWB</span>
+                <span className="font-mono">{returnAwb}</span>
+              </div>
+            ) : null}
+            {returnTrackingUrl ? (
+              <a
+                href={returnTrackingUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-accent-bright hover:text-accent"
+              >
+                Track return <ExternalLink size={14} />
+              </a>
+            ) : null}
+          </div>
+
+          {/* Forward replacement: warehouse → customer */}
+          <div className="space-y-1.5">
+            <p className="text-xs font-medium text-muted">New shipment · warehouse → customer</p>
+            <div className="flex justify-between">
+              <span className="text-muted">Status</span>
+              <span className="font-medium">{replacementStatus || "—"}</span>
+            </div>
+            {replacementCourier ? (
+              <div className="flex justify-between">
+                <span className="text-muted">Courier</span>
+                <span className="font-medium">{replacementCourier}</span>
+              </div>
+            ) : null}
+            {replacementAwb ? (
+              <div className="flex justify-between">
+                <span className="text-muted">AWB</span>
+                <span className="font-mono">{replacementAwb}</span>
+              </div>
+            ) : null}
+            {replacementLabelUrl || replacementTrackingUrl ? (
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                {replacementLabelUrl ? (
+                  <a
+                    href={replacementLabelUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-on-accent transition-colors hover:bg-accent-hover"
+                  >
+                    <FileText size={14} /> Download label
+                  </a>
+                ) : null}
+                {replacementTrackingUrl ? (
+                  <a
+                    href={replacementTrackingUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-sm font-medium text-accent-bright hover:text-accent"
+                  >
+                    Track <ExternalLink size={14} />
+                  </a>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
 
       {error ? (
         <p className="mt-3 flex items-start gap-1.5 text-sm text-danger" role="alert">

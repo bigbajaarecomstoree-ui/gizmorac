@@ -116,6 +116,21 @@ model Order {
   trackingUrl       String @default("")
   labelUrl          String @default("") // Shiprocket shipping-label PDF
   shipmentStatus    String @default("") // latest Shiprocket status label
+  // Replacement: reverse pickup (customer -> warehouse).
+  returnOrderId     String @default("")
+  returnShipmentId  String @default("")
+  returnAwb         String @default("")
+  returnCourier     String @default("")
+  returnTrackingUrl String @default("")
+  returnStatus      String @default("") // "" until a replacement is started
+  // Replacement: fresh forward shipment (warehouse -> customer).
+  replacementOrderId     String @default("")
+  replacementShipmentId  String @default("")
+  replacementAwb         String @default("")
+  replacementCourier     String @default("")
+  replacementLabelUrl    String @default("")
+  replacementTrackingUrl String @default("")
+  replacementStatus      String @default("")
   couponCode    String?
   // Optional link to a registered customer (guest checkout leaves this null).
   customerId    String?

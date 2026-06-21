@@ -9,6 +9,7 @@ const VARIANT: Record<OrderStatus, "surface" | "soft" | "success" | "danger"> = 
   Delivered: "success",
   Cancelled: "danger",
   Returned: "danger",
+  Replacement: "soft",
   Refunded: "danger",
 };
 

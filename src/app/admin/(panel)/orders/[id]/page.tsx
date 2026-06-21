@@ -108,6 +108,15 @@ export default async function OrderDetailPage({ params }: { params: Params }) {
             trackingUrl={order.trackingUrl}
             labelUrl={order.labelUrl}
             shipmentStatus={order.shipmentStatus}
+            returnAwb={order.returnAwb}
+            returnCourier={order.returnCourier}
+            returnTrackingUrl={order.returnTrackingUrl}
+            returnStatus={order.returnStatus}
+            replacementAwb={order.replacementAwb}
+            replacementCourier={order.replacementCourier}
+            replacementTrackingUrl={order.replacementTrackingUrl}
+            replacementLabelUrl={order.replacementLabelUrl}
+            replacementStatus={order.replacementStatus}
           />
 
           <div className="rounded-xl border border-border bg-surface p-5 text-sm">

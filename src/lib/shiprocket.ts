@@ -208,25 +208,17 @@ export interface CreateShipmentResult {
   error?: string;
 }
 
-/** Push an order into Shiprocket (adhoc order) so it can be shipped. */
-export async function createShiprocketOrder(
-  order: Order,
-): Promise<CreateShipmentResult> {
-  const cfg = await getShiprocketConfig();
-  if (!cfg.configured) return { ok: false, error: "Shiprocket is not connected." };
-  if (!cfg.pickup) return { ok: false, error: "Set a pickup location in Settings first." };
-
-  const token = await getToken();
-  if (!token) return { ok: false, error: "Could not authenticate with Shiprocket." };
-
-  const orderDate = new Date(order.createdAt)
-    .toISOString()
-    .slice(0, 16)
-    .replace("T", " ");
-
-  // Build the package from each product's own dimensions: total weight,
-  // widest L/B, and stacked height. Falls back to a default if a product
-  // record is missing dims.
+/**
+ * Build a package from each product's own dimensions: total weight, widest
+ * L/B, and stacked height. Falls back to a sensible default when a product
+ * record is missing dims.
+ */
+async function computePackage(order: Order): Promise<{
+  weight: number;
+  length: number;
+  breadth: number;
+  height: number;
+}> {
   const dims = await prisma.product.findMany({
     where: { id: { in: order.items.map((i) => i.id) } },
     select: { id: true, weightKg: true, lengthCm: true, breadthCm: true, heightCm: true },
@@ -249,9 +241,30 @@ export async function createShiprocketOrder(
     height += d.heightCm * it.qty;
   }
   weight = Math.max(0.1, Math.round(weight * 100) / 100);
+  return { weight, length, breadth, height };
+}
+
+/** Push an order into Shiprocket (adhoc order) so it can be shipped. */
+export async function createShiprocketOrder(
+  order: Order,
+  opts?: { orderIdSuffix?: string },
+): Promise<CreateShipmentResult> {
+  const cfg = await getShiprocketConfig();
+  if (!cfg.configured) return { ok: false, error: "Shiprocket is not connected." };
+  if (!cfg.pickup) return { ok: false, error: "Set a pickup location in Settings first." };
+
+  const token = await getToken();
+  if (!token) return { ok: false, error: "Could not authenticate with Shiprocket." };
+
+  const orderDate = new Date(order.createdAt)
+    .toISOString()
+    .slice(0, 16)
+    .replace("T", " ");
+
+  const { weight, length, breadth, height } = await computePackage(order);
 
   const payload = {
-    order_id: order.orderNumber,
+    order_id: `${order.orderNumber}${opts?.orderIdSuffix ?? ""}`,
     order_date: orderDate,
     pickup_location: cfg.pickup,
     billing_customer_name: order.firstName,
@@ -266,7 +279,8 @@ export async function createShiprocketOrder(
     shipping_is_billing: true,
     order_items: order.items.map((i) => ({
       name: i.name,
-      sku: i.slug || i.id,
+      // Shiprocket caps SKU at 70 chars; slugs can be longer.
+      sku: (i.slug || i.id).slice(0, 70),
       units: i.qty,
       selling_price: i.price,
     })),
@@ -479,6 +493,204 @@ export async function cancelShiprocketOrder(input: {
       return { ok: false, error: data.message || `Shiprocket cancel failed (${res.status})` };
     }
     return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Shiprocket error" };
+  }
+}
+
+export interface PickupAddress {
+  name: string;
+  address: string;
+  city: string;
+  state: string;
+  pincode: string;
+  phone: string;
+  email: string;
+}
+
+/** Fetch a pickup location's full address — the warehouse / return-to address. */
+export async function fetchPickupAddress(
+  nickname: string,
+): Promise<PickupAddress | null> {
+  if (!nickname) return null;
+  const token = await getToken();
+  if (!token) return null;
+  try {
+    const res = await fetch(`${BASE}/settings/company/pickup`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    const data = (await res.json().catch(() => ({}))) as {
+      data?: {
+        shipping_address?: {
+          pickup_location?: string;
+          name?: string;
+          address?: string;
+          city?: string;
+          state?: string;
+          pin_code?: string | number;
+          phone?: string | number;
+          email?: string;
+        }[];
+      };
+    };
+    const a = data.data?.shipping_address?.find(
+      (x) => (x.pickup_location || "").toLowerCase() === nickname.toLowerCase(),
+    );
+    if (!a) return null;
+    return {
+      name: a.name || nickname,
+      address: a.address || "",
+      city: a.city || "",
+      state: a.state || "",
+      pincode: a.pin_code ? String(a.pin_code) : "",
+      phone: a.phone ? String(a.phone) : "",
+      email: a.email || "",
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Create a RETURN order in Shiprocket: a reverse pickup from the customer's
+ * address back to the warehouse. Used by the replacement flow to collect the
+ * faulty unit.
+ */
+export async function createReturnOrder(
+  order: Order,
+): Promise<CreateShipmentResult> {
+  const cfg = await getShiprocketConfig();
+  if (!cfg.configured) return { ok: false, error: "Shiprocket is not connected." };
+  if (!cfg.pickup) return { ok: false, error: "Set a pickup location in Settings first." };
+
+  const token = await getToken();
+  if (!token) return { ok: false, error: "Could not authenticate with Shiprocket." };
+
+  const wh = await fetchPickupAddress(cfg.pickup);
+  if (!wh || !wh.pincode) {
+    return { ok: false, error: "Couldn't read the warehouse address from Shiprocket pickup settings." };
+  }
+
+  const { weight, length, breadth, height } = await computePackage(order);
+  const orderDate = new Date().toISOString().slice(0, 16).replace("T", " ");
+
+  const payload = {
+    order_id: `${order.orderNumber}-RET`,
+    order_date: orderDate,
+    channel_id: "",
+    // Pickup = the customer (we collect the faulty unit from them).
+    pickup_customer_name: order.firstName,
+    pickup_last_name: order.lastName,
+    pickup_address: order.address,
+    pickup_city: order.city,
+    pickup_state: order.state,
+    pickup_country: "India",
+    pickup_pincode: order.pincode,
+    pickup_email: order.email,
+    pickup_phone: order.phone,
+    // Ship-to = the warehouse (return destination).
+    shipping_customer_name: wh.name,
+    shipping_last_name: "",
+    shipping_address: wh.address,
+    shipping_city: wh.city,
+    shipping_country: "India",
+    shipping_pincode: wh.pincode,
+    shipping_state: wh.state,
+    shipping_email: wh.email || order.email,
+    shipping_phone: wh.phone || order.phone,
+    order_items: order.items.map((i) => ({
+      name: i.name,
+      qc_enable: false,
+      // Shiprocket caps SKU at 70 chars; slugs can be longer.
+      sku: (i.slug || i.id).slice(0, 70),
+      units: i.qty,
+      selling_price: i.price,
+    })),
+    payment_method: "PREPAID",
+    sub_total: order.total,
+    length,
+    breadth,
+    height,
+    weight,
+  };
+
+  try {
+    const res = await fetch(`${BASE}/orders/create/return`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(payload),
+      cache: "no-store",
+    });
+    const data = (await res.json().catch(() => ({}))) as {
+      order_id?: number | string;
+      shipment_id?: number | string;
+      status?: string;
+      message?: string;
+      errors?: unknown;
+    };
+    if (!res.ok || !data.order_id) {
+      return {
+        ok: false,
+        error:
+          data.message ||
+          (data.errors ? JSON.stringify(data.errors).slice(0, 200) : "") ||
+          `Return order failed (${res.status})`,
+      };
+    }
+    return {
+      ok: true,
+      shiprocketOrderId: String(data.order_id),
+      shipmentId: data.shipment_id ? String(data.shipment_id) : "",
+      status: data.status || "RETURN",
+    };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Shiprocket error" };
+  }
+}
+
+/**
+ * Assign a reverse courier (AWB) to a return shipment and schedule the pickup
+ * from the customer. Pickup is best-effort. No label is generated — the
+ * courier brings/prints the reverse label for a return.
+ */
+export async function shipReturn(shipmentId: string): Promise<ShipResult> {
+  if (!shipmentId) return { ok: false, error: "Missing return shipment id." };
+  const token = await getToken();
+  if (!token) return { ok: false, error: "Could not authenticate with Shiprocket." };
+  const auth = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
+  const sid = Number(shipmentId);
+
+  try {
+    const awbRes = await fetch(`${BASE}/courier/assign/awb`, {
+      method: "POST",
+      headers: auth,
+      body: JSON.stringify({ shipment_id: sid, is_return: 1 }),
+      cache: "no-store",
+    });
+    const awbData = (await awbRes.json().catch(() => ({}))) as {
+      response?: { data?: { awb_code?: string; courier_name?: string } };
+      message?: string;
+    };
+    const awb = awbData.response?.data?.awb_code || "";
+    const courier = awbData.response?.data?.courier_name || "";
+    if (!awbRes.ok || !awb) {
+      return {
+        ok: false,
+        error:
+          awbData.message ||
+          "Couldn't assign a reverse courier (often a pending KYC or low wallet balance).",
+      };
+    }
+
+    await fetch(`${BASE}/courier/generate/pickup`, {
+      method: "POST",
+      headers: auth,
+      body: JSON.stringify({ shipment_id: [sid] }),
+      cache: "no-store",
+    }).catch(() => {});
+
+    return { ok: true, awb, courier };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Shiprocket error" };
   }

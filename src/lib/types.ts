@@ -141,6 +141,7 @@ export type OrderStatus =
   | "Delivered"
   | "Cancelled"
   | "Returned"
+  | "Replacement"
   | "Refunded";
 
 export interface OrderItem {
@@ -198,6 +199,21 @@ export interface Order {
   trackingUrl: string;
   labelUrl: string;
   shipmentStatus: string;
+  /** Replacement: reverse pickup (customer → warehouse). */
+  returnOrderId: string;
+  returnShipmentId: string;
+  returnAwb: string;
+  returnCourier: string;
+  returnTrackingUrl: string;
+  returnStatus: string;
+  /** Replacement: fresh forward shipment (warehouse → customer). */
+  replacementOrderId: string;
+  replacementShipmentId: string;
+  replacementAwb: string;
+  replacementCourier: string;
+  replacementLabelUrl: string;
+  replacementTrackingUrl: string;
+  replacementStatus: string;
   couponCode?: string | null;
   customerId?: string | null;
   createdAt: string;

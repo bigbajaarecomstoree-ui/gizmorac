@@ -20,6 +20,8 @@ import {
   fetchPickupPincode,
   shipShipment,
   cancelShiprocketOrder,
+  createReturnOrder,
+  shipReturn,
 } from "@/lib/shiprocket";
 import { getOrderById } from "@/lib/data/orders";
 import { recordShipmentUpdate } from "@/lib/data/shipments";
@@ -582,6 +584,110 @@ async function refundOrderPayment(orderId: string): Promise<{
   return { ok: true, moved: true, amount: order.total };
 }
 
+/**
+ * Run the two-leg replacement for an order: a reverse pickup (customer →
+ * warehouse) to collect the faulty unit, and a fresh forward shipment
+ * (warehouse → customer) for the new one. Each leg is independent and
+ * idempotent — re-running picks up only the legs that haven't completed (e.g.
+ * after funding the Shiprocket wallet), so a click never double-creates.
+ * Returns ok:false (with what did/didn't happen) if any leg is incomplete.
+ */
+async function startReplacement(
+  orderId: string,
+): Promise<{ ok: boolean; note: string; error?: string }> {
+  const order = await getOrderById(orderId);
+  if (!order) return { ok: false, note: "", error: "Order not found." };
+
+  const done: string[] = [];
+  const problems: string[] = [];
+
+  // --- Leg 1: reverse pickup (customer → warehouse) ---
+  let returnShipmentId = order.returnShipmentId;
+  if (!order.returnOrderId) {
+    const ret = await createReturnOrder(order);
+    if (ret.ok) {
+      returnShipmentId = ret.shipmentId ?? "";
+      await prisma.order.update({
+        where: { id: orderId },
+        data: {
+          returnOrderId: ret.shiprocketOrderId ?? "",
+          returnShipmentId,
+          returnStatus: ret.status ?? "Return created",
+        },
+      });
+    } else {
+      problems.push(`Reverse pickup couldn't be created — ${ret.error}`);
+    }
+  }
+  if (order.returnAwb) {
+    done.push(`Reverse pickup already booked (AWB ${order.returnAwb}).`);
+  } else if (returnShipmentId) {
+    const rs = await shipReturn(returnShipmentId);
+    if (rs.ok) {
+      await prisma.order.update({
+        where: { id: orderId },
+        data: {
+          returnAwb: rs.awb ?? "",
+          returnCourier: rs.courier ?? "",
+          returnStatus: "Pickup scheduled",
+        },
+      });
+      done.push(`Reverse pickup booked (AWB ${rs.awb}${rs.courier ? `, ${rs.courier}` : ""}).`);
+    } else {
+      problems.push(`Reverse pickup courier not assigned — ${rs.error}`);
+    }
+  }
+
+  // --- Leg 2: forward replacement (warehouse → customer) ---
+  let replacementShipmentId = order.replacementShipmentId;
+  if (!order.replacementOrderId) {
+    const rep = await createShiprocketOrder(order, { orderIdSuffix: "-REP" });
+    if (rep.ok) {
+      replacementShipmentId = rep.shipmentId ?? "";
+      await prisma.order.update({
+        where: { id: orderId },
+        data: {
+          replacementOrderId: rep.shiprocketOrderId ?? "",
+          replacementShipmentId,
+          replacementStatus: rep.status ?? "Created",
+        },
+      });
+    } else {
+      problems.push(`Replacement shipment couldn't be created — ${rep.error}`);
+    }
+  }
+  if (order.replacementAwb) {
+    done.push(`Replacement already shipped (AWB ${order.replacementAwb}).`);
+  } else if (replacementShipmentId) {
+    const s = await shipShipment(replacementShipmentId);
+    if (s.ok) {
+      const t = await getTracking(replacementShipmentId);
+      await prisma.order.update({
+        where: { id: orderId },
+        data: {
+          replacementAwb: s.awb ?? "",
+          replacementCourier: s.courier ?? "",
+          replacementLabelUrl: s.labelUrl ?? "",
+          replacementTrackingUrl: t?.trackingUrl ?? "",
+          replacementStatus: t?.status || "Ready to ship",
+        },
+      });
+      done.push(`Replacement shipped (AWB ${s.awb}${s.courier ? `, ${s.courier}` : ""}).`);
+    } else {
+      problems.push(`Replacement courier not assigned — ${s.error}`);
+    }
+  }
+
+  if (problems.length > 0) {
+    return {
+      ok: false,
+      note: done.join(" "),
+      error: `${problems.join(" ")}${done.length ? ` (Done: ${done.join(" ")})` : ""}`,
+    };
+  }
+  return { ok: true, note: done.join(" ") || "Replacement started." };
+}
+
 export interface OrderStatusResult {
   ok: boolean;
   note?: string;
@@ -611,6 +717,20 @@ export async function updateOrderStatus(formData: FormData): Promise<OrderStatus
       : "Marked refunded — this was a cash order, so refund the customer manually.";
   }
 
+  // A replacement books a reverse pickup + a fresh forward shipment before the
+  // label flips, so the order is only marked "Replacement" once both are set up.
+  let replacementNote = "";
+  if (status === "Replacement") {
+    const r = await startReplacement(id);
+    if (!r.ok) {
+      return {
+        ok: false,
+        error: `${r.error} The order was left unchanged — fix the issue and try again.`,
+      };
+    }
+    replacementNote = r.note;
+  }
+
   const updated = await prisma.order.update({ where: { id }, data: { status } });
 
   await logEvent({
@@ -625,6 +745,15 @@ export async function updateOrderStatus(formData: FormData): Promise<OrderStatus
       actor: "admin",
       action: "admin.order.refund",
       message: `${refundNote} (${updated.orderNumber})`,
+      meta: { orderNumber: updated.orderNumber },
+    });
+  }
+
+  if (status === "Replacement") {
+    await logEvent({
+      actor: "admin",
+      action: "admin.order.replacement",
+      message: `Replacement for ${updated.orderNumber}: ${replacementNote}`,
       meta: { orderNumber: updated.orderNumber },
     });
   }
@@ -668,7 +797,7 @@ export async function updateOrderStatus(formData: FormData): Promise<OrderStatus
   revalidatePath(`/order/${updated.orderNumber}`);
   revalidatePath("/account");
 
-  return { ok: true, note: refundNote || undefined };
+  return { ok: true, note: replacementNote || refundNote || undefined };
 }
 
 // --- coupons / promotions ---
