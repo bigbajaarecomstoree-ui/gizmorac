@@ -2,11 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { getOrderById, ORDER_STATUSES } from "@/lib/data/orders";
+import { getOrderActivity } from "@/lib/data/logs";
 import { getShiprocketConfig } from "@/lib/shiprocket";
 import { formatINR } from "@/lib/format";
 import { OrderStatusBadge } from "@/components/admin/order-status-badge";
 import { OrderStatusForm } from "@/components/admin/order-status-form";
 import { ShipmentPanel } from "@/components/admin/shipment-panel";
+import { OrderActivity } from "@/components/admin/order-activity";
 
 type Params = Promise<{ id: string }>;
 
@@ -18,6 +20,7 @@ export default async function OrderDetailPage({ params }: { params: Params }) {
   if (!order) notFound();
 
   const shiprocket = await getShiprocketConfig();
+  const activity = await getOrderActivity(order.orderNumber);
 
   const placed = new Date(order.createdAt).toLocaleString("en-IN", {
     timeZone: "Asia/Kolkata",
@@ -43,49 +46,61 @@ export default async function OrderDetailPage({ params }: { params: Params }) {
       </div>
       <p className="mt-1 text-sm text-muted">Placed {placed}</p>
 
-      <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-[1fr_320px]">
-        {/* items + totals */}
-        <div className="rounded-xl border border-border bg-surface">
-          <h2 className="border-b border-border px-5 py-3.5 font-semibold">Items</h2>
-          <div className="divide-y divide-border">
-            {order.items.map((it) => (
-              <div key={it.id} className="flex items-center justify-between gap-4 px-5 py-3">
-                <div className="min-w-0">
-                  <Link
-                    href={`/product/${it.slug}`}
-                    target="_blank"
-                    className="text-sm font-medium hover:text-accent-bright"
-                  >
-                    {it.name}
-                  </Link>
-                  <div className="text-xs text-muted">
-                    {formatINR(it.price)} × {it.qty}
+      <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+        {/* items + activity */}
+        <div className="min-w-0 space-y-5">
+          {/* items + totals (compact) */}
+          <div className="rounded-xl border border-border bg-surface">
+            <h2 className="flex items-center justify-between border-b border-border px-5 py-3 text-sm font-semibold">
+              <span>Items</span>
+              <span className="font-normal text-muted">
+                {order.items.reduce((n, it) => n + it.qty, 0)} unit
+                {order.items.reduce((n, it) => n + it.qty, 0) === 1 ? "" : "s"}
+              </span>
+            </h2>
+            <div className="divide-y divide-border">
+              {order.items.map((it) => (
+                <div key={it.id} className="flex items-center justify-between gap-4 px-5 py-2.5">
+                  <div className="min-w-0">
+                    <Link
+                      href={`/product/${it.slug}`}
+                      target="_blank"
+                      className="line-clamp-1 text-sm font-medium hover:text-accent-bright"
+                    >
+                      {it.name}
+                    </Link>
+                    <div className="text-xs text-muted">
+                      {formatINR(it.price)} × {it.qty}
+                    </div>
                   </div>
+                  <span className="shrink-0 text-sm font-semibold">{formatINR(it.price * it.qty)}</span>
                 </div>
-                <span className="text-sm font-semibold">{formatINR(it.price * it.qty)}</span>
+              ))}
+            </div>
+            <dl className="space-y-1.5 border-t border-border px-5 py-3 text-sm">
+              <div className="flex justify-between">
+                <dt className="text-muted">Subtotal</dt>
+                <dd>{formatINR(order.subtotal)}</dd>
               </div>
-            ))}
+              {order.discount > 0 ? (
+                <div className="flex justify-between text-success">
+                  <dt>Discount</dt>
+                  <dd>−{formatINR(order.discount)}</dd>
+                </div>
+              ) : null}
+              <div className="flex justify-between">
+                <dt className="text-muted">Shipping</dt>
+                <dd>{order.shipping === 0 ? "Free" : formatINR(order.shipping)}</dd>
+              </div>
+              <div className="flex justify-between border-t border-border pt-1.5 text-base font-semibold">
+                <dt>Total</dt>
+                <dd className="readout">{formatINR(order.total)}</dd>
+              </div>
+            </dl>
           </div>
-          <dl className="space-y-2 border-t border-border px-5 py-4 text-sm">
-            <div className="flex justify-between">
-              <dt className="text-muted">Subtotal</dt>
-              <dd>{formatINR(order.subtotal)}</dd>
-            </div>
-            {order.discount > 0 ? (
-              <div className="flex justify-between text-success">
-                <dt>Discount</dt>
-                <dd>−{formatINR(order.discount)}</dd>
-              </div>
-            ) : null}
-            <div className="flex justify-between">
-              <dt className="text-muted">Shipping</dt>
-              <dd>{order.shipping === 0 ? "Free" : formatINR(order.shipping)}</dd>
-            </div>
-            <div className="flex justify-between border-t border-border pt-2 text-base font-semibold">
-              <dt>Total</dt>
-              <dd className="readout">{formatINR(order.total)}</dd>
-            </div>
-          </dl>
+
+          {/* activity timeline — every action performed on this order */}
+          <OrderActivity events={activity} />
         </div>
 
         {/* customer + status */}

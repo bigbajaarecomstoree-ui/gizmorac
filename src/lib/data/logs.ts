@@ -80,6 +80,39 @@ export async function getLogs(f: LogFilter = {}) {
   return { rows, total, take };
 }
 
+export interface OrderEvent {
+  id: string;
+  createdAt: string;
+  level: LogLevel;
+  actor: LogActor;
+  actorEmail: string;
+  action: string;
+  message: string;
+}
+
+/**
+ * Full activity history for one order, oldest → newest (timeline order). Every
+ * order event records the order number in its meta, so a single contains-match
+ * gathers the placed / paid / status / shipping / refund / replacement events.
+ */
+export async function getOrderActivity(orderNumber: string): Promise<OrderEvent[]> {
+  if (!orderNumber) return [];
+  const rows = await prisma.eventLog.findMany({
+    where: { meta: { contains: orderNumber } },
+    orderBy: { createdAt: "asc" },
+    take: 100,
+  });
+  return rows.map((r) => ({
+    id: r.id,
+    createdAt: r.createdAt.toISOString(),
+    level: (r.level as LogLevel) ?? "info",
+    actor: (r.actor as LogActor) ?? "system",
+    actorEmail: r.actorEmail,
+    action: r.action,
+    message: r.message,
+  }));
+}
+
 /** Counts by level over the recent window — small header summary for the UI. */
 export async function getLogCounts(): Promise<{ errors: number; total: number }> {
   const [errors, total] = await Promise.all([
