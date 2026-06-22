@@ -9,8 +9,6 @@ import {
   IndianRupee,
   CalendarDays,
   Sparkles,
-  Heart,
-  Headset,
 } from "lucide-react";
 import { getCurrentCustomer } from "@/lib/customer-auth";
 import { getOrdersForCustomer } from "@/lib/data/orders";
@@ -21,8 +19,7 @@ import { formatINR } from "@/lib/format";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { OrderStatusBadge } from "@/components/admin/order-status-badge";
 import { ProductArt } from "@/components/product/product-art";
-import { ProfileForm } from "@/components/account/profile-form";
-import { AccountSettings } from "@/components/account/account-settings";
+import { AccountNav } from "@/components/account/account-nav";
 import { RewardCouponCard } from "@/components/account/reward-coupon";
 import { OrderActions } from "@/components/account/order-actions";
 import { canCancelOrder, isDisputeWindowOpen } from "@/lib/orders-policy";
@@ -133,6 +130,10 @@ export default async function AccountPage() {
         </form>
       </div>
 
+      <div className="mt-6 sm:max-w-sm">
+        <AccountNav />
+      </div>
+
       {/* overview tiles */}
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {stats.map((s) => (
@@ -182,7 +183,7 @@ export default async function AccountPage() {
         ) : null}
       </div>
 
-      <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="mt-8 space-y-8">
         {/* order history */}
         <section className="min-w-0">
           <h2 className="text-lg font-semibold">Order history</h2>
@@ -265,59 +266,23 @@ export default async function AccountPage() {
           )}
         </section>
 
-        {/* rewards + profile + help */}
-        <section className="space-y-8 lg:sticky lg:top-28 lg:self-start">
-          {activeRewards.length > 0 ? (
-            <div>
-              <div className="flex items-center gap-2">
-                <Gift size={18} className="text-accent" />
-                <h2 className="text-lg font-semibold">Your rewards</h2>
-              </div>
-              <p className="mt-1 text-sm text-muted">
-                Repeat-order coupons — apply the code at checkout.
-              </p>
-              <div className="mt-4 space-y-3">
-                {activeRewards.map((r) => (
-                  <RewardCouponCard key={r.code} {...r} />
-                ))}
-              </div>
+        {/* rewards */}
+        {activeRewards.length > 0 ? (
+          <section>
+            <div className="flex items-center gap-2">
+              <Gift size={18} className="text-accent" />
+              <h2 className="text-lg font-semibold">Your rewards</h2>
             </div>
-          ) : null}
-
-          <div>
-            <h2 className="text-lg font-semibold">Profile &amp; address</h2>
-            <p className="mt-1 text-sm text-muted">Saved details speed up checkout.</p>
-            <div className="mt-4 rounded-xl border border-border bg-surface p-5">
-              <ProfileForm customer={customer} />
+            <p className="mt-1 text-sm text-muted">
+              Repeat-order coupons — apply the code at checkout.
+            </p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {activeRewards.map((r) => (
+                <RewardCouponCard key={r.code} {...r} />
+              ))}
             </div>
-          </div>
-
-          <AccountSettings marketingOptIn={customer.marketingOptIn} />
-
-          <div>
-            <h2 className="text-lg font-semibold">Quick links</h2>
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              <Link
-                href="/wishlist"
-                className="flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-3 text-sm font-medium transition-colors hover:border-accent hover:text-accent"
-              >
-                <Heart size={16} /> Wishlist
-              </Link>
-              <Link
-                href="/shop"
-                className="flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-3 text-sm font-medium transition-colors hover:border-accent hover:text-accent"
-              >
-                <ShoppingBag size={16} /> Shop all
-              </Link>
-              <Link
-                href="/#faq"
-                className="col-span-2 flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-3 text-sm font-medium transition-colors hover:border-accent hover:text-accent"
-              >
-                <Headset size={16} /> Help &amp; FAQs
-              </Link>
-            </div>
-          </div>
-        </section>
+          </section>
+        ) : null}
       </div>
     </div>
   );

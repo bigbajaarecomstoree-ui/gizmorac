@@ -4,8 +4,9 @@ import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { ChevronRight, Heart, Menu, Search, ShoppingCart, User, X } from "lucide-react";
+import { ChevronRight, Heart, Menu, Search, Settings, ShoppingCart, User, X } from "lucide-react";
 import { useStore } from "@/components/store/store-provider";
+import { AccountMenu } from "@/components/layout/account-menu";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -139,23 +140,7 @@ export function SiteHeader({
           </form>
 
           <div className="ml-auto flex items-center gap-1 md:ml-0">
-            <Link
-              href={customerName ? "/account" : "/login"}
-              className="hidden items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-medium text-muted transition-colors hover:bg-surface-2 hover:text-foreground sm:flex"
-              aria-label={customerName ? "Your account" : "Log in"}
-            >
-              <User size={18} />
-              <span className="max-w-24 truncate">
-                {customerName ? `Hi, ${customerName}` : "Login"}
-              </span>
-            </Link>
-            <Link
-              href={customerName ? "/account" : "/login"}
-              className="relative grid h-10 w-10 place-items-center rounded-lg text-muted transition-colors hover:bg-surface-2 hover:text-foreground sm:hidden"
-              aria-label={customerName ? "Your account" : "Log in"}
-            >
-              <User size={20} />
-            </Link>
+            <AccountMenu name={customerName} />
             <Link
               href="/wishlist"
               className="relative grid h-10 w-10 place-items-center rounded-lg text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
@@ -217,6 +202,18 @@ export function SiteHeader({
               </span>
               <ChevronRight size={16} className="text-faint" />
             </Link>
+            {customerName ? (
+              <Link
+                href="/account/settings"
+                onClick={() => setOpen(false)}
+                className="flex items-center justify-between rounded-lg px-3 py-3 text-sm font-medium text-muted hover:bg-surface-2 hover:text-foreground"
+              >
+                <span className="flex items-center gap-2">
+                  <Settings size={16} /> Settings
+                </span>
+                <ChevronRight size={16} className="text-faint" />
+              </Link>
+            ) : null}
           </div>
         </div>
       ) : null}
