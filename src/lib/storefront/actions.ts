@@ -11,6 +11,7 @@ import { checkServiceability } from "@/lib/shiprocket";
 import { cancelOrderEverywhere } from "@/lib/data/order-fulfillment";
 import { canCancelOrder, isDisputeWindowOpen } from "@/lib/orders-policy";
 import { logEvent } from "@/lib/data/logs";
+import { prorate, rupeesToPaise } from "@/lib/postorder/money";
 import {
   validateAndPriceCoupon,
   type CouponResult,
@@ -224,13 +225,23 @@ export async function placeOrder(
     return { ok: false, error: "Could not place order, please try again." };
   }
 
+  // Post-order v2: per-line money in paise, with order discount/shipping
+  // prorated across lines (last/largest bucket absorbs the rounding remainder).
+  const lineSubsPaise = lines.map((l) => rupeesToPaise(l.price) * l.qty);
+  const discAllocPaise = prorate(rupeesToPaise(totalDiscount), lineSubsPaise);
+  const shipAllocPaise = prorate(rupeesToPaise(shipping), lineSubsPaise);
+  const v2OrderStatus = wantsOnline ? "PENDING" : "CONFIRMED";
+
   try {
     await prisma.$transaction(async (tx) => {
+      const stockAfter = new Map<string, number>();
       for (const l of lines) {
-        await tx.product.update({
+        const updated = await tx.product.update({
           where: { id: l.id },
           data: { stock: { decrement: l.qty } },
+          select: { stock: true },
         });
+        stockAfter.set(l.id, updated.stock);
       }
       if (appliedCode) {
         await tx.coupon.updateMany({
@@ -238,7 +249,7 @@ export async function placeOrder(
           data: { usedCount: { increment: 1 } },
         });
       }
-      await tx.order.create({
+      const order = await tx.order.create({
         data: {
           orderNumber,
           // COD auto-confirms; online orders stay Pending until payment clears.
@@ -272,6 +283,61 @@ export async function placeOrder(
           paymentStatus: wantsOnline ? "Pending" : "",
           couponCode: appliedCode,
           customerId: customer?.id ?? null,
+          // Post-order v2 (shadow until ffPostOrderV2 flips reads to it).
+          statusV2: v2OrderStatus as never,
+          paymentState: "PENDING",
+          refundState: "NOT_APPLICABLE",
+          subtotalPaise: rupeesToPaise(subtotal),
+          discountPaise: rupeesToPaise(totalDiscount),
+          instantDiscountPaise: rupeesToPaise(instantDiscount),
+          shippingPaise: rupeesToPaise(shipping),
+          totalPaise: rupeesToPaise(total),
+          amountPaidPaise: 0,
+        },
+      });
+
+      // v2 order_items (operational source of truth) + SALE inventory ledger.
+      for (let idx = 0; idx < lines.length; idx++) {
+        const l = lines[idx];
+        await tx.orderItem.create({
+          data: {
+            id: `${order.id}-itm-${idx}`,
+            orderId: order.id,
+            productId: l.id,
+            productSlug: l.slug,
+            name: l.name,
+            qty: l.qty,
+            unitPricePaise: rupeesToPaise(l.price),
+            lineSubtotalPaise: lineSubsPaise[idx],
+            allocatedDiscountPaise: discAllocPaise[idx],
+            allocatedShippingPaise: shipAllocPaise[idx],
+            netPaidPaise: lineSubsPaise[idx] - discAllocPaise[idx] + shipAllocPaise[idx],
+            status: "ACTIVE",
+          },
+        });
+        await tx.inventoryTransaction.create({
+          data: {
+            productId: l.id,
+            delta: -l.qty,
+            type: "SALE",
+            stockAfter: stockAfter.get(l.id) ?? 0,
+            orderId: order.id,
+            reason: "order placed",
+            idempotencyKey: `${order.id}-sale-${l.id}`,
+          },
+        });
+      }
+
+      // Audit baseline for the new order.
+      await tx.orderStatusHistory.create({
+        data: {
+          entityType: "ORDER",
+          entityId: order.id,
+          orderId: order.id,
+          previousState: "",
+          newState: v2OrderStatus,
+          actorRole: "SYSTEM",
+          reason: "order placed",
         },
       });
 
