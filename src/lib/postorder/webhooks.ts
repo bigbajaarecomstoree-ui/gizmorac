@@ -19,6 +19,12 @@ export interface RecordWebhookInput {
  */
 export async function recordWebhookEvent(input: RecordWebhookInput): Promise<{ duplicate: boolean }> {
   if (!input.eventId) return { duplicate: false };
+  // Fast path: already processed (avoids a constraint-violation log on the
+  // common duplicate case). The try/catch below still covers the race.
+  const seen = await prisma.webhookEvent.findUnique({
+    where: { provider_eventId: { provider: input.provider, eventId: input.eventId } },
+  });
+  if (seen) return { duplicate: true };
   try {
     await prisma.webhookEvent.create({
       data: {
