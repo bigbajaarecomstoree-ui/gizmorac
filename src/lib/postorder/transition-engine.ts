@@ -43,6 +43,23 @@ const ENTITY_TYPE = {
   refund: "REFUND",
 } as const;
 
+// Keep the legacy `Order.status` string in sync with statusV2 so every existing
+// read (admin list, customer pages, badges) stays correct after the switch,
+// until the legacy column is dropped in the contract migration.
+const LEGACY_ORDER_LABEL: Record<string, string> = {
+  PENDING: "Pending",
+  CONFIRMED: "Confirmed",
+  PROCESSING: "Packed",
+  SHIPPED: "Shipped",
+  OUT_FOR_DELIVERY: "Shipped",
+  DELIVERED: "Delivered",
+  PARTIALLY_RETURNED: "Returned",
+  RETURNED: "Returned",
+  CANCELLED: "Cancelled",
+  RTO: "Returned",
+  CLOSED: "Returned",
+};
+
 // ── Side-effect & notification registries (populated in Phases 5–7) ─────────
 type SideEffect = (ctx: {
   id: string;
@@ -143,7 +160,10 @@ function lockedUpdate(tx: typeof prisma, kind: EntityKind, id: string, version: 
     case "refund":
       return tx.refund.updateMany({ where: { id, version }, data: { ...data, status: to as never } });
     case "order":
-      return tx.order.updateMany({ where: { id, version }, data: { ...data, statusV2: to as never } });
+      return tx.order.updateMany({
+        where: { id, version },
+        data: { ...data, statusV2: to as never, status: LEGACY_ORDER_LABEL[to] ?? undefined },
+      });
   }
 }
 
