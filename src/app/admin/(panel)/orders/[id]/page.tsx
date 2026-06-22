@@ -4,9 +4,11 @@ import { ArrowLeft } from "lucide-react";
 import { getOrderById, ORDER_STATUSES } from "@/lib/data/orders";
 import { getOrderActivity } from "@/lib/data/logs";
 import { getShiprocketConfig } from "@/lib/shiprocket";
+import { prisma } from "@/lib/prisma";
 import { formatINR } from "@/lib/format";
 import { OrderStatusBadge } from "@/components/admin/order-status-badge";
 import { OrderStatusForm } from "@/components/admin/order-status-form";
+import { OrderOperations } from "@/components/admin/order-operations";
 import { ShipmentPanel } from "@/components/admin/shipment-panel";
 import { OrderActivity } from "@/components/admin/order-activity";
 
@@ -21,6 +23,18 @@ export default async function OrderDetailPage({ params }: { params: Params }) {
 
   const shiprocket = await getShiprocketConfig();
   const activity = await getOrderActivity(order.orderNumber);
+
+  // Post-order v2 (item-level) admin surface — shown when the read-switch is on.
+  const setting = await prisma.storeSetting.findFirst({ select: { ffPostOrderV2: true } });
+  const v2 = setting?.ffPostOrderV2 ?? false;
+  const v2Order = v2 ? await prisma.order.findUnique({ where: { id }, select: { statusV2: true } }) : null;
+  const v2Items = v2
+    ? await prisma.orderItem.findMany({
+        where: { orderId: id },
+        orderBy: { createdAt: "asc" },
+        select: { id: true, name: true, qty: true, status: true, netPaidPaise: true, returnReason: true },
+      })
+    : [];
 
   const placed = new Date(order.createdAt).toLocaleString("en-IN", {
     timeZone: "Asia/Kolkata",
@@ -49,6 +63,22 @@ export default async function OrderDetailPage({ params }: { params: Params }) {
       <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
         {/* items + activity */}
         <div className="min-w-0 space-y-5">
+          {/* item-level operations (post-order v2) */}
+          {v2 ? (
+            <OrderOperations
+              orderId={order.id}
+              orderStatus={v2Order?.statusV2 ?? "PENDING"}
+              items={v2Items.map((i) => ({
+                id: i.id,
+                name: i.name,
+                qty: i.qty,
+                status: i.status,
+                netPaidPaise: i.netPaidPaise,
+                returnReason: i.returnReason,
+              }))}
+            />
+          ) : null}
+
           {/* items + totals (compact) */}
           <div className="rounded-xl border border-border bg-surface">
             <h2 className="flex items-center justify-between border-b border-border px-5 py-3 text-sm font-semibold">
@@ -105,14 +135,16 @@ export default async function OrderDetailPage({ params }: { params: Params }) {
 
         {/* customer + status */}
         <div className="space-y-5">
-          <div className="rounded-xl border border-border bg-surface p-5">
-            <h2 className="mb-3 font-semibold">Update status</h2>
-            <OrderStatusForm
-              orderId={order.id}
-              status={order.status}
-              statuses={ORDER_STATUSES}
-            />
-          </div>
+          {!v2 ? (
+            <div className="rounded-xl border border-border bg-surface p-5">
+              <h2 className="mb-3 font-semibold">Update status</h2>
+              <OrderStatusForm
+                orderId={order.id}
+                status={order.status}
+                statuses={ORDER_STATUSES}
+              />
+            </div>
+          ) : null}
 
           <ShipmentPanel
             orderId={order.id}
