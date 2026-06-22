@@ -446,6 +446,39 @@ export async function shipShipment(shipmentId: string): Promise<ShipResult> {
   }
 }
 
+/**
+ * Generate one combined label PDF for many shipments at once. Shiprocket
+ * returns a single `label_url` covering every shipment id passed — used by the
+ * admin bulk "download all labels" action.
+ */
+export async function generateLabels(
+  shipmentIds: string[],
+): Promise<{ ok: boolean; url?: string; error?: string }> {
+  const ids = shipmentIds.map((s) => Number(s)).filter((n) => n > 0);
+  if (ids.length === 0) return { ok: false, error: "No shipments with labels yet." };
+  const token = await getToken();
+  if (!token) return { ok: false, error: "Could not authenticate with Shiprocket." };
+  try {
+    const res = await fetch(`${BASE}/courier/generate/label`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ shipment_id: ids }),
+      cache: "no-store",
+    });
+    const data = (await res.json().catch(() => ({}))) as {
+      label_created?: number;
+      label_url?: string;
+      message?: string;
+    };
+    if (!res.ok || !data.label_url) {
+      return { ok: false, error: data.message || "Couldn't generate the labels." };
+    }
+    return { ok: true, url: data.label_url };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Shiprocket error" };
+  }
+}
+
 export interface CancelResult {
   ok: boolean;
   error?: string;

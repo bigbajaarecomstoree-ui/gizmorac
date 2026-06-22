@@ -21,6 +21,7 @@ import {
   shipShipment,
   createReturnOrder,
   shipReturn,
+  generateLabels,
 } from "@/lib/shiprocket";
 import { refundOrderPayment, cancelOrderEverywhere } from "@/lib/data/order-fulfillment";
 import { getOrderById } from "@/lib/data/orders";
@@ -754,6 +755,26 @@ export async function updateOrderStatus(formData: FormData): Promise<OrderStatus
   revalidatePath("/account");
 
   return { ok: true, note: replacementNote || refundNote || cancelNote || undefined };
+}
+
+/**
+ * Combine the shipping labels of many orders into a single PDF (bulk print).
+ * Only orders that actually have a Shiprocket shipment are included.
+ */
+export async function bulkDownloadLabels(
+  orderIds: string[],
+): Promise<{ ok: boolean; url?: string; error?: string }> {
+  await assertAdmin();
+  if (orderIds.length === 0) return { ok: false, error: "Select at least one order." };
+  const orders = await prisma.order.findMany({
+    where: { id: { in: orderIds }, shipmentId: { not: "" } },
+    select: { shipmentId: true },
+  });
+  const ids = orders.map((o) => o.shipmentId).filter(Boolean);
+  if (ids.length === 0) {
+    return { ok: false, error: "None of the selected orders have a shipping label yet." };
+  }
+  return generateLabels(ids);
 }
 
 // --- customers (soft delete / restore) ---

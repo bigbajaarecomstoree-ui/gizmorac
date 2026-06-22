@@ -2,7 +2,6 @@ import Link from "next/link";
 import {
   ChevronRight,
   ChevronLeft,
-  Inbox,
   IndianRupee,
   Receipt,
   Clock,
@@ -15,8 +14,8 @@ import {
   type DateRange,
 } from "@/lib/data/orders";
 import { formatINR } from "@/lib/format";
-import { OrderStatusBadge } from "@/components/admin/order-status-badge";
 import { OrderFilters, OrdersPageSize } from "@/components/admin/order-filters";
+import { OrdersList } from "@/components/admin/orders-list";
 import type { Order, OrderStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -170,7 +169,44 @@ export default async function AdminOrdersPage({
         })}
       </div>
 
-      <div className="mt-5">
+      {/* clickable status filter chips */}
+      <div className="mt-5 flex flex-wrap gap-2">
+        {[
+          { key: "all" as const, label: "All", count: base.length },
+          ...ORDER_STATUSES.map((s) => ({
+            key: s,
+            label: s,
+            count: base.filter((o) => o.status === s).length,
+          })),
+        ].map((chip) => {
+          const active = chip.key === status;
+          return (
+            <Link
+              key={chip.key}
+              href={hrefFor({ status: chip.key, range, q, size })}
+              aria-pressed={active}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
+                active
+                  ? "border-accent bg-accent text-on-accent"
+                  : "border-border bg-surface text-muted hover:border-accent hover:text-accent",
+              )}
+            >
+              {chip.label}
+              <span
+                className={cn(
+                  "rounded-full px-1.5 text-xs font-semibold",
+                  active ? "bg-on-accent/20 text-on-accent" : "bg-surface-2 text-faint",
+                )}
+              >
+                {chip.count}
+              </span>
+            </Link>
+          );
+        })}
+      </div>
+
+      <div className="mt-4">
         <OrderFilters status={status} range={range} q={q} size={size} />
       </div>
 
@@ -189,46 +225,20 @@ export default async function AdminOrdersPage({
         </span>
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-xl border border-border bg-surface">
-        {pageItems.length === 0 ? (
-          <div className="flex flex-col items-center px-5 py-16 text-center">
-            <Inbox size={32} className="text-faint" />
-            <p className="mt-3 text-sm text-muted">No orders match these filters.</p>
-          </div>
-        ) : (
-          <div className="divide-y divide-border">
-            {pageItems.map((o) => {
-              const count = o.items.reduce((n, i) => n + i.qty, 0);
-              return (
-                <Link
-                  key={o.id}
-                  href={`/admin/orders/${o.id}`}
-                  className="flex items-center gap-4 px-4 py-3.5 transition-colors hover:bg-surface-2"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-sm font-semibold">{o.orderNumber}</span>
-                      <OrderStatusBadge status={o.status} />
-                    </div>
-                    <div className="mt-0.5 truncate text-sm text-foreground">
-                      {itemsLabel(o)}
-                    </div>
-                    <div className="mt-0.5 truncate text-xs text-muted">
-                      {o.firstName} {o.lastName} · {o.city}, {o.state} · {fmtDate(o.createdAt)}
-                    </div>
-                  </div>
-                  <div className="hidden shrink-0 text-xs text-muted sm:block">
-                    {count} item{count === 1 ? "" : "s"}
-                  </div>
-                  <div className="w-24 shrink-0 text-right readout text-sm font-semibold">
-                    {formatINR(o.total)}
-                  </div>
-                  <ChevronRight size={16} className="shrink-0 text-faint" />
-                </Link>
-              );
-            })}
-          </div>
-        )}
+      <div className="mt-4">
+        <OrdersList
+          rows={pageItems.map((o) => ({
+            id: o.id,
+            orderNumber: o.orderNumber,
+            status: o.status,
+            itemsLabel: itemsLabel(o),
+            meta: `${o.firstName} ${o.lastName} · ${o.city}, ${o.state} · ${fmtDate(o.createdAt)}`,
+            count: o.items.reduce((n, i) => n + i.qty, 0),
+            total: o.total,
+            labelUrl: o.labelUrl,
+            hasShipment: Boolean(o.shipmentId),
+          }))}
+        />
       </div>
 
       {/* page size + pagination */}
