@@ -14,6 +14,8 @@ import { transitionEntity, type Actor } from "./transition-engine";
 import { wouldExceedCeiling } from "./refund-math";
 import { decideRefundWebhook } from "./webhook-rules";
 import { recordWebhookEvent } from "./webhooks";
+import { createCreditNoteForRefund } from "./credit-notes";
+import { recomputeRiskProfile } from "./risk-service";
 
 const MAX_RETRIES = 2;
 const SYSTEM: Actor = { role: "SYSTEM" };
@@ -178,6 +180,10 @@ export async function applyRefundWebhook(input: {
 
   if (input.incoming === "REFUNDED") {
     await prisma.refund.update({ where: { id: refund.id }, data: { completedAt: new Date() } });
+    // GST credit note + customer risk recompute (best-effort, never block settlement).
+    await createCreditNoteForRefund({ orderId: refund.orderId, refundId: refund.id, amountPaise: refund.amountPaise }).catch(() => {});
+    const ord = await prisma.order.findUnique({ where: { id: refund.orderId }, select: { customerId: true } });
+    if (ord?.customerId) await recomputeRiskProfile(ord.customerId).catch(() => {});
     if (refund.orderItemId) {
       // best-effort settlement of the item (full order/payment recompute lands at the switch)
       await transitionEntity({ kind: "item", id: refund.orderItemId, to: "REFUNDED", actor: SYSTEM, reason: "refund completed" });
