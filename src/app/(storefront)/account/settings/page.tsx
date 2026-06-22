@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getCurrentCustomer } from "@/lib/customer-auth";
+import { getAddressesForCustomer } from "@/lib/data/addresses";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { AccountNav } from "@/components/account/account-nav";
 import { ProfileForm } from "@/components/account/profile-form";
+import { AddressBook } from "@/components/account/address-book";
 import { AccountSettings } from "@/components/account/account-settings";
 
 export const metadata: Metadata = {
@@ -16,6 +18,8 @@ export const dynamic = "force-dynamic";
 export default async function AccountSettingsPage() {
   const customer = await getCurrentCustomer();
   if (!customer) redirect("/login");
+
+  const addresses = await getAddressesForCustomer(customer.id);
 
   return (
     <div className="shell py-8">
@@ -40,12 +44,14 @@ export default async function AccountSettingsPage() {
         </div>
 
         <div>
-          <h2 className="text-lg font-semibold">Profile &amp; address</h2>
-          <p className="mt-1 text-sm text-muted">Saved details speed up checkout.</p>
+          <h2 className="text-lg font-semibold">Profile</h2>
+          <p className="mt-1 text-sm text-muted">Your name and contact details.</p>
           <div className="mt-4 rounded-xl border border-border bg-surface p-5">
             <ProfileForm customer={customer} />
           </div>
         </div>
+
+        <AddressBook addresses={addresses} />
 
         <AccountSettings marketingOptIn={customer.marketingOptIn} />
       </div>

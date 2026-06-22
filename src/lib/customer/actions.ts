@@ -177,3 +177,133 @@ export async function deleteMyAccount(): Promise<void> {
   revalidatePath("/admin/customers");
   redirect("/?account=deactivated");
 }
+
+// --- address book ---
+
+export interface AddressInput {
+  id?: string;
+  label?: string;
+  fullName: string;
+  phone: string;
+  line1: string;
+  city: string;
+  state: string;
+  pincode: string;
+  isDefault?: boolean;
+}
+
+export interface AddressResult {
+  ok: boolean;
+  error?: string;
+}
+
+const PHONE_RE = /^[6-9]\d{9}$/;
+const PIN_RE = /^\d{6}$/;
+
+function cleanAddress(input: AddressInput) {
+  const data = {
+    label: (input.label ?? "").trim().slice(0, 40),
+    fullName: (input.fullName ?? "").trim(),
+    phone: (input.phone ?? "").replace(/\s+/g, ""),
+    line1: (input.line1 ?? "").trim(),
+    city: (input.city ?? "").trim(),
+    state: (input.state ?? "").trim(),
+    pincode: (input.pincode ?? "").trim(),
+  };
+  if (!data.fullName) return { error: "Enter the recipient's full name." };
+  if (!PHONE_RE.test(data.phone)) return { error: "Enter a valid 10-digit phone number." };
+  if (!data.line1) return { error: "Enter the address." };
+  if (!data.city) return { error: "Enter the city." };
+  if (!data.state) return { error: "Enter the state." };
+  if (!PIN_RE.test(data.pincode)) return { error: "Enter a valid 6-digit pincode." };
+  return { data };
+}
+
+/** Add a new address, or update an existing one when `id` is supplied. */
+export async function saveAddress(input: AddressInput): Promise<AddressResult> {
+  const customer = await getCurrentCustomer();
+  if (!customer) return { ok: false, error: "Please log in." };
+
+  const parsed = cleanAddress(input);
+  if (parsed.error || !parsed.data) return { ok: false, error: parsed.error };
+
+  const count = await prisma.address.count({ where: { customerId: customer.id } });
+  // First address is automatically the default.
+  const makeDefault = Boolean(input.isDefault) || count === 0;
+
+  let savedId: string;
+  if (input.id) {
+    const existing = await prisma.address.findUnique({ where: { id: input.id } });
+    if (!existing || existing.customerId !== customer.id) {
+      return { ok: false, error: "Address not found." };
+    }
+    await prisma.address.update({
+      where: { id: input.id },
+      data: { ...parsed.data, ...(makeDefault ? { isDefault: true } : {}) },
+    });
+    savedId = input.id;
+  } else {
+    const created = await prisma.address.create({
+      data: { ...parsed.data, customerId: customer.id, isDefault: makeDefault },
+    });
+    savedId = created.id;
+  }
+
+  // Only one default at a time.
+  if (makeDefault) {
+    await prisma.address.updateMany({
+      where: { customerId: customer.id, id: { not: savedId } },
+      data: { isDefault: false },
+    });
+  }
+
+  revalidatePath("/account/settings");
+  revalidatePath("/checkout");
+  return { ok: true };
+}
+
+/** Delete an address; promotes the newest remaining one to default if needed. */
+export async function deleteAddress(id: string): Promise<AddressResult> {
+  const customer = await getCurrentCustomer();
+  if (!customer) return { ok: false, error: "Please log in." };
+
+  const existing = await prisma.address.findUnique({ where: { id } });
+  if (!existing || existing.customerId !== customer.id) {
+    return { ok: false, error: "Address not found." };
+  }
+  await prisma.address.delete({ where: { id } });
+
+  if (existing.isDefault) {
+    const next = await prisma.address.findFirst({
+      where: { customerId: customer.id },
+      orderBy: { createdAt: "desc" },
+    });
+    if (next) {
+      await prisma.address.update({ where: { id: next.id }, data: { isDefault: true } });
+    }
+  }
+
+  revalidatePath("/account/settings");
+  revalidatePath("/checkout");
+  return { ok: true };
+}
+
+/** Mark one address as the default delivery address. */
+export async function setDefaultAddress(id: string): Promise<AddressResult> {
+  const customer = await getCurrentCustomer();
+  if (!customer) return { ok: false, error: "Please log in." };
+
+  const existing = await prisma.address.findUnique({ where: { id } });
+  if (!existing || existing.customerId !== customer.id) {
+    return { ok: false, error: "Address not found." };
+  }
+  await prisma.address.updateMany({
+    where: { customerId: customer.id },
+    data: { isDefault: false },
+  });
+  await prisma.address.update({ where: { id }, data: { isDefault: true } });
+
+  revalidatePath("/account/settings");
+  revalidatePath("/checkout");
+  return { ok: true };
+}

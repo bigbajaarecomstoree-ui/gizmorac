@@ -162,8 +162,28 @@ model Customer {
   // its orders are never removed — admin can restore by clearing this.
   deactivatedAt DateTime?
   orders       Order[]
+  addresses    Address[]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+// Customer address book — multiple saved delivery addresses (ship-to-anywhere).
+model Address {
+  id         String   @id @default(cuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  label      String   @default("") // optional nickname e.g. "Home", "Office"
+  fullName   String
+  phone      String
+  line1      String
+  city       String
+  state      String
+  pincode    String
+  isDefault  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([customerId])
 }
 
 model Coupon {

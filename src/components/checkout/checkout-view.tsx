@@ -3,8 +3,8 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2, Lock, ShoppingBag, Tag, X, Truck } from "lucide-react";
-import type { Customer, Product } from "@/lib/types";
+import { Loader2, Lock, ShoppingBag, Tag, X, Truck, Star, Plus } from "lucide-react";
+import type { Address, Customer, Product } from "@/lib/types";
 import { useStore } from "@/components/store/store-provider";
 import { ProductArt } from "@/components/product/product-art";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -24,6 +24,7 @@ function splitName(full: string): [string, string] {
 export function CheckoutView({
   products,
   customer,
+  addresses = [],
   freeShippingThreshold = 999,
   shippingFee = 79,
   codEnabled = true,
@@ -32,6 +33,7 @@ export function CheckoutView({
 }: {
   products: Product[];
   customer: Customer | null;
+  addresses?: Address[];
   freeShippingThreshold?: number;
   shippingFee?: number;
   codEnabled?: boolean;
@@ -41,19 +43,28 @@ export function CheckoutView({
   const router = useRouter();
   const { cart, clearCart, mounted, offer, clearOffer } = useStore();
 
-  const [first, last] = customer ? splitName(customer.fullName) : ["", ""];
+  // Seed the form from the default saved address, else the profile fields.
+  const defaultAddr = addresses.find((a) => a.isDefault) ?? addresses[0] ?? null;
+  const [seedFirst, seedLast] = defaultAddr
+    ? splitName(defaultAddr.fullName)
+    : customer
+      ? splitName(customer.fullName)
+      : ["", ""];
   const [form, setForm] = React.useState({
-    firstName: first,
-    lastName: last,
+    firstName: seedFirst,
+    lastName: seedLast,
     email: customer?.email ?? "",
-    phone: customer?.phone ?? "",
-    address: customer?.address ?? "",
-    city: customer?.city ?? "",
-    state: customer?.state ?? "",
-    pincode: customer?.pincode ?? "",
+    phone: defaultAddr?.phone ?? customer?.phone ?? "",
+    address: defaultAddr?.line1 ?? customer?.address ?? "",
+    city: defaultAddr?.city ?? customer?.city ?? "",
+    state: defaultAddr?.state ?? customer?.state ?? "",
+    pincode: defaultAddr?.pincode ?? customer?.pincode ?? "",
     gstin: "",
     companyName: "",
   });
+  const [selectedAddr, setSelectedAddr] = React.useState<string>(
+    defaultAddr?.id ?? "new",
+  );
 
   const [pinStatus, setPinStatus] = React.useState<
     "idle" | "checking" | "found" | "notfound"
@@ -205,6 +216,44 @@ export function CheckoutView({
     });
   }
 
+  // Pick a saved address → fill the shipping fields and refresh the ETA.
+  function applyAddress(a: Address) {
+    const [fn, ln] = splitName(a.fullName);
+    setForm((f) => ({
+      ...f,
+      firstName: fn,
+      lastName: ln,
+      phone: a.phone,
+      address: a.line1,
+      city: a.city,
+      state: a.state,
+      pincode: a.pincode,
+    }));
+    setSelectedAddr(a.id);
+    if (/^\d{6}$/.test(a.pincode)) {
+      setPinStatus("found");
+      setEta(null);
+      getDeliveryEstimate(a.pincode).then((res) => {
+        setEta(
+          res.ok
+            ? { serviceable: res.serviceable, days: res.days, codAvailable: res.codAvailable }
+            : null,
+        );
+      });
+    } else {
+      setPinStatus("idle");
+      setEta(null);
+    }
+  }
+
+  // Clear the address fields to type a brand-new delivery address.
+  function useNewAddress() {
+    setSelectedAddr("new");
+    setForm((f) => ({ ...f, address: "", city: "", state: "", pincode: "" }));
+    setPinStatus("idle");
+    setEta(null);
+  }
+
   function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -264,6 +313,54 @@ export function CheckoutView({
 
         <div className="rounded-xl border border-border bg-surface p-5">
           <h2 className="mb-4 font-semibold">Shipping details</h2>
+
+          {customer && addresses.length > 0 ? (
+            <div className="mb-5">
+              <p className="mb-2 text-sm font-medium">Deliver to</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {addresses.map((a) => (
+                  <button
+                    type="button"
+                    key={a.id}
+                    onClick={() => applyAddress(a)}
+                    className={`rounded-xl border p-3 text-left transition-colors ${
+                      selectedAddr === a.id
+                        ? "border-accent bg-accent/5"
+                        : "border-border hover:border-border-bright"
+                    }`}
+                  >
+                    <span className="flex flex-wrap items-center gap-1.5 text-sm font-medium">
+                      {a.fullName}
+                      {a.label ? (
+                        <span className="rounded-full bg-surface-2 px-1.5 py-0.5 text-[10px] text-muted">
+                          {a.label}
+                        </span>
+                      ) : null}
+                      {a.isDefault ? <Star size={11} className="text-accent" /> : null}
+                    </span>
+                    <span className="mt-0.5 block line-clamp-2 text-xs text-muted">
+                      {a.line1}, {a.city}, {a.state} — {a.pincode}
+                    </span>
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={useNewAddress}
+                  className={`rounded-xl border border-dashed p-3 text-left transition-colors ${
+                    selectedAddr === "new"
+                      ? "border-accent bg-accent/5"
+                      : "border-border hover:border-accent"
+                  }`}
+                >
+                  <span className="flex items-center gap-1.5 text-sm font-medium">
+                    <Plus size={14} /> Use a new address
+                  </span>
+                  <span className="mt-0.5 block text-xs text-muted">Enter details below</span>
+                </button>
+              </div>
+            </div>
+          ) : null}
+
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block">
               <span className="mb-1.5 block text-sm font-medium">First name</span>

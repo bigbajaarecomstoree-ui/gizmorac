@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getAllProducts } from "@/lib/data/queries";
 import { getCurrentCustomer } from "@/lib/customer-auth";
+import { getAddressesForCustomer } from "@/lib/data/addresses";
 import { getLastPaymentMethod } from "@/lib/data/orders";
 import { getSettings } from "@/lib/data/settings";
 import { getPhonePeConfig } from "@/lib/phonepe";
@@ -25,6 +26,7 @@ export default async function CheckoutPage() {
   const preferredMethod = customer
     ? await getLastPaymentMethod(customer.id, customer.email)
     : "";
+  const addresses = customer ? await getAddressesForCustomer(customer.id) : [];
 
   return (
     <div className="shell py-8">
@@ -40,6 +42,7 @@ export default async function CheckoutPage() {
         <CheckoutView
           products={products}
           customer={customer}
+          addresses={addresses}
           freeShippingThreshold={settings.freeShippingThreshold}
           shippingFee={settings.shippingFee}
           codEnabled={settings.codEnabled}

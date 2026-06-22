@@ -259,6 +259,19 @@ export interface Customer {
   createdAt: string;
 }
 
+/** A saved delivery address in the customer's address book. */
+export interface Address {
+  id: string;
+  label: string;
+  fullName: string;
+  phone: string;
+  line1: string;
+  city: string;
+  state: string;
+  pincode: string;
+  isDefault: boolean;
+}
+
 /** A customer row enriched with order rollups for the admin directory. */
 export interface CustomerWithStats extends Customer {
   orderCount: number;
