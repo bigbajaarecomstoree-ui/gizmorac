@@ -12,6 +12,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { getCustomerById } from "@/lib/data/customers";
+import { getAddressesForCustomer } from "@/lib/data/addresses";
 import { getOrdersForCustomer } from "@/lib/data/orders";
 import { formatINR } from "@/lib/format";
 import { OrderStatusBadge } from "@/components/admin/order-status-badge";
@@ -40,6 +41,7 @@ export default async function CustomerDetailPage({ params }: { params: Params })
   if (!customer) notFound();
 
   const orders = await getOrdersForCustomer(customer.id, customer.email);
+  const addresses = await getAddressesForCustomer(customer.id);
 
   const totalSpent = orders
     .filter((o) => !NON_REVENUE.includes(o.status))
@@ -138,6 +140,39 @@ export default async function CustomerDetailPage({ params }: { params: Params })
           </div>
         ))}
       </div>
+
+      {/* saved addresses — the customer's address book */}
+      {addresses.length > 0 ? (
+        <div className="mt-8 overflow-hidden rounded-xl border border-border bg-surface">
+          <h2 className="border-b border-border px-5 py-4 font-semibold">
+            Saved addresses ({addresses.length})
+          </h2>
+          <div className="divide-y divide-border">
+            {addresses.map((a) => (
+              <div key={a.id} className="px-5 py-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <MapPin size={15} className="shrink-0 text-accent" />
+                  <span className="text-sm font-semibold">{a.fullName}</span>
+                  {a.label ? (
+                    <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[11px] font-medium text-muted">
+                      {a.label}
+                    </span>
+                  ) : null}
+                  {a.isDefault ? (
+                    <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-semibold text-accent">
+                      Default
+                    </span>
+                  ) : null}
+                </div>
+                <p className="mt-1.5 text-sm text-muted">
+                  {a.line1}, {a.city}, {a.state} — {a.pincode}
+                </p>
+                <p className="text-xs text-faint">{a.phone}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       {/* order history */}
       <div className="mt-8 overflow-hidden rounded-xl border border-border bg-surface">
