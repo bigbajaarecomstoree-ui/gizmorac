@@ -244,6 +244,33 @@ async function computePackage(order: Order): Promise<{
   return { weight, length, breadth, height };
 }
 
+/**
+ * Shiprocket prints the product name on the label's "Item(s)" and "Product
+ * Description" lines. Our full marketing titles get chopped mid-word there
+ * (e.g. "...360 LED Selfie Ri"), which looks broken. So we send a concise,
+ * complete name: the core title before the first comma, capped at 50 chars on
+ * a word boundary.
+ */
+const NAME_FILLER = new Set([
+  "with", "for", "and", "to", "the", "a", "of", "in", "on", "&", "compatible",
+]);
+
+function labelItemName(name: string): string {
+  // Core title = the part before the first comma (marketing titles list
+  // features after one), capped at 50 chars on a word boundary.
+  let head = name.split(",")[0].trim() || name.trim();
+  if (head.length > 50) {
+    const cut = head.slice(0, 50);
+    head = cut.slice(0, cut.lastIndexOf(" ")).trim() || cut.trim();
+  }
+  // Drop trailing connective words so we never end on "...Compatible with".
+  const words = head.split(/\s+/);
+  while (words.length > 2 && NAME_FILLER.has(words[words.length - 1].toLowerCase())) {
+    words.pop();
+  }
+  return words.join(" ");
+}
+
 /** Push an order into Shiprocket (adhoc order) so it can be shipped. */
 export async function createShiprocketOrder(
   order: Order,
@@ -278,7 +305,7 @@ export async function createShiprocketOrder(
     billing_phone: order.phone,
     shipping_is_billing: true,
     order_items: order.items.map((i) => ({
-      name: i.name,
+      name: labelItemName(i.name),
       // Shiprocket caps SKU at 70 chars; slugs can be longer.
       sku: (i.slug || i.id).slice(0, 70),
       units: i.qty,
@@ -633,7 +660,7 @@ export async function createReturnOrder(
     shipping_email: wh.email || order.email,
     shipping_phone: wh.phone || order.phone,
     order_items: order.items.map((i) => ({
-      name: i.name,
+      name: labelItemName(i.name),
       qc_enable: false,
       // Shiprocket caps SKU at 70 chars; slugs can be longer.
       sku: (i.slug || i.id).slice(0, 70),
