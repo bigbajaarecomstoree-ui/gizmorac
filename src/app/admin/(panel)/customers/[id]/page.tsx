@@ -15,6 +15,7 @@ import { getCustomerById } from "@/lib/data/customers";
 import { getOrdersForCustomer } from "@/lib/data/orders";
 import { formatINR } from "@/lib/format";
 import { OrderStatusBadge } from "@/components/admin/order-status-badge";
+import { CustomerStatusActions } from "@/components/admin/customer-status-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -84,10 +85,29 @@ export default async function CustomerDetailPage({ params }: { params: Params })
 
       {/* identity */}
       <div className="mt-4 rounded-xl border border-border bg-surface p-5">
-        <h1 className="text-2xl font-bold tracking-tight">{customer.fullName}</h1>
-        <p className="mt-1 text-sm text-faint">
-          Customer since {fmtDateTime(customer.createdAt)}
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h1 className="text-2xl font-bold tracking-tight">{customer.fullName}</h1>
+              {customer.deactivatedAt ? (
+                <span className="rounded-full bg-danger/10 px-2.5 py-0.5 text-xs font-semibold text-danger">
+                  Deactivated
+                </span>
+              ) : (
+                <span className="rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-semibold text-success">
+                  Active
+                </span>
+              )}
+            </div>
+            <p className="mt-1 text-sm text-faint">
+              Customer since {fmtDateTime(customer.createdAt)}
+              {customer.deactivatedAt
+                ? ` · deactivated ${fmtDateTime(customer.deactivatedAt)}`
+                : ""}
+            </p>
+          </div>
+          <CustomerStatusActions id={customer.id} deactivated={Boolean(customer.deactivatedAt)} />
+        </div>
         <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
           <a href={`mailto:${customer.email}`} className="flex items-center gap-2.5 text-muted transition-colors hover:text-accent">
             <Mail size={16} className="shrink-0 text-accent" />

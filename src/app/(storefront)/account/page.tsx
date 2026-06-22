@@ -22,6 +22,7 @@ import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { OrderStatusBadge } from "@/components/admin/order-status-badge";
 import { ProductArt } from "@/components/product/product-art";
 import { ProfileForm } from "@/components/account/profile-form";
+import { AccountSettings } from "@/components/account/account-settings";
 import { RewardCouponCard } from "@/components/account/reward-coupon";
 import { OrderActions } from "@/components/account/order-actions";
 import { canCancelOrder, isDisputeWindowOpen } from "@/lib/orders-policy";
@@ -290,6 +291,8 @@ export default async function AccountPage() {
               <ProfileForm customer={customer} />
             </div>
           </div>
+
+          <AccountSettings marketingOptIn={customer.marketingOptIn} />
 
           <div>
             <h2 className="text-lg font-semibold">Quick links</h2>

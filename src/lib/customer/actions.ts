@@ -80,6 +80,13 @@ export async function loginAction(
     return { error: "Incorrect email or password." };
   }
 
+  if (customer.deactivatedAt) {
+    return {
+      error:
+        "This account has been deactivated. Please contact us to restore it.",
+    };
+  }
+
   await setCustomerCookie(customer.id);
   await logEvent({
     actor: "customer",
@@ -119,4 +126,54 @@ export async function updateProfileAction(
   });
   revalidatePath("/account");
   return {};
+}
+
+/** Toggle the customer's marketing-email subscription. */
+export async function setMarketingOptIn(
+  optIn: boolean,
+): Promise<{ ok: boolean; optIn: boolean }> {
+  const current = await getCurrentCustomer();
+  if (!current) redirect("/login");
+
+  await prisma.customer.update({
+    where: { id: current.id },
+    data: { marketingOptIn: optIn },
+  });
+  await logEvent({
+    actor: "customer",
+    actorId: current.id,
+    actorEmail: current.email,
+    action: optIn ? "customer.email.subscribed" : "customer.email.unsubscribed",
+    message: optIn
+      ? "Re-subscribed to marketing emails"
+      : "Unsubscribed from marketing emails",
+  });
+  revalidatePath("/account");
+  return { ok: true, optIn };
+}
+
+/**
+ * Customer deactivates ("deletes") their own account. This is a soft delete:
+ * the row and all orders are kept, only `deactivatedAt` is set, and the session
+ * is cleared. Admin can restore the account later.
+ */
+export async function deleteMyAccount(): Promise<void> {
+  const current = await getCurrentCustomer();
+  if (!current) redirect("/login");
+
+  await prisma.customer.update({
+    where: { id: current.id },
+    data: { deactivatedAt: new Date() },
+  });
+  await logEvent({
+    level: "warn",
+    actor: "customer",
+    actorId: current.id,
+    actorEmail: current.email,
+    action: "customer.account.deactivated",
+    message: "Customer deactivated their account",
+  });
+  await clearCustomerCookie();
+  revalidatePath("/admin/customers");
+  redirect("/?account=deactivated");
 }

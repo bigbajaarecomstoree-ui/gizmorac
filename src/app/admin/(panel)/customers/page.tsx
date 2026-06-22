@@ -74,8 +74,15 @@ export default async function AdminCustomersPage() {
                   >
                     <span className="hidden text-faint sm:block">{i + 1}</span>
                     <span className="min-w-0">
-                      <span className="block truncate font-medium text-accent-bright">
-                        {c.fullName}
+                      <span className="flex items-center gap-2">
+                        <span className="truncate font-medium text-accent-bright">
+                          {c.fullName}
+                        </span>
+                        {c.deactivatedAt ? (
+                          <span className="shrink-0 rounded-full bg-danger/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-danger">
+                            Deactivated
+                          </span>
+                        ) : null}
                       </span>
                       <span className="block truncate text-xs text-muted">{c.email}</span>
                       <span className="block text-xs text-faint">

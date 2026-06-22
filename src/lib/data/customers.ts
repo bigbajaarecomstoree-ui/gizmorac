@@ -14,6 +14,8 @@ function map(r: CustomerRow): Customer {
     city: r.city,
     state: r.state,
     pincode: r.pincode,
+    marketingOptIn: r.marketingOptIn,
+    deactivatedAt: r.deactivatedAt ? r.deactivatedAt.toISOString() : null,
     createdAt: r.createdAt.toISOString(),
   };
 }

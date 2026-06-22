@@ -756,6 +756,49 @@ export async function updateOrderStatus(formData: FormData): Promise<OrderStatus
   return { ok: true, note: replacementNote || refundNote || cancelNote || undefined };
 }
 
+// --- customers (soft delete / restore) ---
+
+export interface CustomerStatusResult {
+  ok: boolean;
+  deactivated: boolean;
+}
+
+/** Admin deactivates a customer account (soft delete — orders are kept). */
+export async function deactivateCustomer(id: string): Promise<CustomerStatusResult> {
+  await assertAdmin();
+  const c = await prisma.customer.update({
+    where: { id },
+    data: { deactivatedAt: new Date() },
+  });
+  await logEvent({
+    actor: "admin",
+    action: "admin.customer.deactivate",
+    message: `Customer ${c.email} deactivated`,
+    meta: { customerId: id, email: c.email },
+  });
+  revalidatePath(`/admin/customers/${id}`);
+  revalidatePath("/admin/customers");
+  return { ok: true, deactivated: true };
+}
+
+/** Admin restores a previously-deactivated customer account. */
+export async function restoreCustomer(id: string): Promise<CustomerStatusResult> {
+  await assertAdmin();
+  const c = await prisma.customer.update({
+    where: { id },
+    data: { deactivatedAt: null },
+  });
+  await logEvent({
+    actor: "admin",
+    action: "admin.customer.restore",
+    message: `Customer ${c.email} restored`,
+    meta: { customerId: id, email: c.email },
+  });
+  revalidatePath(`/admin/customers/${id}`);
+  revalidatePath("/admin/customers");
+  return { ok: true, deactivated: false };
+}
+
 // --- coupons / promotions ---
 
 function couponDataFromForm(fd: FormData) {

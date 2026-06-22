@@ -156,6 +156,11 @@ model Customer {
   city         String   @default("")
   state        String   @default("")
   pincode      String   @default("")
+  // Marketing email opt-in (transactional mail is always sent).
+  marketingOptIn Boolean @default(true)
+  // Soft delete: set when the customer deactivates their account. The row and
+  // its orders are never removed — admin can restore by clearing this.
+  deactivatedAt DateTime?
   orders       Order[]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

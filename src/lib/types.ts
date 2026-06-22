@@ -252,6 +252,10 @@ export interface Customer {
   city: string;
   state: string;
   pincode: string;
+  /** Marketing email opt-in (transactional mail is always sent). */
+  marketingOptIn: boolean;
+  /** Soft-delete timestamp (ISO) — null when the account is active. */
+  deactivatedAt: string | null;
   createdAt: string;
 }
 

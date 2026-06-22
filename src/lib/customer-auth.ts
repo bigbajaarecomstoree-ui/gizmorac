@@ -22,6 +22,8 @@ export function toCustomer(r: CustomerRow): Customer {
     city: r.city,
     state: r.state,
     pincode: r.pincode,
+    marketingOptIn: r.marketingOptIn,
+    deactivatedAt: r.deactivatedAt ? r.deactivatedAt.toISOString() : null,
     createdAt: r.createdAt.toISOString(),
   };
 }
@@ -49,5 +51,7 @@ export async function getCurrentCustomer(): Promise<Customer | null> {
   const id = await verifyCustomerToken(store.get(CUSTOMER_COOKIE)?.value);
   if (!id) return null;
   const row = await prisma.customer.findUnique({ where: { id } });
-  return row ? toCustomer(row) : null;
+  // A deactivated (soft-deleted) account behaves as logged-out until restored.
+  if (!row || row.deactivatedAt) return null;
+  return toCustomer(row);
 }
