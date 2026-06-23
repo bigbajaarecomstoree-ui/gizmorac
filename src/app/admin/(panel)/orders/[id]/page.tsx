@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Package, ShoppingBag, CreditCard, CalendarClock, IndianRupee, TrendingUp, Users, ShieldAlert } from "lucide-react";
+import { ArrowLeft, Package, ShoppingBag, CreditCard, CalendarClock, IndianRupee, TrendingUp, Users, ShieldAlert, ChevronRight } from "lucide-react";
 import { getOrderById, ORDER_STATUSES } from "@/lib/data/orders";
 import { getOrderActivity } from "@/lib/data/logs";
 import { getShiprocketConfig } from "@/lib/shiprocket";
@@ -52,6 +52,9 @@ export default async function OrderDetailPage({ params }: { params: Params }) {
   const cogs = order.items.reduce((s, it) => s + (costById.get(it.id) ?? 0) * it.qty, 0);
   const grossProfit = order.total - cogs;
   const margin = order.total ? Math.round((grossProfit / order.total) * 100) : 0;
+  // Margin health: ≥20% healthy (green), 10–19% thin (amber), <10% bad (red).
+  const marginColor =
+    cogs === 0 ? "text-muted" : margin < 10 ? "text-red-600" : margin < 20 ? "text-amber-600" : "text-emerald-600";
 
   // Customer lifetime value + risk signals (matched by email — covers guest + registered).
   const custOrders = await prisma.order.findMany({
@@ -67,6 +70,11 @@ export default async function OrderDetailPage({ params }: { params: Params }) {
   const returnRate = custOrders.length ? Math.round((returnsCount / custOrders.length) * 100) : 0;
   const codCount = custOrders.filter((o) => o.paymentMethod !== "PhonePe").length;
   const highRisk = cancels >= 3 || returnRate >= 40;
+  // Registered-customer record (if any) so the lifetime card can open full history.
+  const customerRecord = await prisma.customer.findFirst({
+    where: { email: order.email },
+    select: { id: true },
+  });
 
   const v2Status = v2Order?.statusV2 ?? "PENDING";
   const canCancel = ["PENDING", "CONFIRMED", "PROCESSING"].includes(v2Status);
@@ -299,36 +307,56 @@ export default async function OrderDetailPage({ params }: { params: Params }) {
             ) : null}
           </div>
 
-          {/* customer lifetime + risk signals (V2) */}
-          <div className="rounded-xl border border-border bg-surface p-5 text-sm">
-            <h2 className="mb-3 flex items-center gap-2 font-semibold">
-              <Users size={16} className="text-accent" /> Customer lifetime
-              {highRisk ? (
-                <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2 py-0.5 text-[11px] font-semibold text-red-600">
-                  <ShieldAlert size={12} /> High risk
-                </span>
-              ) : null}
-            </h2>
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="rounded-lg bg-surface-2 px-2 py-2">
-                <div className="text-base font-bold">{custOrders.length}</div>
-                <div className="tech-label">Orders</div>
+          {/* customer lifetime + risk signals (V2) — links to full history */}
+          {(() => {
+            const inner = (
+              <>
+                <h2 className="mb-3 flex items-center gap-2 font-semibold">
+                  <Users size={16} className="text-accent" /> Customer lifetime
+                  {highRisk ? (
+                    <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2 py-0.5 text-[11px] font-semibold text-red-600">
+                      <ShieldAlert size={12} /> High risk
+                    </span>
+                  ) : null}
+                </h2>
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div className="rounded-lg bg-surface-2 px-2 py-2">
+                    <div className="text-base font-bold">{custOrders.length}</div>
+                    <div className="tech-label">Orders</div>
+                  </div>
+                  <div className="rounded-lg bg-surface-2 px-2 py-2">
+                    <div className="text-base font-bold">{formatINR(clvSpent)}</div>
+                    <div className="tech-label">Spent</div>
+                  </div>
+                  <div className="rounded-lg bg-surface-2 px-2 py-2">
+                    <div className="text-base font-bold">{formatINR(clvAov)}</div>
+                    <div className="tech-label">AOV</div>
+                  </div>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-1.5 text-[11px]">
+                  <span className="rounded-full bg-surface-2 px-2 py-0.5 text-muted">{cancels} cancelled</span>
+                  <span className="rounded-full bg-surface-2 px-2 py-0.5 text-muted">{returnRate}% return rate</span>
+                  <span className="rounded-full bg-surface-2 px-2 py-0.5 text-muted">{codCount} COD</span>
+                </div>
+              </>
+            );
+            return customerRecord ? (
+              <Link
+                href={`/admin/customers/${customerRecord.id}`}
+                className="block rounded-xl border border-border bg-surface p-5 text-sm transition-colors hover:border-accent"
+              >
+                {inner}
+                <div className="mt-3 flex items-center justify-end gap-1 border-t border-border pt-2.5 text-xs font-semibold text-accent">
+                  View order history <ChevronRight size={13} />
+                </div>
+              </Link>
+            ) : (
+              <div className="rounded-xl border border-border bg-surface p-5 text-sm">
+                {inner}
+                <p className="mt-3 border-t border-border pt-2.5 text-xs text-faint">Guest checkout — no customer account.</p>
               </div>
-              <div className="rounded-lg bg-surface-2 px-2 py-2">
-                <div className="text-base font-bold">{formatINR(clvSpent)}</div>
-                <div className="tech-label">Spent</div>
-              </div>
-              <div className="rounded-lg bg-surface-2 px-2 py-2">
-                <div className="text-base font-bold">{formatINR(clvAov)}</div>
-                <div className="tech-label">AOV</div>
-              </div>
-            </div>
-            <div className="mt-3 flex flex-wrap gap-1.5 text-[11px]">
-              <span className="rounded-full bg-surface-2 px-2 py-0.5 text-muted">{cancels} cancelled</span>
-              <span className="rounded-full bg-surface-2 px-2 py-0.5 text-muted">{returnRate}% return rate</span>
-              <span className="rounded-full bg-surface-2 px-2 py-0.5 text-muted">{codCount} COD</span>
-            </div>
-          </div>
+            );
+          })()}
 
           {/* profit (internal, admin only) */}
           <div className="rounded-xl border border-border bg-surface p-5 text-sm">
@@ -347,7 +375,7 @@ export default async function OrderDetailPage({ params }: { params: Params }) {
               </div>
               <div className="flex justify-between border-t border-border pt-1.5 font-semibold">
                 <dt>Gross profit</dt>
-                <dd className={grossProfit >= 0 ? "text-success" : "text-danger"}>
+                <dd className={marginColor}>
                   {formatINR(grossProfit)} · {margin}%
                 </dd>
               </div>
