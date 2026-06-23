@@ -7,6 +7,8 @@ type SeedProduct = Omit<
   | "images"
   | "video"
   | "lowStockThreshold"
+  | "inventoryNote"
+  | "supplier"
   | "warrantyMonths"
   | "active"
   | "cost"

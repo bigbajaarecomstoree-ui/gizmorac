@@ -6,6 +6,7 @@ import {
   InventoryPageSize,
 } from "@/components/admin/inventory-controls";
 import { InventoryTable } from "@/components/admin/inventory-table";
+import { formatINR } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -55,6 +56,8 @@ export default async function InventoryPage({
   ).length;
   const inStock = products.filter((p) => p.stock > p.lowStockThreshold).length;
   const totalUnits = products.reduce((s, p) => s + p.stock, 0);
+  // Inventory value at landed cost (cost × units on hand).
+  const inventoryValue = products.reduce((s, p) => s + p.cost * p.stock, 0);
 
   // Apply search + status filter.
   const ql = q.toLowerCase();
@@ -83,10 +86,10 @@ export default async function InventoryPage({
   const pageItems = filtered.slice(start, start + size);
 
   const cards: { key: StockStatus; label: string; value: number }[] = [
-    { key: "all", label: "All SKUs", value: products.length },
-    { key: "in", label: "In stock", value: inStock },
-    { key: "low", label: "Low stock", value: lowStock },
-    { key: "out", label: "Out of stock", value: outOfStock },
+    { key: "in", label: "Healthy", value: inStock },
+    { key: "low", label: "Low", value: lowStock },
+    { key: "out", label: "Out", value: outOfStock },
+    { key: "all", label: "Total", value: products.length },
   ];
 
   return (
@@ -100,12 +103,20 @@ export default async function InventoryPage({
         Tap a card to filter; changes apply to the storefront instantly.
       </p>
 
-      {/* clickable status cards */}
-      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      {/* clickable status cards + inventory value */}
+      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {cards.map((c) => {
           const active = status === c.key;
-          const danger = c.key === "out";
-          const warn = c.key === "low";
+          const color =
+            c.value === 0
+              ? ""
+              : c.key === "out"
+                ? "text-red-600"
+                : c.key === "low"
+                  ? "text-amber-600"
+                  : c.key === "in"
+                    ? "text-emerald-600"
+                    : "";
           return (
             <Link
               key={c.key}
@@ -116,19 +127,17 @@ export default async function InventoryPage({
                 active ? "border-accent ring-1 ring-accent" : "border-border",
               )}
             >
-              <div
-                className={cn(
-                  "text-xl font-bold tracking-tight",
-                  danger && c.value > 0 && "text-danger",
-                  warn && c.value > 0 && "text-accent-bright",
-                )}
-              >
-                {c.value}
-              </div>
+              <div className={cn("text-xl font-bold tracking-tight", color)}>{c.value}</div>
               <div className="tech-label mt-1">{c.label}</div>
             </Link>
           );
         })}
+        <div className="col-span-2 rounded-xl border border-border bg-surface p-4 sm:col-span-1">
+          <div className="readout text-xl font-bold tracking-tight text-accent">
+            {formatINR(inventoryValue)}
+          </div>
+          <div className="tech-label mt-1">Inventory value</div>
+        </div>
       </div>
 
       {/* search + clear */}

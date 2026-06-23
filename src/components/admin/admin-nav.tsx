@@ -23,18 +23,19 @@ import {
 import { logoutAction } from "@/lib/admin/actions";
 import { cn } from "@/lib/utils";
 
+// Operations-first ordering: daily-ops at the top, catalog below, utilities last.
 const NAV = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard, exact: true },
+  { label: "Orders", href: "/admin/orders", icon: Receipt, exact: false },
+  { label: "Inventory", href: "/admin/inventory", icon: Boxes, exact: false },
+  { label: "Customers", href: "/admin/customers", icon: Users, exact: false },
+  { label: "Finance", href: "/admin/finance", icon: Wallet, exact: false },
+  { label: "Reports", href: "/admin/reports", icon: BarChart3, exact: false },
   { label: "Products", href: "/admin/products", icon: Package, exact: false },
   { label: "Categories", href: "/admin/categories", icon: Tags, exact: false },
-  { label: "Inventory", href: "/admin/inventory", icon: Boxes, exact: false },
-  { label: "Orders", href: "/admin/orders", icon: Receipt, exact: false },
   { label: "Support", href: "/admin/support", icon: LifeBuoy, exact: false },
-  { label: "Customers", href: "/admin/customers", icon: Users, exact: false },
   { label: "Subscribers", href: "/admin/subscribers", icon: Mail, exact: false },
   { label: "Promotions", href: "/admin/promotions", icon: Ticket, exact: false },
-  { label: "Reports", href: "/admin/reports", icon: BarChart3, exact: false },
-  { label: "Finance", href: "/admin/finance", icon: Wallet, exact: false },
   { label: "Logs", href: "/admin/logs", icon: ScrollText, exact: false },
 ];
 

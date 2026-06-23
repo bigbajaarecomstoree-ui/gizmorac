@@ -50,6 +50,8 @@ function toProduct(r: ProductRow): Product {
     reviewCount: r.reviewCount,
     stock: r.stock,
     lowStockThreshold: r.lowStockThreshold,
+    inventoryNote: r.inventoryNote,
+    supplier: r.supplier,
     warrantyMonths: r.warrantyMonths,
     badges: safeParse(r.badges),
     shortDescription: r.shortDescription,

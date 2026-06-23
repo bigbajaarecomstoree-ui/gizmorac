@@ -90,6 +90,10 @@ export interface Product {
   stock: number;
   /** Flag/warn when stock falls to or below this number. */
   lowStockThreshold: number;
+  /** Private staff note for inventory ops (reorders, supplier delays…). */
+  inventoryNote: string;
+  /** Reorder supplier for this product (optional). */
+  supplier: string;
   /** Manufacturer warranty length in months (0 = no warranty). */
   warrantyMonths: number;
   badges: string[];

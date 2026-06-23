@@ -1,0 +1,2 @@
+ALTER TABLE "Product" ADD COLUMN "inventoryNote" TEXT NOT NULL DEFAULT '';
+ALTER TABLE "Product" ADD COLUMN "supplier" TEXT NOT NULL DEFAULT '';

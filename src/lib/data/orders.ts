@@ -276,14 +276,16 @@ export async function getAdminStats(): Promise<AdminStats> {
     productCount,
     orderCount,
     pendingOrders,
-    lowStock,
+    lowStockRows,
     customerCount,
     revenueAgg,
   ] = await Promise.all([
     prisma.product.count(),
     prisma.order.count(),
     prisma.order.count({ where: { status: "Pending" } }),
-    prisma.product.count({ where: { stock: { lte: 10 } } }),
+    // Per-product threshold (a column can't be compared in Prisma's `where`).
+    prisma.$queryRaw<{ count: number }[]>`
+      SELECT count(*)::int AS count FROM "Product" WHERE stock <= "lowStockThreshold"`,
     prisma.customer.count(),
     prisma.order.aggregate({
       _sum: { total: true },
@@ -295,7 +297,7 @@ export async function getAdminStats(): Promise<AdminStats> {
     productCount,
     orderCount,
     pendingOrders,
-    lowStock,
+    lowStock: Number(lowStockRows[0]?.count ?? 0),
     customerCount,
     revenue: revenueAgg._sum.total ?? 0,
   };

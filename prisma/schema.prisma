@@ -47,6 +47,9 @@ model Product {
   stock             Int                    @default(0)
   // Inventory: warn/flag when stock falls to or below this threshold.
   lowStockThreshold Int                    @default(10)
+  // Inventory ops: private staff note + reorder supplier (both optional).
+  inventoryNote     String                 @default("")
+  supplier          String                 @default("")
   // Manufacturer warranty length in months (0 = no warranty). Drives the
   // customer "Warranty claim" button, shown only while within this window.
   warrantyMonths    Int                    @default(0)

@@ -521,15 +521,39 @@ export async function bulkUpdateInventory(
 
   if (clean.length === 0) return { saved: 0 };
 
+  // Snapshot current stock so we can log manual deltas to the ledger.
+  const current = await prisma.product.findMany({
+    where: { id: { in: clean.map((e) => e.id) } },
+    select: { id: true, stock: true },
+  });
+  const stockById = new Map(current.map((p) => [p.id, p.stock]));
+
   try {
-    await prisma.$transaction(
-      clean.map((e) =>
+    await prisma.$transaction([
+      ...clean.map((e) =>
         prisma.product.update({
           where: { id: e.id },
           data: { stock: e.stock, lowStockThreshold: e.lowStockThreshold },
         }),
       ),
-    );
+      // Append a MANUAL_ADJUST ledger row for every row whose stock changed.
+      ...clean.flatMap((e) => {
+        const before = stockById.get(e.id);
+        if (before === undefined || before === e.stock) return [];
+        return [
+          prisma.inventoryTransaction.create({
+            data: {
+              productId: e.id,
+              type: "MANUAL_ADJUST",
+              delta: e.stock - before,
+              stockAfter: e.stock,
+              reason: "Manual edit (admin)",
+              idempotencyKey: `manual:${e.id}:${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            },
+          }),
+        ];
+      }),
+    ]);
   } catch {
     return { saved: 0, error: "Some products could not be saved. Please retry." };
   }
@@ -537,6 +561,28 @@ export async function bulkUpdateInventory(
   revalidateStorefront();
   revalidatePath("/admin/inventory");
   return { saved: clean.length };
+}
+
+/** Save the private inventory note for a product. */
+export async function saveInventoryNote(productId: string, note: string): Promise<{ ok: boolean }> {
+  await assertAdmin();
+  await prisma.product.update({
+    where: { id: productId },
+    data: { inventoryNote: String(note ?? "").slice(0, 2000) },
+  });
+  revalidatePath(`/admin/inventory/${productId}`);
+  return { ok: true };
+}
+
+/** Save the reorder supplier for a product. */
+export async function saveSupplier(productId: string, supplier: string): Promise<{ ok: boolean }> {
+  await assertAdmin();
+  await prisma.product.update({
+    where: { id: productId },
+    data: { supplier: String(supplier ?? "").slice(0, 200) },
+  });
+  revalidatePath(`/admin/inventory/${productId}`);
+  return { ok: true };
 }
 
 // --- orders ---

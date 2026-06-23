@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, Loader2, PackageSearch, TriangleAlert, X } from "lucide-react";
+import { Check, Loader2, PackageSearch, X, History, Minus, Plus } from "lucide-react";
 import type { DeviceArt } from "@/lib/types";
 import { bulkUpdateInventory } from "@/lib/admin/actions";
 import { ProductArt } from "@/components/product/product-art";
@@ -38,6 +39,7 @@ export function InventoryTable({ items }: { items: InventoryItem[] }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkStock, setBulkStock] = useState("");
   const [bulkLow, setBulkLow] = useState("");
+  const [bulkAdjust, setBulkAdjust] = useState("");
   const [saving, startSaving] = useTransition();
   const [savedTick, setSavedTick] = useState(false);
 
@@ -130,6 +132,25 @@ export function InventoryTable({ items }: { items: InventoryItem[] }) {
     setBulkLow("");
   }
 
+  // ---- bulk increase / decrease selected stock by a relative amount ----
+  function applyAdjust(sign: 1 | -1) {
+    const n = Math.round(Number(bulkAdjust));
+    if (!Number.isFinite(n) || n === 0) return;
+    setDraft((prev) => {
+      const next = new Map(prev);
+      for (const id of selected) {
+        const o = originals.get(id);
+        if (!o) continue;
+        const cur = next.get(id) ?? { ...o };
+        const updated: Draft = { ...cur, stock: Math.max(0, cur.stock + sign * n) };
+        if (updated.stock === o.stock && updated.low === o.low) next.delete(id);
+        else next.set(id, updated);
+      }
+      return next;
+    });
+    setBulkAdjust("");
+  }
+
   function discardAll() {
     setDraft(new Map());
   }
@@ -203,7 +224,11 @@ export function InventoryTable({ items }: { items: InventoryItem[] }) {
                     />
                   </div>
 
-                  <div className="flex min-w-0 items-center gap-3">
+                  <Link
+                    href={`/admin/inventory/${p.id}`}
+                    className="group flex min-w-0 items-center gap-3"
+                    title="View movement history"
+                  >
                     <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg border border-border">
                       {p.image ? (
                         <Image src={p.image} alt="" fill sizes="44px" className="object-cover" />
@@ -212,20 +237,26 @@ export function InventoryTable({ items }: { items: InventoryItem[] }) {
                       )}
                     </div>
                     <div className="min-w-0">
-                      <div className="truncate text-sm font-medium" title={p.name}>
+                      <div className="flex items-center gap-1.5 truncate text-sm font-medium group-hover:text-accent" title={p.name}>
                         {p.name}
+                        <History size={12} className="shrink-0 text-faint opacity-0 transition-opacity group-hover:opacity-100" />
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <span className="font-mono text-xs text-faint">{p.sku}</span>
                         {out ? (
-                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-danger">
-                            <TriangleAlert size={12} /> Out of stock
+                          <span className="inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2 py-0.5 text-[11px] font-semibold text-red-600">
+                            <span className="size-1.5 rounded-full bg-red-500" /> Out
                           </span>
                         ) : low ? (
-                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-accent-bright">
-                            <TriangleAlert size={12} /> Low
+                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-600">
+                            <span className="size-1.5 rounded-full bg-amber-500" /> Low
                           </span>
-                        ) : null}
+                        ) : (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-600">
+                            <span className="size-1.5 rounded-full bg-emerald-500" /> Healthy
+                          </span>
+                        )}
+                        <span className="text-xs text-faint">{v.stock} pcs</span>
                         {isDirty ? (
                           <span className="inline-flex items-center gap-1 rounded-full bg-accent/15 px-1.5 py-0.5 text-[0.625rem] font-semibold uppercase tracking-wider text-accent-bright">
                             Unsaved
@@ -233,7 +264,7 @@ export function InventoryTable({ items }: { items: InventoryItem[] }) {
                         ) : null}
                       </div>
                     </div>
-                  </div>
+                  </Link>
 
                   <label className="flex items-center gap-2 sm:w-24 sm:justify-center">
                     <span className="text-xs text-muted sm:hidden">Stock</span>
@@ -299,6 +330,34 @@ export function InventoryTable({ items }: { items: InventoryItem[] }) {
                   className="h-8 rounded-lg border border-border px-3 text-sm font-medium transition-colors hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Apply
+                </button>
+                <span className="hidden text-faint sm:inline">·</span>
+                <span className="text-xs text-muted">Adjust</span>
+                <input
+                  type="number"
+                  min={0}
+                  value={bulkAdjust}
+                  onChange={(e) => setBulkAdjust(e.target.value)}
+                  placeholder="Qty"
+                  className="h-8 w-16 rounded-lg border border-border bg-background px-2 text-sm focus:border-accent focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => applyAdjust(-1)}
+                  disabled={!bulkAdjust.trim()}
+                  aria-label="Decrease stock"
+                  className="grid h-8 w-8 place-items-center rounded-lg border border-border transition-colors hover:border-danger hover:text-danger disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Minus size={15} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => applyAdjust(1)}
+                  disabled={!bulkAdjust.trim()}
+                  aria-label="Increase stock"
+                  className="grid h-8 w-8 place-items-center rounded-lg border border-border transition-colors hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Plus size={15} />
                 </button>
                 <button
                   type="button"
