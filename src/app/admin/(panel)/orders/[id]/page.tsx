@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Package, ShoppingBag, CreditCard, CalendarClock, IndianRupee } from "lucide-react";
 import { getOrderById, ORDER_STATUSES } from "@/lib/data/orders";
 import { getOrderActivity } from "@/lib/data/logs";
 import { getShiprocketConfig } from "@/lib/shiprocket";
@@ -9,6 +9,7 @@ import { formatINR } from "@/lib/format";
 import { OrderStatusBadge } from "@/components/admin/order-status-badge";
 import { OrderStatusForm } from "@/components/admin/order-status-form";
 import { OrderOperations } from "@/components/admin/order-operations";
+import { AdminOrderActions } from "@/components/admin/admin-order-actions";
 import { ShipmentPanel } from "@/components/admin/shipment-panel";
 import { OrderActivity } from "@/components/admin/order-activity";
 
@@ -36,6 +37,22 @@ export default async function OrderDetailPage({ params }: { params: Params }) {
       })
     : [];
 
+  // Product thumbnails for the order's items.
+  const imgRows = await prisma.product.findMany({
+    where: { id: { in: order.items.map((i) => i.id) } },
+    select: { id: true, image: true },
+  });
+  const imageById = new Map(imgRows.map((p) => [p.id, p.image]));
+
+  const v2Status = v2Order?.statusV2 ?? "PENDING";
+  const canCancel = ["PENDING", "CONFIRMED", "PROCESSING"].includes(v2Status);
+  const canMarkDelivered = ["SHIPPED", "OUT_FOR_DELIVERY"].includes(v2Status);
+  const itemCount = order.items.reduce((n, it) => n + it.qty, 0);
+  const paymentLabel =
+    order.paymentMethod === "PhonePe"
+      ? `${order.paymentInstrument || "UPI"} · ${order.paymentStatus || "Pending"}`
+      : "Cash on Delivery";
+
   const placed = new Date(order.createdAt).toLocaleString("en-IN", {
     timeZone: "Asia/Kolkata",
     day: "numeric",
@@ -54,11 +71,44 @@ export default async function OrderDetailPage({ params }: { params: Params }) {
         <ArrowLeft size={15} /> Back to orders
       </Link>
 
-      <div className="mt-3 flex flex-wrap items-center gap-3">
-        <h1 className="font-mono text-2xl font-bold tracking-tight">{order.orderNumber}</h1>
-        <OrderStatusBadge status={order.status} />
+      {/* order header — identity + key facts + admin actions */}
+      <div className="mt-3 rounded-2xl border border-border bg-surface p-5">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h1 className="font-mono text-2xl font-bold tracking-tight">{order.orderNumber}</h1>
+              <OrderStatusBadge status={order.status} />
+            </div>
+            <p className="mt-1 text-sm text-faint">Placed {placed}</p>
+          </div>
+          <AdminOrderActions
+            orderId={order.id}
+            orderNumber={order.orderNumber}
+            email={order.email}
+            phone={order.phone}
+            canCancel={canCancel}
+            canMarkDelivered={canMarkDelivered}
+          />
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border pt-4 sm:grid-cols-4">
+          <div>
+            <div className="tech-label flex items-center gap-1.5"><IndianRupee size={12} /> Total</div>
+            <div className="readout mt-0.5 text-lg font-bold">{formatINR(order.total)}</div>
+          </div>
+          <div>
+            <div className="tech-label flex items-center gap-1.5"><CreditCard size={12} /> Payment</div>
+            <div className="mt-0.5 text-sm font-semibold">{paymentLabel}</div>
+          </div>
+          <div>
+            <div className="tech-label flex items-center gap-1.5"><ShoppingBag size={12} /> Items</div>
+            <div className="mt-0.5 text-sm font-semibold">{itemCount} unit{itemCount === 1 ? "" : "s"}</div>
+          </div>
+          <div>
+            <div className="tech-label flex items-center gap-1.5"><CalendarClock size={12} /> Customer</div>
+            <div className="mt-0.5 truncate text-sm font-semibold">{order.firstName} {order.lastName}</div>
+          </div>
+        </div>
       </div>
-      <p className="mt-1 text-sm text-muted">Placed {placed}</p>
 
       <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
         {/* items + activity */}
@@ -89,23 +139,34 @@ export default async function OrderDetailPage({ params }: { params: Params }) {
               </span>
             </h2>
             <div className="divide-y divide-border">
-              {order.items.map((it) => (
-                <div key={it.id} className="flex items-center justify-between gap-4 px-5 py-2.5">
-                  <div className="min-w-0">
-                    <Link
-                      href={`/product/${it.slug}`}
-                      target="_blank"
-                      className="line-clamp-1 text-sm font-medium hover:text-accent-bright"
-                    >
-                      {it.name}
-                    </Link>
-                    <div className="text-xs text-muted">
-                      {formatINR(it.price)} × {it.qty}
+              {order.items.map((it) => {
+                const img = imageById.get(it.id);
+                return (
+                  <div key={it.id} className="flex items-center gap-3 px-5 py-3">
+                    <span className="grid h-[60px] w-[60px] shrink-0 place-items-center overflow-hidden rounded-lg border border-border bg-surface-2">
+                      {img ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={img} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        <Package size={20} className="text-faint" />
+                      )}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <Link
+                        href={`/product/${it.slug}`}
+                        target="_blank"
+                        className="line-clamp-2 text-sm font-medium hover:text-accent-bright"
+                      >
+                        {it.name}
+                      </Link>
+                      <div className="text-xs text-muted">
+                        {formatINR(it.price)} × {it.qty}
+                      </div>
                     </div>
+                    <span className="shrink-0 text-sm font-semibold">{formatINR(it.price * it.qty)}</span>
                   </div>
-                  <span className="shrink-0 text-sm font-semibold">{formatINR(it.price * it.qty)}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
             <dl className="space-y-1.5 border-t border-border px-5 py-3 text-sm">
               <div className="flex justify-between">

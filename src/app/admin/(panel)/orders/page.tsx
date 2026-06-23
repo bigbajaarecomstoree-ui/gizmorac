@@ -18,6 +18,8 @@ import { OrderFilters, OrdersPageSize } from "@/components/admin/order-filters";
 import { OrdersList } from "@/components/admin/orders-list";
 import type { Order, OrderStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { prisma } from "@/lib/prisma";
+import { canCancelOrder } from "@/lib/orders-policy";
 
 export const dynamic = "force-dynamic";
 
@@ -99,6 +101,13 @@ export default async function AdminOrdersPage({
   const page = Math.min(Math.max(1, Number(sp.page) || 1), pageCount);
   const start = (page - 1) * size;
   const pageItems = filtered.slice(start, start + size);
+
+  // Thumbnail (first item's product image) for each row.
+  const firstItemIds = [...new Set(pageItems.map((o) => o.items[0]?.id).filter(Boolean))] as string[];
+  const imgRows = firstItemIds.length
+    ? await prisma.product.findMany({ where: { id: { in: firstItemIds } }, select: { id: true, image: true } })
+    : [];
+  const imageById = new Map(imgRows.map((p) => [p.id, p.image]));
 
   const rangeLabel = DATE_RANGES.find((r) => r.value === range)?.label ?? "All time";
 
@@ -232,11 +241,20 @@ export default async function AdminOrdersPage({
             orderNumber: o.orderNumber,
             status: o.status,
             itemsLabel: itemsLabel(o),
-            meta: `${o.firstName} ${o.lastName} · ${o.city}, ${o.state} · ${fmtDate(o.createdAt)}`,
+            meta: `${o.firstName} ${o.lastName} · ${fmtDate(o.createdAt)}`,
+            image: o.items[0] ? imageById.get(o.items[0].id) ?? null : null,
+            city: o.city,
+            paymentLabel:
+              o.paymentMethod === "PhonePe"
+                ? `${o.paymentInstrument || "UPI"} · ${o.paymentStatus || "Pending"}`
+                : "COD",
+            courier: o.courier,
             count: o.items.reduce((n, i) => n + i.qty, 0),
             total: o.total,
             labelUrl: o.labelUrl,
+            trackingUrl: o.trackingUrl,
             hasShipment: Boolean(o.shipmentId),
+            canCancel: canCancelOrder(o.status),
           }))}
         />
       </div>
