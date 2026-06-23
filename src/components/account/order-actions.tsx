@@ -8,6 +8,7 @@ import {
   RotateCcw,
   XCircle,
   ShieldAlert,
+  ShieldCheck,
   Loader2,
   Check,
 } from "lucide-react";
@@ -29,6 +30,7 @@ export function OrderActions({
   items,
   canCancel,
   canDispute,
+  canWarranty = false,
   hasOpenTicket = false,
   showTrack = true,
   trackLabel = "Track order",
@@ -37,6 +39,7 @@ export function OrderActions({
   items: { id: string; qty: number }[];
   canCancel: boolean;
   canDispute: boolean;
+  canWarranty?: boolean;
   hasOpenTicket?: boolean;
   showTrack?: boolean;
   trackLabel?: string;
@@ -140,6 +143,13 @@ export function OrderActions({
             <ShieldAlert size={14} /> Dispute
           </button>
         )}
+
+        {/* Warranty claim — only shown when an item is under manufacturer warranty */}
+        {canWarranty ? (
+          <Link href={`/order/${orderNumber}#warranty-claim`} className={`${BTN} ${OUTLINE}`}>
+            <ShieldCheck size={14} /> Warranty claim
+          </Link>
+        ) : null}
       </div>
 
       {done ? (

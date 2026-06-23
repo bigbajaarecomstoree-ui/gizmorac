@@ -90,6 +90,8 @@ export interface Product {
   stock: number;
   /** Flag/warn when stock falls to or below this number. */
   lowStockThreshold: number;
+  /** Manufacturer warranty length in months (0 = no warranty). */
+  warrantyMonths: number;
   badges: string[];
   shortDescription: string;
   description: string;
@@ -292,6 +294,7 @@ export type TicketCategory =
   | "Defective"
   | "Wrong item"
   | "Not working"
+  | "Warranty"
   | "Other";
 
 /** "" = undecided. Otherwise the outcome the admin granted. */

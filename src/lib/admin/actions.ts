@@ -142,6 +142,7 @@ function productDataFromForm(fd: FormData) {
     reviewCount: int(fd, "reviewCount"),
     stock: int(fd, "stock"),
     lowStockThreshold: int(fd, "lowStockThreshold", 10),
+    warrantyMonths: Math.max(0, int(fd, "warrantyMonths", 0)),
     shortDescription: str(fd, "shortDescription"),
     description: str(fd, "description"),
     badges: JSON.stringify(

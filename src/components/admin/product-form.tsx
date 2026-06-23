@@ -196,6 +196,9 @@ export function ProductForm({
           <Field label="Low-stock alert at" hint="Flag the product when stock falls to this number.">
             <input name="lowStockThreshold" type="number" min={0} defaultValue={p?.lowStockThreshold ?? 10} className={inputCls} />
           </Field>
+          <Field label="Warranty (months)" hint="0 = no warranty. Buyers see a “Warranty claim” button only within this window.">
+            <input name="warrantyMonths" type="number" min={0} defaultValue={p?.warrantyMonths ?? 0} className={inputCls} />
+          </Field>
         </div>
       </Card>
 

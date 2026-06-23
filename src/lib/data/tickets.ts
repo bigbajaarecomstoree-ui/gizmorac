@@ -16,6 +16,7 @@ export const TICKET_CATEGORIES: TicketCategory[] = [
   "Defective",
   "Wrong item",
   "Not working",
+  "Warranty",
   "Other",
 ];
 

@@ -22,6 +22,7 @@ export interface OrderRow {
   items: { id: string; qty: number; art: DeviceArt }[];
   canCancel: boolean;
   canDispute: boolean;
+  canWarranty: boolean;
   trackLabel: string;
 }
 
@@ -115,6 +116,7 @@ export function OrderHistoryView({ rows }: { rows: OrderRow[] }) {
                   items={o.items.map((i) => ({ id: i.id, qty: i.qty }))}
                   canCancel={o.canCancel}
                   canDispute={o.canDispute}
+                  canWarranty={o.canWarranty}
                   trackLabel={o.trackLabel}
                 />
               </div>

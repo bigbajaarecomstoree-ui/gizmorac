@@ -9,7 +9,7 @@ import { MAX_QTY } from "@/lib/checkout-shared";
 import { initiatePayment, getPhonePeConfig } from "@/lib/phonepe";
 import { checkServiceability } from "@/lib/shiprocket";
 import { cancelOrderEverywhere } from "@/lib/data/order-fulfillment";
-import { canCancelOrder, isDisputeWindowOpen } from "@/lib/orders-policy";
+import { canCancelOrder, isDisputeWindowOpen, warrantyClaimOpen } from "@/lib/orders-policy";
 import { logEvent } from "@/lib/data/logs";
 import { prorate, rupeesToPaise } from "@/lib/postorder/money";
 import {
@@ -570,7 +570,29 @@ export async function raiseTicket(input: {
       error: "You can report a problem once your order is delivered.",
     };
   }
-  if (!isDisputeWindowOpen(order.status, order.deliveredAt)) {
+  if (input.category === "Warranty") {
+    // Warranty claims are allowed for the product's whole warranty window
+    // (not the 48h dispute window), and only if an item carries warranty.
+    let itemIds: string[] = [];
+    try {
+      const arr = JSON.parse(order.items);
+      if (Array.isArray(arr)) itemIds = arr.map((i) => i?.id).filter(Boolean);
+    } catch {}
+    const prods = itemIds.length
+      ? await prisma.product.findMany({
+          where: { id: { in: itemIds } },
+          select: { warrantyMonths: true },
+        })
+      : [];
+    const maxWarranty = Math.max(0, ...prods.map((p) => p.warrantyMonths));
+    if (!warrantyClaimOpen(order.status, order.deliveredAt, maxWarranty)) {
+      return {
+        ok: false,
+        error:
+          "This order isn't eligible for a warranty claim — no item is under warranty, or the warranty period has ended.",
+      };
+    }
+  } else if (!isDisputeWindowOpen(order.status, order.deliveredAt)) {
     return {
       ok: false,
       error: "The 48-hour window to raise a dispute has closed for this order.",

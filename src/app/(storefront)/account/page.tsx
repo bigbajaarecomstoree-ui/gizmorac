@@ -21,7 +21,7 @@ import { AccountNav } from "@/components/account/account-nav";
 import { RewardCouponCard } from "@/components/account/reward-coupon";
 import { SecurityAlert } from "@/components/account/security-alert";
 import { OrderHistoryView } from "@/components/account/order-history-view";
-import { canCancelOrder, isDisputeWindowOpen } from "@/lib/orders-policy";
+import { canCancelOrder, isDisputeWindowOpen, warrantyClaimOpen } from "@/lib/orders-policy";
 import { buttonVariants } from "@/components/ui/button";
 import type { DeviceArt } from "@/lib/types";
 
@@ -58,6 +58,7 @@ export default async function AccountPage() {
   ]);
   const activeRewards = rewards.filter((r) => !r.used && !r.expired);
   const artById = new Map<string, DeviceArt>(products.map((p) => [p.id, p.art]));
+  const warrantyById = new Map<string, number>(products.map((p) => [p.id, p.warrantyMonths]));
 
   // Overview figures.
   const firstName = customer.fullName.trim().split(/\s+/)[0] || "there";
@@ -215,6 +216,11 @@ export default async function AccountPage() {
                 })),
                 canCancel: canCancelOrder(o.status),
                 canDispute: isDisputeWindowOpen(o.status, o.deliveredAt),
+                canWarranty: warrantyClaimOpen(
+                  o.status,
+                  o.deliveredAt,
+                  Math.max(0, ...o.items.map((i) => warrantyById.get(i.id) ?? 0)),
+                ),
                 trackLabel: o.status === "Delivered" ? "View order" : "Track order",
               }))}
             />

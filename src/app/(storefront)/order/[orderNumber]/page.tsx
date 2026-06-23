@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CheckCircle2, XCircle, Package, Star, ShieldAlert, FileDown, RotateCcw, Truck } from "lucide-react";
 import { getOrderByNumber } from "@/lib/data/orders";
+import { getAllProducts } from "@/lib/data/queries";
 import { getReviewsForOrder } from "@/lib/data/customer-reviews";
 import { getRewardForOrder } from "@/lib/data/rewards";
 import { getTicketForOrder } from "@/lib/data/tickets";
@@ -17,7 +18,7 @@ import { ResumePayment } from "@/components/order/resume-payment";
 import { BuyAgainButton } from "@/components/account/buy-again";
 import { TicketPanel } from "@/components/account/ticket-panel";
 import { OrderActions } from "@/components/account/order-actions";
-import { canCancelOrder, isDisputeWindowOpen } from "@/lib/orders-policy";
+import { canCancelOrder, isDisputeWindowOpen, warrantyClaimOpen } from "@/lib/orders-policy";
 import { buttonVariants } from "@/components/ui/button";
 import type { OrderStatus } from "@/lib/types";
 
@@ -80,6 +81,15 @@ export default async function OrderPage({ params }: { params: Params }) {
         ])
       : [new Map(), null, null];
 
+  // Warranty eligibility: any item under an in-window manufacturer warranty?
+  let canWarranty = false;
+  if (isOwner && isDelivered) {
+    const allProducts = await getAllProducts();
+    const warrantyById = new Map(allProducts.map((p) => [p.id, p.warrantyMonths]));
+    const maxWarranty = Math.max(0, ...order.items.map((i) => warrantyById.get(i.id) ?? 0));
+    canWarranty = warrantyClaimOpen(order.status, order.deliveredAt, maxWarranty);
+  }
+
   return (
     <div className="shell py-8">
       <Breadcrumb
@@ -113,6 +123,7 @@ export default async function OrderPage({ params }: { params: Params }) {
               items={order.items.map((i) => ({ id: i.id, qty: i.qty }))}
               canCancel={canCancelOrder(order.status)}
               canDispute={isDisputeWindowOpen(order.status, order.deliveredAt)}
+              canWarranty={canWarranty}
               hasOpenTicket={Boolean(ticket)}
               showTrack={false}
             />
@@ -377,17 +388,25 @@ export default async function OrderPage({ params }: { params: Params }) {
 
         {/* support — raise / track a damage or defect ticket (delivered, owner) */}
         {isOwner && isDelivered ? (
-          <div id="raise-dispute" className="mt-5 scroll-mt-24 rounded-xl border border-border bg-surface p-5">
-            <div className="flex items-center gap-2">
-              <ShieldAlert size={18} className="text-danger" />
-              <h2 className="font-semibold">Need help with this order?</h2>
-            </div>
-            <p className="mt-1 text-sm text-muted">
-              Item damaged or defective? Raise a ticket and our team will help with a
-              refund, replacement or warranty claim.
-            </p>
-            <div className="mt-4">
-              <TicketPanel orderNumber={order.orderNumber} ticket={ticket} />
+          <div className="relative mt-5">
+            <span id="warranty-claim" className="absolute -top-24" aria-hidden />
+            <div id="raise-dispute" className="scroll-mt-24 rounded-xl border border-border bg-surface p-5">
+              <div className="flex items-center gap-2">
+                <ShieldAlert size={18} className="text-danger" />
+                <h2 className="font-semibold">Need help with this order?</h2>
+              </div>
+              <p className="mt-1 text-sm text-muted">
+                Item damaged or defective{canWarranty ? ", or making a warranty claim" : ""}?
+                Raise a ticket and our team will help with a refund, replacement or warranty
+                claim.
+              </p>
+              <div className="mt-4">
+                <TicketPanel
+                  orderNumber={order.orderNumber}
+                  ticket={ticket}
+                  allowWarranty={canWarranty}
+                />
+              </div>
             </div>
           </div>
         ) : null}

@@ -21,3 +21,24 @@ export function isDisputeWindowOpen(
   if (!ref) return true;
   return Date.now() - new Date(ref).getTime() <= DISPUTE_WINDOW_MS;
 }
+
+/**
+ * A warranty claim is allowed only while the order is delivered AND still
+ * within the product's warranty window. `warrantyMonths <= 0` means the product
+ * carries no warranty, so the button stays hidden entirely (never shown without
+ * warranty — avoids confusing buyers).
+ */
+export function warrantyClaimOpen(
+  status: string,
+  deliveredAt: string | Date | null | undefined,
+  warrantyMonths: number,
+  fallback?: string | Date | null,
+): boolean {
+  if (status !== "Delivered") return false;
+  if (!warrantyMonths || warrantyMonths <= 0) return false;
+  const ref = deliveredAt ?? fallback;
+  if (!ref) return true; // delivered, no timestamp (legacy) — allow within warranty
+  const end = new Date(ref);
+  end.setMonth(end.getMonth() + warrantyMonths);
+  return Date.now() <= end.getTime();
+}

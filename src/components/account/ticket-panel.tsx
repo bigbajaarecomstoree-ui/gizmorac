@@ -18,7 +18,13 @@ const RESOLUTION_COPY: Record<string, string> = {
   Warranty: "Your warranty claim has been approved.",
 };
 
-function NewTicketForm({ orderNumber }: { orderNumber: string }) {
+function NewTicketForm({
+  orderNumber,
+  allowWarranty = false,
+}: {
+  orderNumber: string;
+  allowWarranty?: boolean;
+}) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const [category, setCategory] = React.useState("");
@@ -84,7 +90,7 @@ function NewTicketForm({ orderNumber }: { orderNumber: string }) {
         <option value="" disabled>
           Select an issue…
         </option>
-        {CATEGORIES.map((c) => (
+        {(allowWarranty ? [...CATEGORIES, "Warranty"] : CATEGORIES).map((c) => (
           <option key={c} value={c}>
             {c}
           </option>
@@ -214,12 +220,14 @@ function TicketReply({ ticket }: { ticket: Ticket }) {
 export function TicketPanel({
   orderNumber,
   ticket,
+  allowWarranty = false,
 }: {
   orderNumber: string;
   ticket: Ticket | null;
+  allowWarranty?: boolean;
 }) {
   if (!ticket) {
-    return <NewTicketForm orderNumber={orderNumber} />;
+    return <NewTicketForm orderNumber={orderNumber} allowWarranty={allowWarranty} />;
   }
 
   const closed = ticket.status === "Resolved" || ticket.status === "Rejected";
