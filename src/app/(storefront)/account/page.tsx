@@ -22,6 +22,7 @@ import { ProductArt } from "@/components/product/product-art";
 import { AccountNav } from "@/components/account/account-nav";
 import { RewardCouponCard } from "@/components/account/reward-coupon";
 import { OrderActions } from "@/components/account/order-actions";
+import { SecurityAlert } from "@/components/account/security-alert";
 import { canCancelOrder, isDisputeWindowOpen } from "@/lib/orders-policy";
 import { buttonVariants } from "@/components/ui/button";
 import type { DeviceArt } from "@/lib/types";
@@ -183,7 +184,12 @@ export default async function AccountPage() {
         ) : null}
       </div>
 
-      <div className="mt-8 space-y-8">
+      {/* anti-fraud notice for the orders area */}
+      <div className="mt-8">
+        <SecurityAlert />
+      </div>
+
+      <div className="mt-6 space-y-8">
         {/* order history */}
         <section className="min-w-0">
           <h2 className="text-lg font-semibold">Order history</h2>
