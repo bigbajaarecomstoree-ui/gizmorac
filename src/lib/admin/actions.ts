@@ -1275,11 +1275,25 @@ export async function shipNow(orderId: string): Promise<ShipResult> {
     where: { id: orderId },
     data: {
       status: "Shipped",
+      // Advance the v2 status too, so the order reaches SHIPPED and the
+      // customer/admin Cancel action correctly disables once it's dispatched.
+      statusV2: "SHIPPED",
       awb: s.awb || t?.awb || order.awb,
       courier: s.courier || t?.courier || order.courier,
       labelUrl: s.labelUrl || order.labelUrl,
       trackingUrl: t?.trackingUrl || order.trackingUrl,
       shipmentStatus: t?.status || "Ready to ship",
+    },
+  });
+  await prisma.orderStatusHistory.create({
+    data: {
+      entityType: "ORDER",
+      entityId: orderId,
+      orderId,
+      previousState: order.status,
+      newState: "SHIPPED",
+      actorRole: "ADMIN",
+      reason: "shipped via Shiprocket",
     },
   });
   await logEvent({

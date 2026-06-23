@@ -14,6 +14,7 @@ import { runQc } from "@/lib/postorder/qc-service";
 import { approveReplacement, markReplacementDelivered } from "@/lib/postorder/replacements";
 import { createRefund, processRefund, applyRefundWebhook } from "@/lib/postorder/refund-engine";
 import { transitionEntity, recomputeOrderStatus } from "@/lib/postorder/transition-engine";
+import { cancelShiprocketOrder } from "@/lib/shiprocket";
 import type { QcResolution } from "@/lib/postorder/qc";
 
 const ACTOR = { role: "ADMIN" as const, id: "admin", email: "admin" };
@@ -146,7 +147,10 @@ export async function adminAdvanceFulfillment(orderId: string, to: string): Prom
 /** Cancel an order: override → CANCELLED, freeze items to CLOSED, refund if paid pre-ship. */
 export async function adminCancelOrder(orderId: string): Promise<OpResult> {
   await guard();
-  const order = await prisma.order.findUnique({ where: { id: orderId }, select: { statusV2: true, paymentState: true, amountPaidPaise: true } });
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: { statusV2: true, paymentState: true, amountPaidPaise: true, shiprocketOrderId: true, awb: true },
+  });
   if (!order) return { ok: false, error: "Order not found." };
 
   const t = await transitionEntity({ kind: "order", id: orderId, to: "CANCELLED", actor: ACTOR, reason: "cancelled by admin" });
@@ -159,14 +163,23 @@ export async function adminCancelOrder(orderId: string): Promise<OpResult> {
     }
   }
 
-  let note = "Order cancelled.";
+  const parts = ["Order cancelled."];
+
+  // Cancel the Shiprocket shipment too (refunds freight to the wallet) — best-effort.
+  if (order.shiprocketOrderId) {
+    const c = await cancelShiprocketOrder({ shiprocketOrderId: order.shiprocketOrderId, awb: order.awb || undefined });
+    await prisma.order.update({ where: { id: orderId }, data: { shipmentStatus: "Cancelled" } });
+    parts.push(c.ok ? "Shipment cancelled." : `Shipment needs a manual cancel (${c.error}).`);
+  }
+
+  // Refund the customer's online payment.
   if (order.paymentState === "PAID" && (order.amountPaidPaise ?? 0) > 0) {
     const created = await createRefund({ orderId, amountPaise: order.amountPaidPaise ?? 0, reason: "order cancelled", idempotencyKey: `${orderId}-cancel-refund`, actor: ACTOR });
     if (created.ok && created.refundId) {
       await processRefund(created.refundId, ACTOR);
-      note = "Order cancelled + refund initiated.";
+      parts.push("Refund initiated.");
     }
   }
   done(orderId);
-  return { ok: true, note };
+  return { ok: true, note: parts.join(" ") };
 }
