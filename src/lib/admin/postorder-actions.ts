@@ -149,7 +149,17 @@ export async function adminCancelOrder(orderId: string): Promise<OpResult> {
   await guard();
   const order = await prisma.order.findUnique({
     where: { id: orderId },
-    select: { statusV2: true, paymentState: true, amountPaidPaise: true, shiprocketOrderId: true, awb: true },
+    select: {
+      statusV2: true,
+      paymentState: true,
+      paymentStatus: true,
+      paymentMethod: true,
+      amountPaidPaise: true,
+      totalPaise: true,
+      total: true,
+      shiprocketOrderId: true,
+      awb: true,
+    },
   });
   if (!order) return { ok: false, error: "Order not found." };
 
@@ -172,12 +182,29 @@ export async function adminCancelOrder(orderId: string): Promise<OpResult> {
     parts.push(c.ok ? "Shipment cancelled." : `Shipment needs a manual cancel (${c.error}).`);
   }
 
-  // Refund the customer's online payment.
-  if (order.paymentState === "PAID" && (order.amountPaidPaise ?? 0) > 0) {
-    const created = await createRefund({ orderId, amountPaise: order.amountPaidPaise ?? 0, reason: "order cancelled", idempotencyKey: `${orderId}-cancel-refund`, actor: ACTOR });
-    if (created.ok && created.refundId) {
-      await processRefund(created.refundId, ACTOR);
-      parts.push("Refund initiated.");
+  // Refund the customer's online payment. Robust against orders whose v2
+  // paymentState wasn't synced (fall back to the legacy "Paid" signal + total).
+  const paidOnline =
+    order.paymentMethod === "PhonePe" &&
+    (order.paymentState === "PAID" || order.paymentStatus === "Paid");
+  if (paidOnline) {
+    const amt =
+      order.amountPaidPaise && order.amountPaidPaise > 0
+        ? order.amountPaidPaise
+        : order.totalPaise ?? order.total * 100;
+    // Backfill the paid amount so the over-refund guard has the right ceiling.
+    if (!order.amountPaidPaise || order.amountPaidPaise <= 0) {
+      await prisma.order.update({
+        where: { id: orderId },
+        data: { amountPaidPaise: amt, paymentState: "PAID" },
+      });
+    }
+    if (amt > 0) {
+      const created = await createRefund({ orderId, amountPaise: amt, reason: "order cancelled", idempotencyKey: `${orderId}-cancel-refund`, actor: ACTOR });
+      if (created.ok && created.refundId) {
+        await processRefund(created.refundId, ACTOR);
+        parts.push("Refund initiated.");
+      }
     }
   }
   done(orderId);

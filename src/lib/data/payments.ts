@@ -50,6 +50,10 @@ export async function reconcilePhonePeOrder(
         paymentStatus: "Paid",
         paymentRef: status.reference || status.transactionId || order.paymentRef,
         paymentInstrument: status.instrument || order.paymentInstrument,
+        // Keep the v2 state in sync so cancel/refund logic sees the payment.
+        statusV2: "CONFIRMED",
+        paymentState: "PAID",
+        amountPaidPaise: order.totalPaise ?? order.total * 100,
       },
     });
     await logEvent({
@@ -69,6 +73,8 @@ export async function reconcilePhonePeOrder(
         status: "Cancelled",
         paymentStatus: "Failed",
         paymentError: status.error || "Payment was not completed.",
+        statusV2: "CANCELLED",
+        paymentState: "FAILED",
       },
     });
     await restoreStock(order.items);
