@@ -233,18 +233,26 @@ export function SiteFooter({
         </div>
 
         <div className="flex flex-col items-center justify-between gap-4 border-t border-border py-6 sm:flex-row">
-          <p className="text-xs text-faint">
+          <p className="order-2 text-xs text-faint sm:order-1">
             © {new Date().getFullYear()} GIZMORAC. All rights reserved.
           </p>
-          <div className="flex items-center gap-2.5">
-            <span className="tech-label">Payment partner</span>
-            <Image
-              src="/phonepe-payment-gateway.png"
-              alt="PhonePe Payment Gateway"
-              width={431}
-              height={117}
-              className="h-7 w-auto"
-            />
+          <div className="order-1 flex flex-wrap items-center justify-center gap-x-7 gap-y-3 sm:order-2">
+            <div className="flex items-center gap-2.5">
+              <span className="tech-label">Payment partner</span>
+              <Image
+                src="/phonepe-payment-gateway.png"
+                alt="PhonePe Payment Gateway"
+                width={431}
+                height={117}
+                className="h-7 w-auto"
+              />
+            </div>
+            <div className="flex items-center gap-2.5">
+              <span className="tech-label">Shipping partner</span>
+              {/* Local SVG served directly — the next/image optimizer rejects SVG. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/shiprocket.svg" alt="Shiprocket" width={1440} height={320} className="h-7 w-auto" />
+            </div>
           </div>
         </div>
       </div>

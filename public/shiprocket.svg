@@ -1,0 +1,11 @@
+<svg viewBox="0 0 1440 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Shiprocket">
+  <!-- play-triangle ribbon icon -->
+  <path d="M78 58 L268 162 L78 266 Z"
+        fill="none" stroke="#6739B7" stroke-width="36"
+        stroke-linejoin="round" stroke-linecap="round"/>
+  <!-- inner green play -->
+  <path d="M126 120 L206 162 L126 204 Z" fill="#39C12F"/>
+  <!-- wordmark -->
+  <text x="320" y="228" font-family="Arial, Helvetica, sans-serif"
+        font-size="210" font-weight="700" fill="#333333">Shiprocket</text>
+</svg>
