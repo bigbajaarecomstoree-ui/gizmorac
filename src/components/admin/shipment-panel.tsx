@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { pushToShiprocket, syncShipment, shipNow } from "@/lib/admin/actions";
 import { Button } from "@/components/ui/button";
+import { formatINR } from "@/lib/format";
 
 export function ShipmentPanel({
   orderId,
@@ -22,6 +23,7 @@ export function ShipmentPanel({
   trackingUrl,
   labelUrl,
   shipmentStatus,
+  shipmentCostPaise,
   returnAwb,
   returnCourier,
   returnTrackingUrl,
@@ -40,6 +42,7 @@ export function ShipmentPanel({
   trackingUrl: string;
   labelUrl: string;
   shipmentStatus: string;
+  shipmentCostPaise: number;
   returnAwb: string;
   returnCourier: string;
   returnTrackingUrl: string;
@@ -124,6 +127,16 @@ export function ShipmentPanel({
           <div className="flex justify-between">
             <span className="text-muted">AWB</span>
             <span className="font-mono">{awb}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted">Shipping cost</span>
+            {shipmentCostPaise > 0 ? (
+              <span className="font-semibold">{formatINR(shipmentCostPaise / 100)}</span>
+            ) : (
+              <span className="text-faint" title="Captured at dispatch — older shipments may not have it recorded">
+                Not recorded
+              </span>
+            )}
           </div>
           <div className="flex flex-wrap items-center gap-2 pt-2">
             {labelUrl ? (

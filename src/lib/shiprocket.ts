@@ -406,6 +406,8 @@ export interface ShipResult {
   awb?: string;
   courier?: string;
   labelUrl?: string;
+  /** Freight Shiprocket charged us for this AWB, in whole rupees (0 if unknown). */
+  freightCharge?: number;
   error?: string;
 }
 
@@ -431,11 +433,21 @@ export async function shipShipment(shipmentId: string): Promise<ShipResult> {
     });
     const awbData = (await awbRes.json().catch(() => ({}))) as {
       awb_assign_status?: number;
-      response?: { data?: { awb_code?: string; courier_name?: string } };
+      response?: {
+        data?: {
+          awb_code?: string;
+          courier_name?: string;
+          freight_charge?: number | string;
+          rate?: number | string;
+        };
+      };
       message?: string;
     };
     const awb = awbData.response?.data?.awb_code || "";
     const courier = awbData.response?.data?.courier_name || "";
+    // Shiprocket bills the freight on AWB assignment; capture it as our shipping cost.
+    const freightCharge =
+      Number(awbData.response?.data?.freight_charge ?? awbData.response?.data?.rate) || 0;
     if (!awbRes.ok || !awb) {
       return {
         ok: false,
@@ -467,7 +479,7 @@ export async function shipShipment(shipmentId: string): Promise<ShipResult> {
     };
     if (labelRes.ok) labelUrl = labelData.label_url || "";
 
-    return { ok: true, awb, courier, labelUrl };
+    return { ok: true, awb, courier, labelUrl, freightCharge };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Shiprocket error" };
   }

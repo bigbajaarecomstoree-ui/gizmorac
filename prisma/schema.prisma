@@ -124,6 +124,7 @@ model Order {
   trackingUrl            String             @default("")
   labelUrl               String             @default("") // Shiprocket shipping-label PDF
   shipmentStatus         String             @default("") // latest Shiprocket status label
+  shipmentCostPaise      Int                @default(0) // freight charged to us by Shiprocket (paise)
   // Replacement: reverse pickup (customer -> warehouse).
   returnOrderId          String             @default("")
   returnShipmentId       String             @default("")

@@ -1315,6 +1315,8 @@ export async function shipNow(orderId: string): Promise<ShipResult> {
       labelUrl: s.labelUrl || order.labelUrl,
       trackingUrl: t?.trackingUrl || order.trackingUrl,
       shipmentStatus: t?.status || "Ready to ship",
+      // Only overwrite when Shiprocket actually returned a freight charge.
+      ...(s.freightCharge ? { shipmentCostPaise: Math.round(s.freightCharge * 100) } : {}),
     },
   });
   await prisma.orderStatusHistory.create({

@@ -57,6 +57,7 @@ function toOrder(r: OrderRow): Order {
     trackingUrl: r.trackingUrl,
     labelUrl: r.labelUrl,
     shipmentStatus: r.shipmentStatus,
+    shipmentCostPaise: r.shipmentCostPaise,
     returnOrderId: r.returnOrderId,
     returnShipmentId: r.returnShipmentId,
     returnAwb: r.returnAwb,

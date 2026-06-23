@@ -1,0 +1,1 @@
+ALTER TABLE "Order" ADD COLUMN "shipmentCostPaise" INTEGER NOT NULL DEFAULT 0;

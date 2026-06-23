@@ -201,6 +201,8 @@ export interface Order {
   trackingUrl: string;
   labelUrl: string;
   shipmentStatus: string;
+  /** Freight charged to us by Shiprocket for this shipment, in paise. */
+  shipmentCostPaise: number;
   /** Replacement: reverse pickup (customer → warehouse). */
   returnOrderId: string;
   returnShipmentId: string;

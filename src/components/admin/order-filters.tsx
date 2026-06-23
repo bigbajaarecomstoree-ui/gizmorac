@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { ORDER_STATUSES, DATE_RANGES, type DateRange } from "@/lib/data/orders";
 import { Select, type SelectOption } from "@/components/ui/select";
 import type { OrderStatus } from "@/lib/types";
@@ -46,6 +46,10 @@ export function OrderFilters({
 }) {
   const router = useRouter();
   const [search, setSearch] = React.useState(q);
+  const hasFilters = status !== "all" || range !== "all" || q.trim() !== "";
+  // Set when "Clear filters" resets everything, so the search debounce below
+  // doesn't re-push the now-stale status/range and undo the reset.
+  const suppressDebounce = React.useRef(false);
 
   const [prevQ, setPrevQ] = React.useState(q);
   if (q !== prevQ) {
@@ -54,6 +58,10 @@ export function OrderFilters({
   }
 
   React.useEffect(() => {
+    if (suppressDebounce.current) {
+      suppressDebounce.current = false;
+      return;
+    }
     const trimmed = search.trim();
     if (trimmed === q) return;
     const handle = setTimeout(
@@ -62,6 +70,12 @@ export function OrderFilters({
     );
     return () => clearTimeout(handle);
   }, [search, q, status, range, size, router]);
+
+  function clearAll() {
+    suppressDebounce.current = true;
+    setSearch("");
+    router.push("/admin/orders");
+  }
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -79,8 +93,21 @@ export function OrderFilters({
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search order #, name, email, phone"
           aria-label="Search orders"
-          className="h-10 w-full rounded-lg border border-border bg-background pl-9 pr-3 text-sm placeholder:text-faint focus:border-accent focus:outline-none"
+          className="h-10 w-full rounded-lg border border-border bg-background pl-9 pr-9 text-sm placeholder:text-faint focus:border-accent focus:outline-none"
         />
+        {search ? (
+          <button
+            type="button"
+            onClick={() => {
+              setSearch("");
+              router.push(buildUrl({ status, range, q: "", size }));
+            }}
+            aria-label="Clear search"
+            className="absolute right-2.5 top-1/2 grid size-5 -translate-y-1/2 place-items-center rounded text-faint transition-colors hover:text-foreground"
+          >
+            <X size={15} />
+          </button>
+        ) : null}
       </form>
 
       <Select
@@ -96,6 +123,16 @@ export function OrderFilters({
         onChange={(s) => router.push(buildUrl({ status: s, range, q: search, size }))}
         ariaLabel="Order status"
       />
+
+      {hasFilters ? (
+        <button
+          type="button"
+          onClick={clearAll}
+          className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-muted transition-colors hover:border-danger hover:text-danger"
+        >
+          <X size={15} /> Clear filters
+        </button>
+      ) : null}
     </div>
   );
 }
