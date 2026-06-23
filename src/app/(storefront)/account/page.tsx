@@ -17,12 +17,10 @@ import { getAllProducts } from "@/lib/data/queries";
 import { logoutAction } from "@/lib/customer/actions";
 import { formatINR } from "@/lib/format";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
-import { OrderStatusBadge } from "@/components/admin/order-status-badge";
-import { ProductArt } from "@/components/product/product-art";
 import { AccountNav } from "@/components/account/account-nav";
 import { RewardCouponCard } from "@/components/account/reward-coupon";
-import { OrderActions } from "@/components/account/order-actions";
 import { SecurityAlert } from "@/components/account/security-alert";
+import { OrderHistoryView } from "@/components/account/order-history-view";
 import { canCancelOrder, isDisputeWindowOpen } from "@/lib/orders-policy";
 import { buttonVariants } from "@/components/ui/button";
 import type { DeviceArt } from "@/lib/types";
@@ -37,14 +35,6 @@ export const dynamic = "force-dynamic";
 const REWARD_PERCENT = 10;
 const TERMINAL = ["Cancelled", "Returned", "Refunded"];
 
-function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-IN", {
-    timeZone: "Asia/Kolkata",
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
 function fmtMonthYear(iso: string) {
   return new Date(iso).toLocaleDateString("en-IN", {
     timeZone: "Asia/Kolkata",
@@ -205,70 +195,29 @@ export default async function AccountPage() {
               </Link>
             </div>
           ) : (
-            <div className="mt-4 space-y-3">
-              {orders.map((o) => {
-                const count = o.items.reduce((n, i) => n + i.qty, 0);
-                const first = o.items[0];
-                const moreItems = o.items.length - 1;
-                const summary = first
-                  ? `${first.name}${moreItems > 0 ? ` + ${moreItems} more` : ""}`
-                  : "—";
-                return (
-                  <div
-                    key={o.id}
-                    className="rounded-xl border border-border bg-surface p-4 transition-colors hover:border-border-bright"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-sm font-semibold">{o.orderNumber}</span>
-                        <OrderStatusBadge status={o.status} />
-                      </div>
-                      <span className="text-xs text-muted">{fmtDate(o.createdAt)}</span>
-                    </div>
-
-                    <div className="mt-3 flex items-center gap-3">
-                      <div className="flex -space-x-2">
-                        {o.items.slice(0, 3).map((it) => (
-                          <span
-                            key={it.id}
-                            className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-border bg-background"
-                          >
-                            <ProductArt
-                              art={artById.get(it.id) ?? ("printer" as DeviceArt)}
-                              glyphClassName="!h-[40%]"
-                            />
-                          </span>
-                        ))}
-                        {o.items.length > 3 ? (
-                          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-border bg-surface-2 text-xs font-semibold text-muted">
-                            +{o.items.length - 3}
-                          </span>
-                        ) : null}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">{summary}</p>
-                        <p className="text-xs text-muted">
-                          {count} item{count === 1 ? "" : "s"} ·{" "}
-                          <span className="readout font-semibold text-foreground">
-                            {formatINR(o.total)}
-                          </span>
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="mt-3 border-t border-border pt-3">
-                      <OrderActions
-                        orderNumber={o.orderNumber}
-                        items={o.items.map((i) => ({ id: i.id, qty: i.qty }))}
-                        canCancel={canCancelOrder(o.status)}
-                        canDispute={isDisputeWindowOpen(o.status, o.deliveredAt)}
-                        trackLabel={o.status === "Delivered" ? "View order" : "Track order"}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <OrderHistoryView
+              rows={orders.map((o) => ({
+                id: o.id,
+                orderNumber: o.orderNumber,
+                status: o.status,
+                createdAt: o.createdAt,
+                paymentLabel: o.paymentMethod === "PhonePe" ? "Prepaid" : "COD",
+                total: o.total,
+                address: [o.city, o.state].filter(Boolean).join(", "),
+                itemsSummary: o.items[0]
+                  ? `${o.items[0].name}${o.items.length > 1 ? ` + ${o.items.length - 1} more` : ""}`
+                  : "—",
+                count: o.items.reduce((n, i) => n + i.qty, 0),
+                items: o.items.map((i) => ({
+                  id: i.id,
+                  qty: i.qty,
+                  art: artById.get(i.id) ?? ("printer" as DeviceArt),
+                })),
+                canCancel: canCancelOrder(o.status),
+                canDispute: isDisputeWindowOpen(o.status, o.deliveredAt),
+                trackLabel: o.status === "Delivered" ? "View order" : "Track order",
+              }))}
+            />
           )}
         </section>
 
