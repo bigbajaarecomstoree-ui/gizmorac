@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { getAllProducts } from "@/lib/data/queries";
 import { getCurrentCustomer } from "@/lib/customer-auth";
 import { getAddressesForCustomer } from "@/lib/data/addresses";
-import { getLastPaymentMethod } from "@/lib/data/orders";
 import { getSettings } from "@/lib/data/settings";
 import { getPhonePeConfig } from "@/lib/phonepe";
 import { CheckoutView } from "@/components/checkout/checkout-view";
@@ -23,9 +22,6 @@ export default async function CheckoutPage() {
     getSettings(),
     getPhonePeConfig(),
   ]);
-  const preferredMethod = customer
-    ? await getLastPaymentMethod(customer.id, customer.email)
-    : "";
   const addresses = customer ? await getAddressesForCustomer(customer.id) : [];
 
   return (
@@ -47,7 +43,6 @@ export default async function CheckoutPage() {
           shippingFee={settings.shippingFee}
           codEnabled={settings.codEnabled}
           phonepeEnabled={phonepe.configured}
-          preferredMethod={preferredMethod || undefined}
         />
       </div>
     </div>
