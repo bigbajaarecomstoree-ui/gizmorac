@@ -251,7 +251,7 @@ export function SiteFooter({
               <span className="tech-label">Shipping partner</span>
               {/* Local SVG served directly — the next/image optimizer rejects SVG. */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/shiprocket.svg" alt="Shiprocket" width={1440} height={320} className="h-7 w-auto" />
+              <img src="/shiprocket.svg" alt="Shiprocket" width={1500} height={320} className="h-7 w-auto" />
             </div>
           </div>
         </div>

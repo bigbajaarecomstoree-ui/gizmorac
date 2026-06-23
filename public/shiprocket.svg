@@ -1,11 +1,12 @@
-<svg viewBox="0 0 1440 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Shiprocket">
-  <!-- play-triangle ribbon icon -->
-  <path d="M78 58 L268 162 L78 266 Z"
-        fill="none" stroke="#6739B7" stroke-width="36"
+<svg viewBox="0 0 1500 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Shiprocket">
+  <!-- rounded purple play / rocket triangle -->
+  <path d="M64 46 L64 234 L238 140 Z" fill="none" stroke="#5B2B8E" stroke-width="30"
         stroke-linejoin="round" stroke-linecap="round"/>
-  <!-- inner green play -->
-  <path d="M126 120 L206 162 L126 204 Z" fill="#39C12F"/>
-  <!-- wordmark -->
-  <text x="320" y="228" font-family="Arial, Helvetica, sans-serif"
-        font-size="210" font-weight="700" fill="#333333">Shiprocket</text>
+  <!-- inner vivid-green play triangle -->
+  <path d="M116 104 L116 196 L198 150 Z" fill="#39D239"/>
+  <!-- wordmark: purple S, charcoal remainder -->
+  <text x="300" y="226" font-family="'Nunito','Baloo 2','Trebuchet MS',system-ui,Arial,sans-serif"
+        font-size="200" font-weight="800" letter-spacing="-4">
+    <tspan fill="#5B2B8E">S</tspan><tspan fill="#2E2E2E">hiprocket</tspan>
+  </text>
 </svg>
