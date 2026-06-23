@@ -142,6 +142,8 @@ model Order {
   // Set when the order is marked Delivered — drives the 48h dispute window.
   deliveredAt            DateTime?
   couponCode             String?
+  // Internal admin-only notes (never shown to the customer).
+  adminNotes             String             @default("")
   // Optional link to a registered customer (guest checkout leaves this null).
   customerId             String?
   customer               Customer?          @relation(fields: [customerId], references: [id])

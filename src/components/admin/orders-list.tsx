@@ -13,9 +13,10 @@ import {
   Eye,
   Truck,
   XCircle,
+  Download,
 } from "lucide-react";
 import { OrderStatusBadge } from "@/components/admin/order-status-badge";
-import { bulkDownloadLabels } from "@/lib/admin/actions";
+import { bulkDownloadLabels, bulkMarkShipped } from "@/lib/admin/actions";
 import { adminCancelOrder } from "@/lib/admin/postorder-actions";
 import { formatINR } from "@/lib/format";
 import type { OrderStatus } from "@/lib/types";
@@ -50,9 +51,10 @@ export function OrdersList({ rows }: { rows: OrderRow[] }) {
   const [openId, setOpenId] = React.useState<string | null>(null);
   const [cancelling, setCancelling] = React.useState<string | null>(null);
 
-  const shippable = rows.filter((r) => r.hasShipment);
-  const shippableIds = shippable.map((r) => r.id);
-  const allSelected = shippableIds.length > 0 && shippableIds.every((id) => sel.has(id));
+  const allIds = rows.map((r) => r.id);
+  const allSelected = allIds.length > 0 && allIds.every((id) => sel.has(id));
+  const selectedRows = rows.filter((r) => sel.has(r.id));
+  const labelTargets = rows.filter((r) => r.hasShipment);
 
   function toggle(id: string) {
     setSel((s) => {
@@ -63,14 +65,16 @@ export function OrdersList({ rows }: { rows: OrderRow[] }) {
     });
   }
   function toggleAll() {
-    setSel(allSelected ? new Set() : new Set(shippableIds));
+    setSel(allSelected ? new Set() : new Set(allIds));
   }
 
   function download() {
     setError(null);
-    const ids = sel.size > 0 ? [...sel] : shippableIds;
+    const ids = (selectedRows.length ? selectedRows : labelTargets)
+      .filter((r) => r.hasShipment)
+      .map((r) => r.id);
     if (ids.length === 0) {
-      setError("No orders here have a shipping label yet.");
+      setError("None of these orders have a shipping label yet.");
       return;
     }
     start(async () => {
@@ -80,6 +84,21 @@ export function OrdersList({ rows }: { rows: OrderRow[] }) {
         return;
       }
       window.open(res.url, "_blank", "noopener");
+    });
+  }
+
+  function shipSelected() {
+    const ids = selectedRows.filter((r) => !r.hasShipment).map((r) => r.id);
+    if (ids.length === 0) {
+      setError("Select one or more orders that haven't shipped yet.");
+      return;
+    }
+    if (!confirm(`Ship ${ids.length} order${ids.length === 1 ? "" : "s"}? Each assigns a courier, label and pickup.`)) return;
+    setError(null);
+    setNote(null);
+    start(async () => {
+      const r = await bulkMarkShipped(ids);
+      setNote(`Shipped ${r.shipped}${r.failed ? `, ${r.failed} failed` : ""}.`);
     });
   }
 
@@ -99,21 +118,37 @@ export function OrdersList({ rows }: { rows: OrderRow[] }) {
 
   return (
     <div>
-      {shippable.length > 0 ? (
-        <div className="mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface px-4 py-2.5">
+      {rows.length > 0 ? (
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface px-4 py-2.5">
           <label className="flex cursor-pointer items-center gap-2 text-sm text-muted">
             <input type="checkbox" checked={allSelected} onChange={toggleAll} className={checkbox} />
-            Select all with labels ({shippable.length})
+            {sel.size > 0 ? `${sel.size} selected` : `Select all (${rows.length})`}
           </label>
-          <button
-            type="button"
-            onClick={download}
-            disabled={pending}
-            className="ml-auto inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-accent px-3.5 py-2 text-sm font-semibold text-on-accent transition-colors hover:bg-accent-hover disabled:opacity-60"
-          >
-            {pending ? <Loader2 size={15} className="animate-spin" /> : <Printer size={15} />}
-            {sel.size > 0 ? `Print ${sel.size} label${sel.size === 1 ? "" : "s"}` : "Print all labels"}
-          </button>
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            <a
+              href="/api/admin/orders/export"
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium text-muted transition-colors hover:border-accent hover:text-accent"
+            >
+              <Download size={15} /> Export CSV
+            </a>
+            <button
+              type="button"
+              onClick={shipSelected}
+              disabled={pending}
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium text-muted transition-colors hover:border-accent hover:text-accent disabled:opacity-60"
+            >
+              <Truck size={15} /> Mark shipped
+            </button>
+            <button
+              type="button"
+              onClick={download}
+              disabled={pending}
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-accent px-3.5 py-2 text-sm font-semibold text-on-accent transition-colors hover:bg-accent-hover disabled:opacity-60"
+            >
+              {pending ? <Loader2 size={15} className="animate-spin" /> : <Printer size={15} />}
+              Print labels
+            </button>
+          </div>
         </div>
       ) : null}
 
@@ -136,17 +171,13 @@ export function OrdersList({ rows }: { rows: OrderRow[] }) {
           <div className="divide-y divide-border">
             {rows.map((o) => (
               <div key={o.id} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2">
-                {o.hasShipment ? (
-                  <input
-                    type="checkbox"
-                    checked={sel.has(o.id)}
-                    onChange={() => toggle(o.id)}
-                    aria-label={`Select ${o.orderNumber}`}
-                    className={checkbox}
-                  />
-                ) : (
-                  <span className="w-4 shrink-0" />
-                )}
+                <input
+                  type="checkbox"
+                  checked={sel.has(o.id)}
+                  onChange={() => toggle(o.id)}
+                  aria-label={`Select ${o.orderNumber}`}
+                  className={checkbox}
+                />
 
                 <Link href={`/admin/orders/${o.id}`} className="flex min-w-0 flex-1 items-center gap-3">
                   <span className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-lg border border-border bg-surface-2">

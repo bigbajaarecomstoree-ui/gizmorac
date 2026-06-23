@@ -47,6 +47,18 @@ function when(iso: string): string {
   });
 }
 
+function relative(iso: string): string {
+  const s = Math.round((Date.now() - new Date(iso).getTime()) / 1000);
+  if (s < 60) return "just now";
+  const m = Math.round(s / 60);
+  if (m < 60) return `${m} min${m === 1 ? "" : "s"} ago`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h} hour${h === 1 ? "" : "s"} ago`;
+  const d = Math.round(h / 24);
+  if (d < 30) return `${d} day${d === 1 ? "" : "s"} ago`;
+  return when(iso);
+}
+
 export function OrderActivity({ events }: { events: OrderEvent[] }) {
   return (
     <div className="rounded-xl border border-border bg-surface">
@@ -88,8 +100,8 @@ export function OrderActivity({ events }: { events: OrderEvent[] }) {
                     {e.message ? (
                       <p className="mt-0.5 text-sm text-muted break-words">{e.message}</p>
                     ) : null}
-                    <p className="mt-1 text-xs text-faint">
-                      {when(e.createdAt)} · {actorName(e.actor, e.actorEmail)}
+                    <p className="mt-1 text-xs text-faint" title={when(e.createdAt)}>
+                      {actorName(e.actor, e.actorEmail)} · {relative(e.createdAt)}
                     </p>
                   </div>
                 </li>

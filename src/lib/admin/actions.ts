@@ -778,6 +778,38 @@ export async function bulkDownloadLabels(
   return generateLabels(ids);
 }
 
+/** Ship many orders at once (assign AWB + label + pickup per order). */
+export async function bulkMarkShipped(
+  orderIds: string[],
+): Promise<{ ok: boolean; shipped: number; failed: number; error?: string }> {
+  await assertAdmin();
+  if (orderIds.length === 0) return { ok: false, shipped: 0, failed: 0, error: "Select at least one order." };
+  let shipped = 0;
+  let failed = 0;
+  for (const id of orderIds) {
+    try {
+      const r = await shipNow(id);
+      if (r.ok) shipped++;
+      else failed++;
+    } catch {
+      failed++;
+    }
+  }
+  revalidatePath("/admin/orders");
+  return { ok: true, shipped, failed };
+}
+
+/** Save internal admin notes on an order (never shown to the customer). */
+export async function saveAdminNotes(orderId: string, notes: string): Promise<{ ok: boolean }> {
+  await assertAdmin();
+  await prisma.order.update({
+    where: { id: orderId },
+    data: { adminNotes: notes.slice(0, 4000) },
+  });
+  revalidatePath(`/admin/orders/${orderId}`);
+  return { ok: true };
+}
+
 // --- customers (soft delete / restore) ---
 
 export interface CustomerStatusResult {

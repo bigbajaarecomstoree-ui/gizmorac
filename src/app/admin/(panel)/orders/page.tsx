@@ -6,6 +6,9 @@ import {
   Receipt,
   Clock,
   XCircle,
+  TrendingUp,
+  CheckCircle2,
+  Undo2,
 } from "lucide-react";
 import {
   getFilteredOrders,
@@ -88,11 +91,14 @@ export default async function AdminOrdersPage({
   // Base set = current date-range + search, ALL statuses (drives the KPI cards).
   const base = await getFilteredOrders({ status: "all", range, q });
 
-  const netRevenue = base
-    .filter((o) => !NON_REVENUE.includes(o.status))
-    .reduce((s, o) => s + o.total, 0);
+  const revenueOrders = base.filter((o) => !NON_REVENUE.includes(o.status));
+  const netRevenue = revenueOrders.reduce((s, o) => s + o.total, 0);
+  const aov = revenueOrders.length ? Math.round(netRevenue / revenueOrders.length) : 0;
   const pendingCount = base.filter((o) => o.status === "Pending").length;
+  const deliveredCount = base.filter((o) => o.status === "Delivered").length;
   const cancelledCount = base.filter((o) => o.status === "Cancelled").length;
+  const refundedOrders = base.filter((o) => o.status === "Refunded");
+  const refundAmount = refundedOrders.reduce((s, o) => s + (o.refundAmount || o.total), 0);
 
   // Table = base narrowed by the active status, then paginated.
   const filtered = status === "all" ? base : base.filter((o) => o.status === status);
@@ -112,40 +118,13 @@ export default async function AdminOrdersPage({
   const rangeLabel = DATE_RANGES.find((r) => r.value === range)?.label ?? "All time";
 
   const cards = [
-    {
-      key: "sales",
-      label: "Total Sales",
-      value: formatINR(netRevenue),
-      icon: IndianRupee,
-      target: "all" as const,
-      highlight: false,
-      accent: true,
-    },
-    {
-      key: "orders",
-      label: "Total Orders",
-      value: String(base.length),
-      icon: Receipt,
-      target: "all" as const,
-      highlight: true,
-    },
-    {
-      key: "pending",
-      label: "Pending Orders",
-      value: String(pendingCount),
-      icon: Clock,
-      target: "Pending" as const,
-      highlight: true,
-    },
-    {
-      key: "cancelled",
-      label: "Cancelled Orders",
-      value: String(cancelledCount),
-      icon: XCircle,
-      target: "Cancelled" as const,
-      highlight: true,
-      danger: true,
-    },
+    { key: "revenue", label: "Revenue", value: formatINR(netRevenue), icon: IndianRupee, target: "all" as const, highlight: false, accent: true },
+    { key: "orders", label: "Orders", value: String(base.length), icon: Receipt, target: "all" as const, highlight: false },
+    { key: "aov", label: "Avg order value", value: formatINR(aov), icon: TrendingUp, target: "all" as const, highlight: false },
+    { key: "pending", label: "Pending", value: String(pendingCount), icon: Clock, target: "Pending" as const, highlight: true },
+    { key: "delivered", label: "Delivered", value: String(deliveredCount), icon: CheckCircle2, target: "Delivered" as const, highlight: true },
+    { key: "cancelled", label: "Cancelled", value: String(cancelledCount), icon: XCircle, target: "Cancelled" as const, highlight: true, danger: true },
+    { key: "refunds", label: "Refunds", value: formatINR(refundAmount), icon: Undo2, target: "Refunded" as const, highlight: true },
   ];
 
   return (

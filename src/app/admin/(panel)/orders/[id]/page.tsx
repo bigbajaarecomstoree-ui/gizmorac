@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Package, ShoppingBag, CreditCard, CalendarClock, IndianRupee } from "lucide-react";
+import { ArrowLeft, Package, ShoppingBag, CreditCard, CalendarClock, IndianRupee, TrendingUp, Users, ShieldAlert } from "lucide-react";
 import { getOrderById, ORDER_STATUSES } from "@/lib/data/orders";
 import { getOrderActivity } from "@/lib/data/logs";
 import { getShiprocketConfig } from "@/lib/shiprocket";
@@ -10,6 +10,7 @@ import { OrderStatusBadge } from "@/components/admin/order-status-badge";
 import { OrderStatusForm } from "@/components/admin/order-status-form";
 import { OrderOperations } from "@/components/admin/order-operations";
 import { AdminOrderActions } from "@/components/admin/admin-order-actions";
+import { AdminNotes } from "@/components/admin/admin-notes";
 import { ShipmentPanel } from "@/components/admin/shipment-panel";
 import { OrderActivity } from "@/components/admin/order-activity";
 
@@ -37,12 +38,35 @@ export default async function OrderDetailPage({ params }: { params: Params }) {
       })
     : [];
 
-  // Product thumbnails for the order's items.
+  // Product thumbnails + cost for the order's items.
   const imgRows = await prisma.product.findMany({
     where: { id: { in: order.items.map((i) => i.id) } },
-    select: { id: true, image: true },
+    select: { id: true, image: true, cost: true },
   });
   const imageById = new Map(imgRows.map((p) => [p.id, p.image]));
+  const costById = new Map(imgRows.map((p) => [p.id, p.cost]));
+
+  // Internal notes + profit (admin only).
+  const orderRow = await prisma.order.findUnique({ where: { id }, select: { adminNotes: true } });
+  const adminNotes = orderRow?.adminNotes ?? "";
+  const cogs = order.items.reduce((s, it) => s + (costById.get(it.id) ?? 0) * it.qty, 0);
+  const grossProfit = order.total - cogs;
+  const margin = order.total ? Math.round((grossProfit / order.total) * 100) : 0;
+
+  // Customer lifetime value + risk signals (matched by email — covers guest + registered).
+  const custOrders = await prisma.order.findMany({
+    where: { email: order.email },
+    select: { total: true, status: true, paymentMethod: true },
+  });
+  const NON_REV = ["Cancelled", "Returned", "Refunded"];
+  const revOrders = custOrders.filter((o) => !NON_REV.includes(o.status));
+  const clvSpent = revOrders.reduce((s, o) => s + o.total, 0);
+  const clvAov = revOrders.length ? Math.round(clvSpent / revOrders.length) : 0;
+  const cancels = custOrders.filter((o) => o.status === "Cancelled").length;
+  const returnsCount = custOrders.filter((o) => o.status === "Returned" || o.status === "Refunded").length;
+  const returnRate = custOrders.length ? Math.round((returnsCount / custOrders.length) * 100) : 0;
+  const codCount = custOrders.filter((o) => o.paymentMethod !== "PhonePe").length;
+  const highRisk = cancels >= 3 || returnRate >= 40;
 
   const v2Status = v2Order?.statusV2 ?? "PENDING";
   const canCancel = ["PENDING", "CONFIRMED", "PROCESSING"].includes(v2Status);
@@ -274,6 +298,66 @@ export default async function OrderDetailPage({ params }: { params: Params }) {
               </div>
             ) : null}
           </div>
+
+          {/* customer lifetime + risk signals (V2) */}
+          <div className="rounded-xl border border-border bg-surface p-5 text-sm">
+            <h2 className="mb-3 flex items-center gap-2 font-semibold">
+              <Users size={16} className="text-accent" /> Customer lifetime
+              {highRisk ? (
+                <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2 py-0.5 text-[11px] font-semibold text-red-600">
+                  <ShieldAlert size={12} /> High risk
+                </span>
+              ) : null}
+            </h2>
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="rounded-lg bg-surface-2 px-2 py-2">
+                <div className="text-base font-bold">{custOrders.length}</div>
+                <div className="tech-label">Orders</div>
+              </div>
+              <div className="rounded-lg bg-surface-2 px-2 py-2">
+                <div className="text-base font-bold">{formatINR(clvSpent)}</div>
+                <div className="tech-label">Spent</div>
+              </div>
+              <div className="rounded-lg bg-surface-2 px-2 py-2">
+                <div className="text-base font-bold">{formatINR(clvAov)}</div>
+                <div className="tech-label">AOV</div>
+              </div>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-1.5 text-[11px]">
+              <span className="rounded-full bg-surface-2 px-2 py-0.5 text-muted">{cancels} cancelled</span>
+              <span className="rounded-full bg-surface-2 px-2 py-0.5 text-muted">{returnRate}% return rate</span>
+              <span className="rounded-full bg-surface-2 px-2 py-0.5 text-muted">{codCount} COD</span>
+            </div>
+          </div>
+
+          {/* profit (internal, admin only) */}
+          <div className="rounded-xl border border-border bg-surface p-5 text-sm">
+            <h2 className="mb-3 flex items-center gap-2 font-semibold">
+              <TrendingUp size={16} className="text-accent" /> Profit
+              <span className="text-xs font-normal text-faint">· internal</span>
+            </h2>
+            <dl className="space-y-1.5">
+              <div className="flex justify-between">
+                <dt className="text-muted">Selling</dt>
+                <dd>{formatINR(order.total)}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-muted">Product cost</dt>
+                <dd>−{formatINR(cogs)}</dd>
+              </div>
+              <div className="flex justify-between border-t border-border pt-1.5 font-semibold">
+                <dt>Gross profit</dt>
+                <dd className={grossProfit >= 0 ? "text-success" : "text-danger"}>
+                  {formatINR(grossProfit)} · {margin}%
+                </dd>
+              </div>
+            </dl>
+            {cogs === 0 ? (
+              <p className="mt-2 text-xs text-faint">Set a product cost in Products to see true margin.</p>
+            ) : null}
+          </div>
+
+          <AdminNotes orderId={order.id} initial={adminNotes} />
         </div>
       </div>
     </div>
