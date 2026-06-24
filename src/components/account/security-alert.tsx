@@ -38,10 +38,14 @@ export function SecurityAlert() {
               type="button"
               aria-label={`Security tip ${idx + 1}`}
               onClick={() => setI(idx)}
-              className={`h-1.5 rounded-full transition-all ${
-                idx === i ? "w-4 bg-accent" : "w-1.5 bg-accent/30 hover:bg-accent/50"
-              }`}
-            />
+              className="group flex h-6 items-center px-1"
+            >
+              <span
+                className={`block h-1.5 rounded-full transition-all ${
+                  idx === i ? "w-4 bg-accent" : "w-1.5 bg-accent/30 group-hover:bg-accent/50"
+                }`}
+              />
+            </button>
           ))}
         </div>
       </div>

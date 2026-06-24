@@ -61,7 +61,7 @@ export function PriceSlider({
         value={val}
         onChange={(e) => onInput(Number(e.target.value))}
         aria-label="Maximum price"
-        className="h-1.5 w-full cursor-pointer accent-accent"
+        className="h-6 w-full cursor-pointer accent-accent"
       />
       <div className="mt-1.5 flex justify-between text-[0.6875rem] text-faint">
         <span>{formatINR(floor)}</span>

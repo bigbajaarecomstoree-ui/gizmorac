@@ -82,10 +82,10 @@ export function SiteHeader({
             : "border-transparent bg-background/40 backdrop-blur-md",
         )}
       >
-        <div className="shell flex h-16 items-center gap-4">
+        <div className="shell flex h-16 items-center gap-2 sm:gap-4">
           <button
             type="button"
-            className="grid h-10 w-10 place-items-center rounded-lg text-muted hover:text-foreground lg:hidden cursor-pointer"
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-muted hover:text-foreground lg:hidden cursor-pointer"
             onClick={() => setOpen((v) => !v)}
             aria-label="Toggle menu"
             aria-expanded={open}
@@ -93,14 +93,14 @@ export function SiteHeader({
             {open ? <X size={20} /> : <Menu size={20} />}
           </button>
 
-          <Link href="/" className="flex items-center gap-1" aria-label="GIZMORAC home">
+          <Link href="/" className="flex shrink-0 items-center gap-1" aria-label="GIZMORAC home">
             <Image
               src="/logo.png"
               alt=""
               width={523}
               height={586}
               priority
-              className="h-9 w-auto object-contain"
+              className="hidden h-9 w-auto object-contain min-[380px]:block"
             />
             <span className="font-display text-lg font-bold tracking-tight">
               GIZMO<span className="text-accent">RAC</span>
@@ -139,7 +139,7 @@ export function SiteHeader({
             </div>
           </form>
 
-          <div className="ml-auto flex items-center gap-1 md:ml-0">
+          <div className="ml-auto flex shrink-0 items-center gap-1 md:ml-0">
             <AccountMenu name={customerName} />
             <Link
               href="/wishlist"
