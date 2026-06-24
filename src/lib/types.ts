@@ -165,6 +165,8 @@ export interface OrderItem {
 export interface Order {
   id: string;
   orderNumber: string;
+  /** Unguessable suffix for the public guest tracking link. */
+  trackingToken: string;
   status: OrderStatus;
   firstName: string;
   lastName: string;

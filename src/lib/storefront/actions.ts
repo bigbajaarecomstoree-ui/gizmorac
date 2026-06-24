@@ -1,5 +1,6 @@
 "use server";
 
+import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
@@ -10,6 +11,8 @@ import { initiatePayment, getPhonePeConfig } from "@/lib/phonepe";
 import { checkServiceability } from "@/lib/shiprocket";
 import { cancelOrderEverywhere } from "@/lib/data/order-fulfillment";
 import { canCancelOrder, isDisputeWindowOpen, warrantyClaimOpen } from "@/lib/orders-policy";
+import { limitByIp } from "@/lib/rate-limit";
+import { paymentsProductionSafe } from "@/lib/env-check";
 import { logEvent } from "@/lib/data/logs";
 import { prorate, rupeesToPaise } from "@/lib/postorder/money";
 import {
@@ -57,7 +60,7 @@ export interface CheckoutPayload {
 }
 
 export type PlaceOrderResult =
-  | { ok: true; orderNumber: string; paymentMethod: "COD" | "PhonePe" }
+  | { ok: true; orderNumber: string; trackingToken: string; paymentMethod: "COD" | "PhonePe" }
   | { ok: false; error: string };
 
 /** Fetch authoritative prices for a set of cart line refs. */
@@ -96,6 +99,8 @@ export async function applyCoupon(
   code: string,
   refs: CartLineRef[],
 ): Promise<CouponResult> {
+  const blocked = await limitByIp("coupon", 20, 60);
+  if (blocked) return { ok: false, error: blocked };
   const lines = await resolveLines(refs);
   if (lines.length === 0) return { ok: false, error: "Your cart is empty" };
   return validateAndPriceCoupon(
@@ -224,6 +229,8 @@ export async function placeOrder(
   if (!orderNumber) {
     return { ok: false, error: "Could not place order, please try again." };
   }
+  // Unguessable token for the public guest tracking link (32-bit, hex).
+  const trackingToken = randomBytes(4).toString("hex").toUpperCase();
 
   // Post-order v2: per-line money in paise, with order discount/shipping
   // prorated across lines (last/largest bucket absorbs the rounding remainder).
@@ -252,6 +259,7 @@ export async function placeOrder(
       const order = await tx.order.create({
         data: {
           orderNumber,
+          trackingToken,
           // COD auto-confirms; online orders stay Pending until payment clears.
           status: wantsOnline ? "Pending" : "Confirmed",
           firstName: payload.firstName.trim(),
@@ -376,6 +384,7 @@ export async function placeOrder(
   return {
     ok: true,
     orderNumber,
+    trackingToken,
     paymentMethod: wantsOnline ? "PhonePe" : "COD",
   };
 }
@@ -413,6 +422,22 @@ export async function startPhonePePayment(
   if (!order) return { ok: false, error: "Order not found." };
   if (order.paymentStatus === "Paid") {
     return { ok: false, error: "This order is already paid." };
+  }
+
+  // Safety guard: never run a customer through a sandbox gateway in production.
+  const cfg = await getPhonePeConfig();
+  if (!paymentsProductionSafe(cfg.env)) {
+    await logEvent({
+      level: "error",
+      actor: "system",
+      action: "payment.misconfigured",
+      message: `Blocked online payment: PhonePe is in sandbox on a production deployment (order ${orderNumber}).`,
+      meta: { orderNumber, env: cfg.env },
+    });
+    return {
+      ok: false,
+      error: "Online payment is temporarily unavailable. Please choose Cash on Delivery.",
+    };
   }
 
   const h = await headers();
@@ -756,6 +781,8 @@ export async function subscribeNewsletter(
   email: string,
   source = "footer",
 ): Promise<SubscribeResult> {
+  const blocked = await limitByIp("newsletter", 5, 300);
+  if (blocked) return { ok: false, error: blocked };
   const clean = email.trim().toLowerCase();
   if (!EMAIL_RE.test(clean)) {
     return { ok: false, error: "Please enter a valid email address." };

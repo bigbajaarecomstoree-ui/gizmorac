@@ -258,13 +258,13 @@ export function CheckoutView({
       paymentMethod: payMethod,
       items: lines.map((l) => ({ id: l.product.id, qty: l.qty })),
     };
-    const finishCod = (orderNumber: string) => {
+    const finishCod = (trackUrl: string) => {
       clearCart();
       clearOffer();
       try {
         localStorage.removeItem(COUPON_STORAGE_KEY);
       } catch {}
-      router.push(`/order/${orderNumber}`);
+      router.push(trackUrl);
     };
     startPlacing(async () => {
       const res = await placeOrder(payload);
@@ -272,6 +272,8 @@ export function CheckoutView({
         setError(res.error);
         return;
       }
+      // Tokenised link so guests can track without an account.
+      const trackUrl = `/order/${res.orderNumber}-${res.trackingToken}`;
       if (res.paymentMethod === "PhonePe") {
         const pay = await startPhonePePayment(res.orderNumber);
         if (pay.ok) {
@@ -285,7 +287,7 @@ export function CheckoutView({
           setError(`${pay.error} Your order ${res.orderNumber} is saved as pending.`);
         }
       } else {
-        finishCod(res.orderNumber);
+        finishCod(trackUrl);
       }
     });
   }

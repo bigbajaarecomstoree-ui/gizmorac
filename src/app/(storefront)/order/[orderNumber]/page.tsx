@@ -47,7 +47,13 @@ function friendlyPayError(code: string): string {
 }
 
 export default async function OrderPage({ params }: { params: Params }) {
-  const { orderNumber } = await params;
+  const { orderNumber: rawParam } = await params;
+  // The link may be the bare number (GZ-123456 — owner-only) or carry the public
+  // tracking token (GZ-123456-AB12CD34 — works for guests who got the email link).
+  const m = /^(GZ-\d{6})(?:-([A-Za-z0-9]+))?$/.exec(rawParam);
+  const orderNumber = m?.[1] ?? rawParam;
+  const urlToken = m?.[2] ?? "";
+
   const order = await getOrderByNumber(orderNumber);
   if (!order) notFound();
 
@@ -57,6 +63,11 @@ export default async function OrderPage({ params }: { params: Params }) {
       (customer.id === order.customerId ||
         customer.email.toLowerCase() === order.email.toLowerCase()),
   );
+  const tokenOk = order.trackingToken !== "" && urlToken === order.trackingToken;
+  // Neither the signed-in owner nor a valid token → reveal nothing. This stops
+  // anyone from enumerating order numbers to harvest order data.
+  if (!tokenOk && !isOwner) notFound();
+  const canView = isOwner || tokenOk;
 
   const placed = new Date(order.createdAt).toLocaleString("en-IN", {
     timeZone: "Asia/Kolkata",
@@ -414,7 +425,7 @@ export default async function OrderPage({ params }: { params: Params }) {
         {/* shipping — full details only for the owner */}
         <div className="mt-5 rounded-xl border border-border bg-surface p-5 text-sm">
           <h2 className="mb-3 font-semibold">Shipping</h2>
-          {isOwner ? (
+          {canView ? (
             <>
               <p className="font-medium">{order.firstName} {order.lastName}</p>
               <p className="text-muted">{order.phone}</p>

@@ -24,6 +24,7 @@ function toOrder(r: OrderRow): Order {
   return {
     id: r.id,
     orderNumber: r.orderNumber,
+    trackingToken: r.trackingToken,
     status: r.status as OrderStatus,
     firstName: r.firstName,
     lastName: r.lastName,

@@ -27,6 +27,7 @@ import { refundOrderPayment, cancelOrderEverywhere } from "@/lib/data/order-fulf
 import { getOrderById } from "@/lib/data/orders";
 import { recordShipmentUpdate } from "@/lib/data/shipments";
 import { logEvent } from "@/lib/data/logs";
+import { limitByIp } from "@/lib/rate-limit";
 import { headers } from "next/headers";
 
 async function clientIp(): Promise<string> {
@@ -177,6 +178,8 @@ export async function loginAction(
   _prev: { error?: string } | undefined,
   formData: FormData,
 ): Promise<{ error?: string }> {
+  const blocked = await limitByIp("admin-login", 8, 60);
+  if (blocked) return { error: blocked };
   const password = (formData.get("password") ?? "").toString();
   const ip = await clientIp();
   if (!checkPassword(password)) {

@@ -10,6 +10,7 @@ import {
   getCurrentCustomer,
 } from "@/lib/customer-auth";
 import { logEvent } from "@/lib/data/logs";
+import { limitByIp } from "@/lib/rate-limit";
 
 export interface AuthState {
   error?: string;
@@ -25,6 +26,8 @@ export async function signupAction(
   _prev: AuthState | undefined,
   formData: FormData,
 ): Promise<AuthState> {
+  const blocked = await limitByIp("signup", 5, 600);
+  if (blocked) return { error: blocked };
   const fullName = field(formData, "fullName");
   const email = field(formData, "email").toLowerCase();
   const phone = field(formData, "phone");
@@ -60,6 +63,8 @@ export async function loginAction(
   _prev: AuthState | undefined,
   formData: FormData,
 ): Promise<AuthState> {
+  const blocked = await limitByIp("login", 10, 60);
+  if (blocked) return { error: blocked };
   const email = field(formData, "email").toLowerCase();
   const password = (formData.get("password") ?? "").toString();
 

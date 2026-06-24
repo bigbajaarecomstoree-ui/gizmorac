@@ -82,6 +82,8 @@ model Product {
 model Order {
   id                     String             @id @default(cuid())
   orderNumber            String             @unique
+  // Unguessable suffix for the public guest tracking link (GZ-123456-AB12CD34).
+  trackingToken          String             @default("")
   // Pending|Confirmed|Packed|Shipped|Delivered|Cancelled|Returned|Refunded
   status                 String             @default("Pending")
   firstName              String
