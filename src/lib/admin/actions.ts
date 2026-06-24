@@ -585,6 +585,26 @@ export async function saveSupplier(productId: string, supplier: string): Promise
   return { ok: true };
 }
 
+/** Save the Finance operating-cost assumptions (gateway/COD fee rates). */
+export async function saveFinanceFees(input: {
+  paymentFeePct: number;
+  codFeePct: number;
+  codFeeFlat: number;
+}): Promise<{ ok: boolean }> {
+  await assertAdmin();
+  const clamp = (n: number, max: number) => Math.min(Math.max(0, Number(n) || 0), max);
+  await prisma.storeSetting.update({
+    where: { id: "store" },
+    data: {
+      paymentFeePct: clamp(input.paymentFeePct, 100),
+      codFeePct: clamp(input.codFeePct, 100),
+      codFeeFlat: Math.round(clamp(input.codFeeFlat, 100000)),
+    },
+  });
+  revalidatePath("/admin/finance");
+  return { ok: true };
+}
+
 // --- orders ---
 
 /**

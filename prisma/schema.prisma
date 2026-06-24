@@ -414,6 +414,10 @@ model StoreSetting {
   investigationSlaHours      Int       @default(48)
   restockingFeePercent       Int       @default(0)
   highValueRefundPaise       Int       @default(500000) // ₹5,000 — above this needs manager approval
+  // Finance: operating-cost assumptions for the P&L (editable on the Finance page).
+  paymentFeePct              Float     @default(2) // payment-gateway MDR on online orders
+  codFeePct                  Float     @default(0) // COD remittance fee, % of order value
+  codFeeFlat                 Int       @default(0) // COD remittance fee, flat ₹ per COD order
   // Money in integer paise (backfilled ×100 from the rupee columns above).
   freeShippingThresholdPaise Int?
   shippingFeePaise           Int?

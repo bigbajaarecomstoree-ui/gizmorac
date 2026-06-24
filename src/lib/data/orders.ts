@@ -327,7 +327,25 @@ export interface ReportSummary {
   grossProfit: number;
   /** Gross margin %, on net sales. */
   margin: number;
+  // --- rates (by order count) ---
+  refundRate: number;
+  returnRate: number;
+  // --- operating expenses → operating profit ---
+  /** Outbound shipping we paid Shiprocket on counted orders (₹). */
+  shipping: number;
+  /** Payment-gateway fees on online (prepaid) counted orders (₹). */
+  gatewayFees: number;
+  /** COD remittance fees on COD counted orders (₹). */
+  codFees: number;
+  /** Operating Profit = Gross Profit − shipping − gateway − COD fees. */
+  operatingProfit: number;
+  /** Fee assumptions used (so the page can show + edit them). */
+  feePaymentPct: number;
+  feeCodPct: number;
+  feeCodFlat: number;
   byStatus: { status: OrderStatus; count: number; value: number }[];
+  /** Per-product sales & profit across counted orders (top first). */
+  byProduct: { id: string; name: string; sales: number; profit: number; units: number }[];
 }
 
 /** Build a report summary for an arbitrary date window (UTC-instant bounds). */
@@ -394,6 +412,48 @@ async function buildSummary(bounds: {
   const grossProfit = revenue - cogs;
   const margin = revenue > 0 ? Math.round((grossProfit / revenue) * 1000) / 10 : 0;
 
+  // Per-product sales & profit across counted (fulfilled) orders.
+  const productMap = new Map<
+    string,
+    { id: string; name: string; sales: number; profit: number; units: number }
+  >();
+  for (const o of counted) {
+    for (const it of o.items) {
+      const cur = productMap.get(it.id) ?? { id: it.id, name: it.name, sales: 0, profit: 0, units: 0 };
+      const lineSales = it.price * it.qty;
+      cur.sales += lineSales;
+      cur.profit += lineSales - (costById.get(it.id) ?? 0) * it.qty;
+      cur.units += it.qty;
+      productMap.set(it.id, cur);
+    }
+  }
+  const byProduct = [...productMap.values()].sort((a, b) => b.sales - a.sales).slice(0, 12);
+
+  // Operating expenses → operating profit. Shipping is real (captured per
+  // shipment); gateway/COD fees use configurable rates from StoreSetting.
+  const fee = await prisma.storeSetting.findFirst({
+    select: { paymentFeePct: true, codFeePct: true, codFeeFlat: true },
+  });
+  const feePaymentPct = fee?.paymentFeePct ?? 2;
+  const feeCodPct = fee?.codFeePct ?? 0;
+  const feeCodFlat = fee?.codFeeFlat ?? 0;
+  const shipping = counted.reduce((s, o) => s + Math.round((o.shipmentCostPaise ?? 0) / 100), 0);
+  const gatewayFees = Math.round(
+    counted
+      .filter((o) => o.paymentMethod === "PhonePe")
+      .reduce((s, o) => s + (o.total * feePaymentPct) / 100, 0),
+  );
+  const codFees = Math.round(
+    counted
+      .filter((o) => o.paymentMethod !== "PhonePe")
+      .reduce((s, o) => s + (o.total * feeCodPct) / 100 + feeCodFlat, 0),
+  );
+  const operatingProfit = grossProfit - shipping - gatewayFees - codFees;
+
+  const pct = (n: number) => (orders.length ? Math.round((n / orders.length) * 1000) / 10 : 0);
+  const refundRate = pct(orders.filter((o) => o.status === "Refunded").length);
+  const returnRate = pct(orders.filter((o) => o.status === "Returned").length);
+
   return {
     orders: orders.length,
     revenue,
@@ -410,7 +470,17 @@ async function buildSummary(bounds: {
     cogs,
     grossProfit,
     margin,
+    refundRate,
+    returnRate,
+    shipping,
+    gatewayFees,
+    codFees,
+    operatingProfit,
+    feePaymentPct,
+    feeCodPct,
+    feeCodFlat,
     byStatus,
+    byProduct,
   };
 }
 
@@ -427,6 +497,52 @@ export async function getReportSummaryBetween(
   to?: string,
 ): Promise<ReportSummary> {
   return buildSummary(customBounds(from, to));
+}
+
+export interface FinanceTrendPoint {
+  date: string;
+  label: string;
+  revenue: number;
+  profit: number;
+  refunds: number;
+}
+
+/** Daily Revenue / Profit / Refunds over the last `days` (IST), for the chart. */
+export async function getFinanceTrend(days = 30): Promise<FinanceTrendPoint[]> {
+  const key = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+  const label = (d: Date) =>
+    d.toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short" });
+
+  const buckets = new Map<string, FinanceTrendPoint>();
+  const now = new Date();
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(now.getDate() - i);
+    buckets.set(key(d), { date: key(d), label: label(d), revenue: 0, profit: 0, refunds: 0 });
+  }
+  const since = new Date(now);
+  since.setDate(now.getDate() - (days - 1));
+  since.setHours(0, 0, 0, 0);
+
+  const [rows, costRows] = await Promise.all([
+    prisma.order.findMany({ where: { createdAt: { gte: since } } }),
+    prisma.product.findMany({ select: { id: true, cost: true } }),
+  ]);
+  const orders = rows.map(toOrder);
+  const costById = new Map(costRows.map((p) => [p.id, p.cost]));
+
+  for (const o of orders) {
+    const b = buckets.get(key(new Date(o.createdAt)));
+    if (!b) continue;
+    if (o.status === "Refunded") {
+      b.refunds += o.total;
+    } else if (!["Cancelled", "Returned"].includes(o.status)) {
+      b.revenue += o.total;
+      const cogs = o.items.reduce((n, it) => n + (costById.get(it.id) ?? 0) * it.qty, 0);
+      b.profit += o.total - cogs;
+    }
+  }
+  return [...buckets.values()];
 }
 
 const WEEKDAYS = [
