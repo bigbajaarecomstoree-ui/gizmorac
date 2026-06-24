@@ -15,7 +15,7 @@ const LINKS = [
 /** Sticky account navigation — vertical sidebar on desktop, scroller on mobile. */
 export function AccountSidebar() {
   return (
-    <nav className="lg:sticky lg:top-24">
+    <nav className="min-w-0 lg:sticky lg:top-24">
       <ul className="flex gap-1 overflow-x-auto rounded-xl border border-border bg-surface p-1 lg:flex-col lg:overflow-visible">
         {LINKS.map((l) => (
           <li key={l.href} className="lg:w-full">
