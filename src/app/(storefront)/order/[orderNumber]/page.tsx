@@ -20,6 +20,7 @@ import { TicketPanel } from "@/components/account/ticket-panel";
 import { OrderActions } from "@/components/account/order-actions";
 import { canCancelOrder, isDisputeWindowOpen, warrantyClaimOpen } from "@/lib/orders-policy";
 import { buttonVariants } from "@/components/ui/button";
+import { TrackPurchase } from "@/components/analytics/track-event";
 import type { OrderStatus } from "@/lib/types";
 
 type Params = Promise<{ orderNumber: string }>;
@@ -101,8 +102,22 @@ export default async function OrderPage({ params }: { params: Params }) {
     canWarranty = warrantyClaimOpen(order.status, order.deliveredAt, maxWarranty);
   }
 
+  const isPlaced = ["Confirmed", "Packed", "Shipped", "Delivered"].includes(order.status);
+
   return (
     <div className="shell py-8">
+      {isPlaced ? (
+        <TrackPurchase
+          orderNumber={order.orderNumber}
+          value={order.total}
+          items={order.items.map((i) => ({
+            item_id: i.id,
+            item_name: i.name,
+            price: i.price,
+            quantity: i.qty,
+          }))}
+        />
+      ) : null}
       <Breadcrumb
         items={[
           { label: "Home", href: "/" },

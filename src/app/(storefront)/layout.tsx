@@ -3,6 +3,7 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { WhatsAppButton } from "@/components/layout/whatsapp-button";
 import { PromoPopups } from "@/components/promo/promo-popups";
+import { Analytics } from "@/components/analytics/analytics";
 import { getCurrentCustomer } from "@/lib/customer-auth";
 import { getSettings, whatsappLink } from "@/lib/data/settings";
 import { getVisibleCategories } from "@/lib/data/queries";
@@ -44,6 +45,7 @@ export default async function StorefrontLayout({
           supportEmail={settings.supportEmail}
         />
         <WhatsAppButton href={waHref} />
+        <Analytics />
         <PromoPopups
           browse={{
             enabled: settings.browseOfferEnabled,

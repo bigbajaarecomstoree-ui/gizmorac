@@ -10,6 +10,7 @@ import { ProductArt } from "@/components/product/product-art";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { formatINR, shortTitle } from "@/lib/format";
 import { applyCoupon, placeOrder, startPhonePePayment, getDeliveryEstimate } from "@/lib/storefront/actions";
+import { track } from "@/lib/analytics";
 import { COUPON_STORAGE_KEY } from "@/lib/checkout-shared";
 import { INDIAN_STATES, lookupPincode } from "@/lib/india";
 
@@ -93,6 +94,23 @@ export function CheckoutView({
     .filter((l): l is { product: Product; qty: number } => Boolean(l.product));
 
   const subtotal = lines.reduce((s, l) => s + l.product.price * l.qty, 0);
+
+  // begin_checkout — fire once when the cart first resolves.
+  const beganRef = React.useRef(false);
+  React.useEffect(() => {
+    if (beganRef.current || lines.length === 0) return;
+    beganRef.current = true;
+    track("begin_checkout", {
+      currency: "INR",
+      value: subtotal,
+      items: lines.map((l) => ({
+        item_id: l.product.id,
+        item_name: l.product.name,
+        price: l.product.price,
+        quantity: l.qty,
+      })),
+    });
+  }, [lines, subtotal]);
 
   // Re-validate any coupon saved in the cart against current lines.
   React.useEffect(() => {

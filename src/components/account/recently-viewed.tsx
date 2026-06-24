@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Eye } from "lucide-react";
 import { formatINR } from "@/lib/format";
 
@@ -66,8 +67,13 @@ export function RecentlyViewed({
           >
             <div className="relative aspect-square overflow-hidden rounded-lg bg-background">
               {p.image ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={p.image} alt="" className="h-full w-full object-cover" />
+                <Image
+                  src={p.image}
+                  alt={p.name}
+                  fill
+                  sizes="(max-width: 640px) 33vw, 16vw"
+                  className="object-cover"
+                />
               ) : null}
             </div>
             <p className="mt-2 line-clamp-2 text-xs font-medium leading-snug">{p.name}</p>

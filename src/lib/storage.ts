@@ -26,3 +26,23 @@ export async function saveUpload(
   await writeFile(path.join(dir, name), bytes);
   return `/uploads/${name}`;
 }
+
+/**
+ * Best-effort delete of a previously uploaded file. Only Vercel Blob URLs are
+ * removed (local /uploads files are left on the read-only prod FS). Never throws
+ * — a failed cleanup must not block the admin action.
+ */
+export async function deleteUpload(url: string): Promise<void> {
+  if (!url) return;
+  if (
+    process.env.BLOB_READ_WRITE_TOKEN &&
+    url.includes(".public.blob.vercel-storage.com")
+  ) {
+    try {
+      const { del } = await import("@vercel/blob");
+      await del(url);
+    } catch {
+      // swallow — orphaned-blob cleanup is non-critical
+    }
+  }
+}

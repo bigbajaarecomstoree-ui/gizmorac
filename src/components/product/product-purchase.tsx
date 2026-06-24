@@ -7,14 +7,17 @@ import { Button } from "@/components/ui/button";
 import { WishlistButton } from "./wishlist-button";
 import { useStore } from "@/components/store/store-provider";
 import { MAX_QTY } from "@/lib/checkout-shared";
+import { track } from "@/lib/analytics";
 
 export function ProductPurchase({
   id,
   name,
+  price,
   stock,
 }: {
   id: string;
   name: string;
+  price: number;
   stock: number;
 }) {
   const router = useRouter();
@@ -23,11 +26,20 @@ export function ProductPurchase({
   const max = Math.max(1, Math.min(stock, MAX_QTY));
   const outOfStock = stock <= 0;
 
+  function trackAdd() {
+    track("add_to_cart", {
+      currency: "INR",
+      value: price * qty,
+      items: [{ item_id: id, item_name: name, price, quantity: qty }],
+    });
+  }
   function add() {
     addToCart(id, qty, name);
+    trackAdd();
   }
   function buyNow() {
     addToCart(id, qty, name);
+    trackAdd();
     router.push("/cart");
   }
 

@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { randomBytes } from "node:crypto";
 import { isAuthenticated } from "@/lib/auth";
-import { saveUpload } from "@/lib/storage";
+import { saveUpload, deleteUpload } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -76,4 +76,19 @@ export async function POST(request: NextRequest) {
       { status: 500 },
     );
   }
+}
+
+/** Delete an uploaded Blob (admin-gated; only Blob URLs are removable). */
+export async function DELETE(request: NextRequest) {
+  if (!(await isAuthenticated())) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  let url = "";
+  try {
+    url = (((await request.json()) as { url?: string }).url ?? "").toString();
+  } catch {
+    return Response.json({ error: "Invalid request." }, { status: 400 });
+  }
+  await deleteUpload(url); // best-effort, never throws
+  return Response.json({ ok: true });
 }

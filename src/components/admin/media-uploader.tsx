@@ -30,6 +30,9 @@ export function MediaUploader({
   const [error, setError] = React.useState<string | null>(null);
   const imgInput = React.useRef<HTMLInputElement>(null);
   const vidInput = React.useRef<HTMLInputElement>(null);
+  // URLs uploaded in THIS session — safe to delete the blob if removed before
+  // save. Pre-existing images are only unlinked (never deleted here).
+  const sessionUploads = React.useRef<Set<string>>(new Set());
 
   async function onPickImages(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
@@ -51,6 +54,7 @@ export function MediaUploader({
         if (f.size > MAX_BYTES) throw new Error(`${f.name} exceeds 20MB.`);
         urls.push(await upload(f, "image"));
       }
+      urls.forEach((u) => sessionUploads.current.add(u));
       setImages((prev) => [...prev, ...urls].slice(0, MAX_IMAGES));
       if (files.length > room) {
         setError(`Only ${room} more image${room === 1 ? "" : "s"} could be added (max ${MAX_IMAGES}).`);
@@ -83,6 +87,14 @@ export function MediaUploader({
 
   function removeImage(url: string) {
     setImages((prev) => prev.filter((u) => u !== url));
+    if (sessionUploads.current.has(url)) {
+      sessionUploads.current.delete(url);
+      fetch("/api/admin/upload", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      }).catch(() => {}); // best-effort cleanup
+    }
   }
 
   return (

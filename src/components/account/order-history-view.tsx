@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Search, LayoutGrid, Table2 } from "lucide-react";
 import { OrderStatusBadge } from "@/components/admin/order-status-badge";
 import { ProductArt } from "@/components/product/product-art";
@@ -98,8 +99,7 @@ export function OrderHistoryView({ rows }: { rows: OrderRow[] }) {
                   {o.items.slice(0, 3).map((it) => (
                     <span key={it.id} className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-border bg-background">
                       {it.image ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={it.image} alt="" className="h-full w-full object-cover" />
+                        <Image src={it.image} alt="" fill sizes="56px" className="object-cover" />
                       ) : (
                         <ProductArt art={it.art} glyphClassName="!h-[40%]" />
                       )}

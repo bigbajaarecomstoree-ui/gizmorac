@@ -23,6 +23,7 @@ import { ProductTabs } from "@/components/product/product-tabs";
 import { ProductGrid } from "@/components/product/product-grid";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { TrackRecentlyViewed, RecentlyViewed } from "@/components/account/recently-viewed";
+import { TrackEvent } from "@/components/analytics/track-event";
 
 type Params = Promise<{ slug: string }>;
 
@@ -112,6 +113,14 @@ export default async function ProductPage({ params }: { params: Params }) {
       <TrackRecentlyViewed
         item={{ slug: product.slug, name: product.name, image: product.image ?? null, price: product.price }}
       />
+      <TrackEvent
+        name="view_item"
+        params={{
+          currency: "INR",
+          value: product.price,
+          items: [{ item_id: product.id, item_name: product.name, price: product.price, quantity: 1 }],
+        }}
+      />
 
       <Breadcrumb
         items={[
@@ -189,7 +198,7 @@ export default async function ProductPage({ params }: { params: Params }) {
           </ul>
 
           <div className="mt-7">
-            <ProductPurchase id={product.id} name={shortTitle(product.name)} stock={product.stock} />
+            <ProductPurchase id={product.id} name={shortTitle(product.name)} price={product.price} stock={product.stock} />
           </div>
 
           <div className="mt-6">
