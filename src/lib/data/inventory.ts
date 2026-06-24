@@ -65,6 +65,54 @@ export async function getStockMovements(productId: string, limit = 50): Promise<
   return rows.map((r) => ({ ...r, createdAt: r.createdAt.toISOString() }));
 }
 
+/** Low-stock items for the dashboard widget (most urgent first). */
+export interface LowStockItem {
+  id: string;
+  name: string;
+  stock: number;
+  lowStockThreshold: number;
+}
+
+export async function getLowStockItems(limit = 5): Promise<LowStockItem[]> {
+  const rows = await prisma.product.findMany({
+    select: { id: true, name: true, stock: true, lowStockThreshold: true },
+  });
+  return rows
+    .filter((p) => p.stock <= p.lowStockThreshold)
+    .sort((a, b) => a.stock - b.stock)
+    .slice(0, limit);
+}
+
+/** Recent stock movements across all products (newest first). */
+export interface RecentMovement {
+  id: string;
+  type: InventoryTxnType;
+  delta: number;
+  productName: string;
+  createdAt: string;
+}
+
+export async function getRecentStockMovements(limit = 6): Promise<RecentMovement[]> {
+  const rows = await prisma.inventoryTransaction.findMany({
+    orderBy: { createdAt: "desc" },
+    take: limit,
+    select: {
+      id: true,
+      type: true,
+      delta: true,
+      createdAt: true,
+      product: { select: { name: true } },
+    },
+  });
+  return rows.map((r) => ({
+    id: r.id,
+    type: r.type,
+    delta: r.delta,
+    productName: r.product.name,
+    createdAt: r.createdAt.toISOString(),
+  }));
+}
+
 export interface VelocityStats {
   /** Units sold per day, averaged over the window. */
   perDay: number;

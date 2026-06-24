@@ -8,7 +8,6 @@ import {
   TriangleAlert,
   CalendarDays,
   LifeBuoy,
-  Plus,
   ArrowRight,
 } from "lucide-react";
 import {
@@ -18,27 +17,52 @@ import {
 } from "@/lib/data/orders";
 import { getOpenTicketCount } from "@/lib/data/tickets";
 import { getDashboardChart } from "@/lib/data/dashboard-chart";
+import { getLowStockItems, getRecentStockMovements } from "@/lib/data/inventory";
+import {
+  bestSeller,
+  customerSegments,
+  revenueTrend,
+  refundStats,
+  getNewCustomerCount,
+} from "@/lib/data/dashboard";
 import { formatINR } from "@/lib/format";
-import { buttonVariants } from "@/components/ui/button";
 import { OrderStatusBadge } from "@/components/admin/order-status-badge";
 import { SalesChart } from "@/components/admin/sales-chart";
+import { DashboardCreateMenu } from "@/components/admin/dashboard-create-menu";
+import {
+  LowStockWidget,
+  RecentMovementsWidget,
+  BestSellerCard,
+  CustomerSegmentsCard,
+  StoreHealthCard,
+} from "@/components/admin/dashboard-widgets";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboard() {
-  const [stats, orders, byWeekday, openTickets, chart] = await Promise.all([
-    getAdminStats(),
-    getOrders(),
-    getSalesByWeekday(),
-    getOpenTicketCount(),
-    getDashboardChart(),
-  ]);
+  const [stats, orders, byWeekday, openTickets, chart, lowStockItems, recentMovements, newCustomers] =
+    await Promise.all([
+      getAdminStats(),
+      getOrders(),
+      getSalesByWeekday(),
+      getOpenTicketCount(),
+      getDashboardChart(),
+      getLowStockItems(),
+      getRecentStockMovements(),
+      getNewCustomerCount(),
+    ]);
   const recent = orders.slice(0, 5);
 
   const topDay = [...byWeekday].sort(
     (a, b) => b.orders - a.orders || b.revenue - a.revenue,
   )[0];
   const hasSales = topDay && topDay.orders > 0;
+
+  // Derived dashboard insights (computed from the orders already loaded).
+  const best = bestSeller(orders);
+  const segments = customerSegments(orders);
+  const trend = revenueTrend(orders);
+  const refunds = refundStats(orders);
 
   const cards = [
     { label: "Revenue", value: formatINR(stats.revenue), icon: IndianRupee, href: "/admin/reports", accent: true },
@@ -56,10 +80,7 @@ export default async function AdminDashboard() {
           <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
           <p className="mt-1 text-sm text-muted">Your store at a glance.</p>
         </div>
-        <Link href="/admin/products/new" className={buttonVariants({ size: "sm" })}>
-          <Plus size={16} />
-          Add product
-        </Link>
+        <DashboardCreateMenu />
       </div>
 
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
@@ -77,6 +98,22 @@ export default async function AdminDashboard() {
             <div className="tech-label mt-1">{c.label}</div>
           </Link>
         ))}
+      </div>
+
+      {/* health snapshot + best seller + customers */}
+      <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-3">
+        <StoreHealthCard
+          trend={trend}
+          lowStock={stats.lowStock}
+          pending={stats.pendingOrders}
+          refunds={refunds}
+        />
+        <BestSellerCard best={best} />
+        <CustomerSegmentsCard
+          newCount={newCustomers}
+          repeat={segments.repeat}
+          highRisk={segments.highRisk}
+        />
       </div>
 
       {/* sales trend — metric + range selectable, auto-scaled axis */}
@@ -118,13 +155,21 @@ export default async function AdminDashboard() {
           </div>
         </div>
         <div className="text-right">
-          <div className="readout text-lg font-bold">
-            {hasSales ? topDay.orders : 0}
+          <div className="readout text-lg font-bold text-accent">
+            {formatINR(hasSales ? topDay.revenue : 0)}
           </div>
-          <div className="tech-label">{topDay && topDay.orders === 1 ? "order" : "orders"}</div>
+          <div className="tech-label">
+            {hasSales ? topDay.orders : 0} {topDay && topDay.orders === 1 ? "order" : "orders"}
+          </div>
         </div>
         <ArrowRight size={18} className="shrink-0 text-accent-bright transition-transform group-hover:translate-x-0.5" />
       </Link>
+
+      {/* inventory at a glance */}
+      <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
+        <LowStockWidget items={lowStockItems} />
+        <RecentMovementsWidget movements={recentMovements} />
+      </div>
 
       <div className="mt-6 rounded-xl border border-border bg-surface">
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
