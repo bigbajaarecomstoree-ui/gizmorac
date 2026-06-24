@@ -22,6 +22,7 @@ import { PincodeChecker } from "@/components/product/pincode-checker";
 import { ProductTabs } from "@/components/product/product-tabs";
 import { ProductGrid } from "@/components/product/product-grid";
 import { SectionHeading } from "@/components/ui/section-heading";
+import { TrackRecentlyViewed, RecentlyViewed } from "@/components/account/recently-viewed";
 
 type Params = Promise<{ slug: string }>;
 
@@ -107,6 +108,9 @@ export default async function ProductPage({ params }: { params: Params }) {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLd(productSchema) }}
+      />
+      <TrackRecentlyViewed
+        item={{ slug: product.slug, name: product.name, image: product.image ?? null, price: product.price }}
       />
 
       <Breadcrumb
@@ -232,6 +236,11 @@ export default async function ProductPage({ params }: { params: Params }) {
           <ProductGrid products={related} className="mt-8 lg:grid-cols-4" />
         </div>
       ) : null}
+
+      {/* recently viewed (excludes the current product) */}
+      <div className="mt-16">
+        <RecentlyViewed excludeSlug={product.slug} limit={6} />
+      </div>
     </div>
   );
 }

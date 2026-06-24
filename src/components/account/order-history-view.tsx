@@ -6,6 +6,7 @@ import { Search, LayoutGrid, Table2 } from "lucide-react";
 import { OrderStatusBadge } from "@/components/admin/order-status-badge";
 import { ProductArt } from "@/components/product/product-art";
 import { OrderActions } from "@/components/account/order-actions";
+import { ShipmentProgress } from "@/components/account/shipment-progress";
 import { formatINR } from "@/lib/format";
 import type { DeviceArt, OrderStatus } from "@/lib/types";
 
@@ -19,11 +20,15 @@ export interface OrderRow {
   address: string; // "City, State"
   itemsSummary: string;
   count: number;
-  items: { id: string; qty: number; art: DeviceArt }[];
+  items: { id: string; qty: number; art: DeviceArt; image: string | null }[];
   canCancel: boolean;
   canDispute: boolean;
   canWarranty: boolean;
   trackLabel: string;
+  /** Delivery stage 1–4 (Processing→Shipped→OFD→Delivered). */
+  stage: number;
+  /** Whether to show the shipment tracker (false for cancelled/returned). */
+  showProgress: boolean;
 }
 
 function fmtDate(iso: string) {
@@ -91,12 +96,17 @@ export function OrderHistoryView({ rows }: { rows: OrderRow[] }) {
               <div className="mt-3 flex items-center gap-3">
                 <div className="flex -space-x-2">
                   {o.items.slice(0, 3).map((it) => (
-                    <span key={it.id} className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-border bg-background">
-                      <ProductArt art={it.art} glyphClassName="!h-[40%]" />
+                    <span key={it.id} className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-border bg-background">
+                      {it.image ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={it.image} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        <ProductArt art={it.art} glyphClassName="!h-[40%]" />
+                      )}
                     </span>
                   ))}
                   {o.items.length > 3 ? (
-                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-border bg-surface-2 text-xs font-semibold text-muted">
+                    <span className="grid h-14 w-14 shrink-0 place-items-center rounded-lg border border-border bg-surface-2 text-xs font-semibold text-muted">
                       +{o.items.length - 3}
                     </span>
                   ) : null}
@@ -109,6 +119,12 @@ export function OrderHistoryView({ rows }: { rows: OrderRow[] }) {
                   </p>
                 </div>
               </div>
+
+              {o.showProgress ? (
+                <div className="mt-4 border-t border-border pt-4">
+                  <ShipmentProgress stage={o.stage} />
+                </div>
+              ) : null}
 
               <div className="mt-3 border-t border-border pt-3">
                 <OrderActions
