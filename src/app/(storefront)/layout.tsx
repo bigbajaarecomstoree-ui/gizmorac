@@ -5,7 +5,7 @@ import { WhatsAppButton } from "@/components/layout/whatsapp-button";
 import { PromoPopups } from "@/components/promo/promo-popups";
 import { getCurrentCustomer } from "@/lib/customer-auth";
 import { getSettings, whatsappLink } from "@/lib/data/settings";
-import { getCategories } from "@/lib/data/queries";
+import { getVisibleCategories } from "@/lib/data/queries";
 
 export default async function StorefrontLayout({
   children,
@@ -13,7 +13,7 @@ export default async function StorefrontLayout({
   const [customer, settings, categories] = await Promise.all([
     getCurrentCustomer(),
     getSettings(),
-    getCategories(),
+    getVisibleCategories(),
   ]);
 
   const waHref = whatsappLink(settings.whatsappNumber);

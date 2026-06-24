@@ -3,11 +3,11 @@ import Image from "next/image";
 import { ArrowUpRight } from "lucide-react";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { ProductArt } from "@/components/product/product-art";
-import { getCategories, getCategoryCounts } from "@/lib/data/queries";
+import { getVisibleCategories, getCategoryCounts } from "@/lib/data/queries";
 
 export async function CategoryGrid() {
   const [categories, counts] = await Promise.all([
-    getCategories(),
+    getVisibleCategories(),
     getCategoryCounts(),
   ]);
 

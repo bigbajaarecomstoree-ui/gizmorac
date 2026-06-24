@@ -143,11 +143,22 @@ function toCategory(r: CategoryRow): Category {
     art: r.art as DeviceArt,
     image: r.image,
     sortOrder: r.sortOrder,
+    hidden: r.hidden,
+    featured: r.featured,
   };
 }
 
 export async function getCategories(): Promise<Category[]> {
   const rows = await prisma.category.findMany({
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+  });
+  return rows.map(toCategory);
+}
+
+/** Storefront-facing categories — excludes hidden (seasonal/coming-soon) ones. */
+export async function getVisibleCategories(): Promise<Category[]> {
+  const rows = await prisma.category.findMany({
+    where: { hidden: false },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
   });
   return rows.map(toCategory);
@@ -173,6 +184,33 @@ export async function getCategoryCounts(): Promise<Record<CategorySlug, number>>
   });
   for (const g of grouped) counts[g.category] = g._count._all;
   return counts;
+}
+
+/** Net sales (₹) per category slug, from fulfilled orders' line items. */
+export async function getCategoryRevenue(): Promise<Record<string, number>> {
+  const [products, orders] = await Promise.all([
+    prisma.product.findMany({ select: { id: true, category: true } }),
+    prisma.order.findMany({
+      where: { status: { notIn: ["Cancelled", "Returned", "Refunded"] } },
+      select: { items: true },
+    }),
+  ]);
+  const catById = new Map(products.map((p) => [p.id, p.category]));
+  const rev: Record<string, number> = {};
+  for (const o of orders) {
+    let items: { id: string; price: number; qty: number }[] = [];
+    try {
+      items = JSON.parse(o.items);
+    } catch {
+      items = [];
+    }
+    for (const it of items) {
+      const cat = catById.get(it.id);
+      if (!cat) continue;
+      rev[cat] = (rev[cat] ?? 0) + (it.price ?? 0) * (it.qty ?? 0);
+    }
+  }
+  return rev;
 }
 
 export async function getBestSellers(limit = 8): Promise<Product[]> {

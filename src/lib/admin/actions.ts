@@ -972,6 +972,8 @@ function categoryDataFromForm(fd: FormData) {
     art: str(fd, "art") || "printer",
     image: str(fd, "image") || null,
     sortOrder: int(fd, "sortOrder", 0),
+    hidden: bool(fd, "hidden"),
+    featured: bool(fd, "featured"),
   };
 }
 
@@ -999,6 +1001,18 @@ export async function updateCategory(formData: FormData): Promise<void> {
   });
   revalidateCategories();
   redirect("/admin/categories");
+}
+
+/** Persist a new category order (drag-and-drop) by rewriting sortOrder. */
+export async function reorderCategories(orderedIds: string[]): Promise<{ ok: boolean }> {
+  await assertAdmin();
+  const ids = (Array.isArray(orderedIds) ? orderedIds : []).filter((s) => typeof s === "string");
+  if (ids.length === 0) return { ok: true };
+  await prisma.$transaction(
+    ids.map((id, i) => prisma.category.update({ where: { id }, data: { sortOrder: i } })),
+  );
+  revalidateCategories();
+  return { ok: true };
 }
 
 export async function deleteCategory(formData: FormData): Promise<void> {

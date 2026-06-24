@@ -2,7 +2,7 @@ import type { Category } from "@/lib/types";
 
 // Seed data for the Category table. Categories are now managed in the admin
 // (DB-backed); this list is only used to seed a fresh database.
-export type CategorySeed = Omit<Category, "id">;
+export type CategorySeed = Omit<Category, "id" | "hidden" | "featured">;
 
 export const categorySeeds: CategorySeed[] = [
   {

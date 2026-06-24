@@ -3,7 +3,7 @@ import Link from "next/link";
 import { SlidersHorizontal, PackageSearch } from "lucide-react";
 import type { CategorySlug, ShopQuery, SortOption } from "@/lib/types";
 import {
-  getCategories,
+  getVisibleCategories,
   getCategoryBySlug,
   getCategoryCounts,
   getPriceBounds,
@@ -82,7 +82,7 @@ export default async function ShopPage({
   };
 
   const [categories, counts, result, priceBounds] = await Promise.all([
-    getCategories(),
+    getVisibleCategories(),
     getCategoryCounts(),
     queryProducts(query),
     getPriceBounds(),

@@ -1,18 +1,32 @@
 import Link from "next/link";
-import Image from "next/image";
-import { Plus, Tags, Pencil } from "lucide-react";
-import { getCategories, getCategoryCounts } from "@/lib/data/queries";
-import { ProductArt } from "@/components/product/product-art";
+import { Plus, Tags, Layers, PackageX, Star } from "lucide-react";
+import {
+  getCategories,
+  getCategoryCounts,
+  getCategoryRevenue,
+} from "@/lib/data/queries";
 import { buttonVariants } from "@/components/ui/button";
-import { DeleteCategoryButton } from "@/components/admin/delete-category-button";
+import { CategoryReorderList } from "@/components/admin/category-reorder-list";
 
 export const dynamic = "force-dynamic";
 
 export default async function CategoriesPage() {
-  const [categories, counts] = await Promise.all([
+  const [categories, counts, revenue] = await Promise.all([
     getCategories(),
     getCategoryCounts(),
+    getCategoryRevenue(),
   ]);
+
+  const productsAssigned = categories.reduce((s, c) => s + (counts[c.slug] ?? 0), 0);
+  const emptyCount = categories.filter((c) => (counts[c.slug] ?? 0) === 0).length;
+  const featuredCount = categories.filter((c) => c.featured).length;
+
+  const cards = [
+    { label: "Categories", value: categories.length, icon: Tags, accent: true },
+    { label: "Products assigned", value: productsAssigned, icon: Layers },
+    { label: "Empty", value: emptyCount, icon: PackageX, warn: emptyCount > 0 },
+    { label: "Featured", value: featuredCount, icon: Star },
+  ];
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -23,8 +37,7 @@ export default async function CategoriesPage() {
             <h1 className="text-2xl font-bold tracking-tight">Categories</h1>
           </div>
           <p className="mt-1 text-sm text-muted">
-            {categories.length} categories. These power the storefront menus,
-            home grid and the product category picker.
+            These power the storefront menus, home grid and the product category picker.
           </p>
         </div>
         <Link href="/admin/categories/new" className={buttonVariants({ size: "sm" })}>
@@ -46,44 +59,39 @@ export default async function CategoriesPage() {
           </Link>
         </div>
       ) : (
-        <div className="mt-6 overflow-hidden rounded-xl border border-border bg-surface">
-          <div className="divide-y divide-border">
-            {categories.map((c) => (
-              <div key={c.id} className="flex items-center gap-4 px-4 py-3">
-                <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-border">
-                  {c.image ? (
-                    <Image src={c.image} alt="" fill sizes="48px" className="object-cover" />
-                  ) : (
-                    <ProductArt art={c.art} glyphClassName="!h-[42%]" />
-                  )}
+        <>
+          <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {cards.map((c) => (
+              <div key={c.label} className="rounded-xl border border-border bg-surface p-4">
+                <c.icon
+                  size={18}
+                  className={c.accent ? "text-accent" : c.warn ? "text-amber-600" : "text-faint"}
+                />
+                <div className={`mt-3 text-xl font-bold tracking-tight ${c.warn ? "text-amber-600" : ""}`}>
+                  {c.value}
                 </div>
-
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-semibold">{c.name}</div>
-                  <div className="truncate text-xs text-muted">
-                    <span className="font-mono text-faint">{c.slug}</span>
-                    {c.tagline ? ` · ${c.tagline}` : ""}
-                  </div>
-                </div>
-
-                <div className="hidden w-24 text-right text-sm text-muted sm:block">
-                  {counts[c.slug] ?? 0} product{(counts[c.slug] ?? 0) === 1 ? "" : "s"}
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Link
-                    href={`/admin/categories/${c.id}/edit`}
-                    className="inline-grid h-9 w-9 place-items-center rounded-lg border border-border text-muted transition-colors hover:border-accent hover:text-accent"
-                    aria-label={`Edit ${c.name}`}
-                  >
-                    <Pencil size={15} />
-                  </Link>
-                  <DeleteCategoryButton id={c.id} name={c.name} productCount={counts[c.slug] ?? 0} />
-                </div>
+                <div className="tech-label mt-1">{c.label}</div>
               </div>
             ))}
           </div>
-        </div>
+
+          <div className="mt-6">
+            <CategoryReorderList
+              items={categories.map((c) => ({
+                id: c.id,
+                name: c.name,
+                slug: c.slug,
+                tagline: c.tagline,
+                art: c.art,
+                image: c.image ?? null,
+                hidden: c.hidden,
+                featured: c.featured,
+                productCount: counts[c.slug] ?? 0,
+                revenue: revenue[c.slug] ?? 0,
+              }))}
+            />
+          </div>
+        </>
       )}
     </div>
   );

@@ -32,6 +32,10 @@ export interface Category {
   /** Optional real photo; falls back to the `art` line illustration when absent. */
   image?: string | null;
   sortOrder: number;
+  /** Hidden from the storefront (seasonal / coming-soon) without deleting. */
+  hidden: boolean;
+  /** Promoted on the homepage. */
+  featured: boolean;
 }
 
 export interface ProductSpec {

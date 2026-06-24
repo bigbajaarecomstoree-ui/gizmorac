@@ -110,9 +110,38 @@ export function CategoryForm({
               triggerClassName="h-11 bg-background"
             />
           </Field>
-          <Field label="Display order" hint="Lower numbers show first">
+          <Field label="Display order" hint="Lower numbers show first (or drag to reorder)">
             <input name="sortOrder" type="number" defaultValue={c?.sortOrder ?? 0} className={inputCls} />
           </Field>
+        </div>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-background p-3">
+            <input
+              type="checkbox"
+              name="featured"
+              defaultChecked={c?.featured}
+              className="mt-0.5 size-4 cursor-pointer accent-accent"
+            />
+            <span>
+              <span className="block text-sm font-medium">Featured</span>
+              <span className="block text-xs text-faint">Promote this category on the homepage.</span>
+            </span>
+          </label>
+          <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-background p-3">
+            <input
+              type="checkbox"
+              name="hidden"
+              defaultChecked={c?.hidden}
+              className="mt-0.5 size-4 cursor-pointer accent-accent"
+            />
+            <span>
+              <span className="block text-sm font-medium">Hidden</span>
+              <span className="block text-xs text-faint">
+                Hide from the storefront (seasonal / coming-soon) without deleting.
+              </span>
+            </span>
+          </label>
         </div>
       </section>
 

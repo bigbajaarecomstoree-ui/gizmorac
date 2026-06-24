@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 import { SITE } from "@/lib/constants";
-import { getProductSlugs, getCategories } from "@/lib/data/queries";
+import { getProductSlugs, getVisibleCategories } from "@/lib/data/queries";
 
 // Refresh at runtime (daily) rather than hard-failing the build if the database
 // is briefly unreachable during a Vercel deploy.
@@ -19,7 +19,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   try {
     const [slugs, categories] = await Promise.all([
       getProductSlugs(),
-      getCategories(),
+      getVisibleCategories(),
     ]);
     categoryRoutes = categories.map((c) => ({
       url: `${SITE.url}/shop?category=${c.slug}`,
