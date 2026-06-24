@@ -325,6 +325,7 @@ model TicketMessage {
 model Subscriber {
   id        String   @id @default(cuid())
   email     String   @unique
+  source    String   @default("footer") // where they signed up: footer / home / …
   createdAt DateTime @default(now())
 }
 

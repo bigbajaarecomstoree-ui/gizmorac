@@ -15,7 +15,7 @@ export function FooterNewsletter() {
     e.preventDefault();
     setError(null);
     startTransition(async () => {
-      const res = await subscribeNewsletter(email);
+      const res = await subscribeNewsletter(email, "footer");
       if (res.ok) setDone(true);
       else setError(res.error ?? "Something went wrong. Please try again.");
     });

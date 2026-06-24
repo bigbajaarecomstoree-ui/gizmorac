@@ -754,15 +754,17 @@ export type SubscribeResult = { ok: boolean; error?: string };
 
 export async function subscribeNewsletter(
   email: string,
+  source = "footer",
 ): Promise<SubscribeResult> {
   const clean = email.trim().toLowerCase();
   if (!EMAIL_RE.test(clean)) {
     return { ok: false, error: "Please enter a valid email address." };
   }
+  const src = String(source || "footer").slice(0, 40);
   await prisma.subscriber.upsert({
     where: { email: clean },
     update: {},
-    create: { email: clean },
+    create: { email: clean, source: src },
   });
   return { ok: true };
 }

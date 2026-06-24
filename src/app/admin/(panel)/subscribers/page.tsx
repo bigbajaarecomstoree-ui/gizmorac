@@ -1,22 +1,60 @@
-import { Download, Mail, Inbox } from "lucide-react";
-import { getSubscribers } from "@/lib/data/subscribers";
+import {
+  Mail,
+  Users,
+  Repeat,
+  IndianRupee,
+  Star,
+  Clock,
+  CalendarDays,
+  CalendarClock,
+  Download,
+} from "lucide-react";
+import { getSubscribers, getSubscriberGrowth } from "@/lib/data/subscribers";
+import { getAudienceCounts } from "@/lib/data/audience";
 import { SubscriberActions } from "@/components/admin/subscriber-actions";
+import { SubscriberList } from "@/components/admin/subscriber-list";
+import { SubscriberGrowthChart } from "@/components/admin/subscriber-growth-chart";
 
 export const dynamic = "force-dynamic";
 
-function fmtDateTime(iso: string) {
-  return new Date(iso).toLocaleString("en-IN", {
+function fmtDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-IN", {
     timeZone: "Asia/Kolkata",
     day: "numeric",
     month: "short",
     year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
   });
 }
 
 export default async function AdminSubscribersPage() {
-  const subscribers = await getSubscribers();
+  const [subscribers, growth, audience] = await Promise.all([
+    getSubscribers(),
+    getSubscriberGrowth(30),
+    getAudienceCounts(),
+  ]);
+
+  const istDate = (iso: string) => new Date(iso).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+  const monthPrefix = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }).slice(0, 7);
+  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const thisMonth = subscribers.filter((s) => istDate(s.createdAt).startsWith(monthPrefix)).length;
+  const thisWeek = subscribers.filter((s) => new Date(s.createdAt).getTime() >= weekAgo).length;
+
+  const kpis = [
+    { label: "Total subscribers", value: String(subscribers.length), icon: Mail, accent: true },
+    { label: "This month", value: String(thisMonth), icon: CalendarDays },
+    { label: "This week", value: String(thisWeek), icon: CalendarClock },
+    { label: "Last signup", value: subscribers[0] ? fmtDate(subscribers[0].createdAt) : "—", icon: Clock, small: true },
+  ];
+
+  const segments = [
+    { key: "subscribers", label: "All subscribers", count: audience.subscribers, icon: Mail },
+    { key: "customers", label: "All customers", count: audience.customers, icon: Users },
+    { key: "repeat", label: "Repeat buyers", count: audience.repeat, icon: Repeat },
+    { key: "spent5000", label: "Spent > ₹5,000", count: audience.spent5000, icon: IndianRupee },
+    { key: "highvalue", label: "High-value (₹10k+)", count: audience.highvalue, icon: Star },
+    { key: "recent30", label: "Bought in 30 days", count: audience.recent30, icon: Clock },
+  ];
+
   const emails = subscribers.map((s) => s.email);
 
   return (
@@ -25,11 +63,10 @@ export default async function AdminSubscribersPage() {
         <div>
           <div className="flex items-center gap-2">
             <Mail size={22} className="text-accent" />
-            <h1 className="text-2xl font-bold tracking-tight">Newsletter subscribers</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Subscribers</h1>
           </div>
           <p className="mt-1 text-sm text-muted">
-            {subscribers.length} subscriber{subscribers.length === 1 ? "" : "s"} from the
-            footer signup.
+            Newsletter signups and exportable audience segments.
           </p>
         </div>
         <a
@@ -42,51 +79,63 @@ export default async function AdminSubscribersPage() {
         </a>
       </div>
 
+      {/* KPI cards */}
+      <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {kpis.map((k) => (
+          <div key={k.label} className="rounded-xl border border-border bg-surface p-4">
+            <k.icon size={18} className={k.accent ? "text-accent" : "text-faint"} />
+            <div className={`mt-3 font-bold tracking-tight ${k.small ? "text-base" : "text-xl"}`}>
+              {k.value}
+            </div>
+            <div className="tech-label mt-1">{k.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* growth chart */}
+      <div className="mt-6">
+        <SubscriberGrowthChart points={growth} />
+      </div>
+
+      {/* audience exports */}
+      <div className="mt-6">
+        <h2 className="mb-1 text-sm font-semibold">Audience exports</h2>
+        <p className="mb-3 text-xs text-faint">
+          One-click CSV for Meta/Mailchimp imports — built from subscribers, customers and orders.
+        </p>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+          {segments.map((s) => (
+            <a
+              key={s.key}
+              href={`/api/admin/subscribers/export?segment=${s.key}`}
+              download
+              className="group flex items-center gap-3 rounded-xl border border-border bg-surface p-4 transition-colors hover:border-accent"
+            >
+              <s.icon size={18} className="shrink-0 text-faint group-hover:text-accent" />
+              <div className="min-w-0 flex-1">
+                <div className="text-lg font-bold tracking-tight">{s.count}</div>
+                <div className="truncate text-xs text-muted">{s.label}</div>
+              </div>
+              <Download size={15} className="shrink-0 text-faint group-hover:text-accent" />
+            </a>
+          ))}
+        </div>
+      </div>
+
+      {/* campaign helper (copy / BCC) */}
       {subscribers.length > 0 ? (
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface p-4">
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface p-4">
           <p className="text-sm text-muted">
-            Send a campaign from your own email — copy the list into the BCC field,
-            or open your mail app with everyone added.
+            Send a campaign from your own email — copy the list into BCC, or open your mail app
+            with everyone added.
           </p>
           <SubscriberActions emails={emails} />
         </div>
       ) : null}
 
-      <div className="mt-5 overflow-hidden rounded-xl border border-border bg-surface">
-        {subscribers.length === 0 ? (
-          <div className="flex flex-col items-center px-5 py-16 text-center">
-            <Inbox size={28} className="text-faint" />
-            <p className="mt-3 text-sm font-medium text-muted">No subscribers yet</p>
-            <p className="mt-1 text-xs text-faint">
-              Emails from the footer &ldquo;Newsletter&rdquo; signup will appear here.
-            </p>
-          </div>
-        ) : (
-          <>
-            <div className="hidden grid-cols-[2rem_1fr_12rem] gap-4 border-b border-border px-4 py-3 text-xs uppercase tracking-wider text-faint sm:grid">
-              <span>#</span>
-              <span>Email</span>
-              <span>Subscribed</span>
-            </div>
-            <div className="divide-y divide-border">
-              {subscribers.map((s, i) => (
-                <div
-                  key={s.id}
-                  className="grid grid-cols-1 gap-1 px-4 py-3 text-sm sm:grid-cols-[2rem_1fr_12rem] sm:items-center sm:gap-4"
-                >
-                  <span className="hidden text-faint sm:block">{i + 1}</span>
-                  <a
-                    href={`mailto:${s.email}`}
-                    className="truncate font-medium text-accent-bright hover:text-accent"
-                  >
-                    {s.email}
-                  </a>
-                  <span className="text-xs text-muted">{fmtDateTime(s.createdAt)}</span>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
+      {/* searchable list */}
+      <div className="mt-6">
+        <SubscriberList subscribers={subscribers} />
       </div>
     </div>
   );
