@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { Download, Users, ChevronRight } from "lucide-react";
-import { getCustomersWithStats } from "@/lib/data/customers";
+import { Download, Users, ChevronRight, UserCheck, Repeat, UserPlus, ShieldAlert } from "lucide-react";
+import { getCustomersWithStats, isHighRiskCustomer } from "@/lib/data/customers";
 import { formatINR } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 const COLS =
   "sm:grid-cols-[2rem_minmax(0,2fr)_minmax(0,1fr)_minmax(0,2fr)_3.5rem_6rem_1.25rem]";
@@ -19,6 +20,16 @@ function fmtDate(iso: string) {
 
 export default async function AdminCustomersPage() {
   const customers = await getCustomersWithStats();
+
+  // Top-line segments — keeps the module feeling alive (Total/Active/Repeat/New/Risk).
+  const since = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  const kpis = [
+    { label: "Total", value: customers.length, icon: Users, color: "" },
+    { label: "Active", value: customers.filter((c) => !c.deactivatedAt).length, icon: UserCheck, color: "text-emerald-600" },
+    { label: "Repeat", value: customers.filter((c) => c.orderCount > 1).length, icon: Repeat, color: "text-accent" },
+    { label: "New (30d)", value: customers.filter((c) => new Date(c.createdAt).getTime() >= since).length, icon: UserPlus, color: "text-emerald-600" },
+    { label: "High risk", value: customers.filter((c) => isHighRiskCustomer(c)).length, icon: ShieldAlert, color: "text-red-600" },
+  ];
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -42,7 +53,19 @@ export default async function AdminCustomersPage() {
         </a>
       </div>
 
-      <div className="mt-6 overflow-hidden rounded-xl border border-border bg-surface">
+      {customers.length > 0 ? (
+        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          {kpis.map((k) => (
+            <div key={k.label} className="rounded-xl border border-border bg-surface p-4">
+              <k.icon size={18} className={cn(k.value > 0 ? k.color : "text-faint", !k.color && "text-faint")} />
+              <div className={cn("mt-3 text-xl font-bold tracking-tight", k.value > 0 ? k.color : "")}>{k.value}</div>
+              <div className="tech-label mt-1">{k.label}</div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      <div className="mt-4 overflow-hidden rounded-xl border border-border bg-surface">
         {customers.length === 0 ? (
           <p className="px-5 py-12 text-center text-sm text-muted">
             No customers have signed up yet.
@@ -98,7 +121,7 @@ export default async function AdminCustomersPage() {
                       {c.orderCount}
                     </span>
                     <span className="sm:text-right">
-                      <span className="readout font-semibold">{formatINR(c.totalSpent)}</span>
+                      <span className="readout text-base font-bold">{formatINR(c.totalSpent)}</span>
                     </span>
                     <ChevronRight size={16} className="hidden shrink-0 text-faint sm:block" />
                   </Link>

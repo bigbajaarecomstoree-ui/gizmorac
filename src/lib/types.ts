@@ -284,6 +284,9 @@ export interface Address {
 export interface CustomerWithStats extends Customer {
   orderCount: number;
   totalSpent: number;
+  cancels: number;
+  returns: number;
+  codOrders: number;
 }
 
 // --- support tickets (damage / defect claims) ---
