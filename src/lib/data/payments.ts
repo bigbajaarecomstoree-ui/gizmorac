@@ -2,19 +2,94 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getOrderStatus, getRefundStatus } from "@/lib/phonepe";
 import { logEvent } from "@/lib/data/logs";
+import { applyInventoryTxn } from "@/lib/postorder/inventory";
 
-async function restoreStock(itemsJson: string) {
+/** Minimal order shape needed to release an unpaid order. */
+export interface ReleasableOrder {
+  id: string;
+  orderNumber: string;
+  items: string;
+  couponCode: string | null;
+  email: string;
+}
+
+/**
+ * Idempotently release an unpaid PhonePe order: cancel it, restore stock through
+ * the authoritative ledger, release the coupon hold, and close the line items.
+ *
+ * Concurrency-safe: a compare-and-swap claims the `Pending` row exactly once, so
+ * only one runner (callback / webhook / cron) ever performs the restore — even
+ * if all three fire at the same instant. Returns true only for the winner.
+ */
+export async function releaseOrder(
+  order: ReleasableOrder,
+  reason: string,
+): Promise<boolean> {
+  const claimed = await prisma.order.updateMany({
+    where: { id: order.id, paymentStatus: "Pending" },
+    data: {
+      status: "Cancelled",
+      paymentStatus: "Failed",
+      paymentError: reason,
+      statusV2: "CANCELLED",
+      paymentState: "FAILED",
+    },
+  });
+  if (claimed.count === 0) return false; // already settled by another runner
+
+  // Restore stock via the append-only ledger (idempotent per key → never drifts).
   let items: { id: string; qty: number }[] = [];
   try {
-    items = JSON.parse(itemsJson);
+    items = JSON.parse(order.items);
   } catch {
-    return;
+    items = [];
   }
   for (const it of items) {
-    await prisma.product
-      .update({ where: { id: it.id }, data: { stock: { increment: it.qty } } })
-      .catch(() => {});
+    if (!it?.id || !it?.qty) continue;
+    await applyInventoryTxn({
+      productId: it.id,
+      delta: it.qty,
+      type: "CANCEL_RESTOCK",
+      orderId: order.id,
+      reason,
+      idempotencyKey: `${order.id}-cancel-${it.id}`,
+    });
   }
+
+  // Release the coupon hold taken at checkout (never below zero).
+  if (order.couponCode) {
+    await prisma.coupon.updateMany({
+      where: { code: order.couponCode, usedCount: { gt: 0 } },
+      data: { usedCount: { decrement: 1 } },
+    });
+  }
+
+  // Close the v2 line items + write the audit row.
+  await prisma.orderItem.updateMany({
+    where: { orderId: order.id, status: "ACTIVE" },
+    data: { status: "CLOSED" },
+  });
+  await prisma.orderStatusHistory.create({
+    data: {
+      entityType: "ORDER",
+      entityId: order.id,
+      orderId: order.id,
+      previousState: "PENDING",
+      newState: "CANCELLED",
+      actorRole: "SYSTEM",
+      reason,
+    },
+  });
+  await logEvent({
+    level: "warn",
+    actor: "system",
+    actorEmail: order.email,
+    action: "order.released",
+    message: `Released unpaid order ${order.orderNumber}: ${reason}`,
+    meta: { orderNumber: order.orderNumber, reason },
+  });
+  revalidate(order.orderNumber);
+  return true;
 }
 
 function revalidate(orderNumber: string) {
@@ -40,6 +115,7 @@ export async function reconcilePhonePeOrder(
   const order = await prisma.order.findUnique({ where: { orderNumber } });
   if (!order) return "NotFound";
   if (order.paymentStatus === "Paid") return "Paid";
+  if (order.paymentStatus === "Failed") return "Failed"; // already settled — no API call
 
   const status = await getOrderStatus(orderNumber);
   if (status.state === "COMPLETED") {
@@ -67,26 +143,7 @@ export async function reconcilePhonePeOrder(
     return "Paid";
   }
   if (status.state === "FAILED") {
-    await prisma.order.update({
-      where: { id: order.id },
-      data: {
-        status: "Cancelled",
-        paymentStatus: "Failed",
-        paymentError: status.error || "Payment was not completed.",
-        statusV2: "CANCELLED",
-        paymentState: "FAILED",
-      },
-    });
-    await restoreStock(order.items);
-    await logEvent({
-      level: "warn",
-      actor: "customer",
-      actorEmail: order.email,
-      action: "payment.failed",
-      message: `Payment failed/cancelled for ${orderNumber} (PhonePe)`,
-      meta: { orderNumber },
-    });
-    revalidate(orderNumber);
+    await releaseOrder(order, status.error || "Payment was not completed.");
     return "Failed";
   }
   return "Pending";
