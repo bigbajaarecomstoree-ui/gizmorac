@@ -50,6 +50,76 @@ export async function refundOrderPayment(orderId: string): Promise<RefundOutcome
   return { ok: true, moved: true, amount: order.total };
 }
 
+/**
+ * Refund a COD order's online booking advance — the small amount paid up front
+ * via PhonePe on a COD-advance order. `refundOrderPayment` deliberately handles
+ * only fully-prepaid PhonePe orders, so this is the additive counterpart for the
+ * advance; the two are mutually exclusive by `paymentMethod` (at most one moves
+ * money for a given order). Fired on a pre-dispatch cancel per the cancellation
+ * matrix (cancel-before-dispatch / not-shipped → refund; refusal / RTO /
+ * unreachable forfeit and never route through here). Standard COD orders and
+ * orders with no advance are a no-op, so existing behaviour is unchanged.
+ *
+ * Exactly-once under double-clicks / callback retries / multiple tabs: an atomic
+ * CAS claim flips the order's `refundStatus` from "" → "Processing" before the
+ * gateway call (refundStatus is otherwise untouched on a COD order). If the
+ * claim is already taken we return success without moving money; if the gateway
+ * rejects we release the claim so a retry can re-attempt.
+ */
+export async function refundCodAdvance(orderId: string): Promise<RefundOutcome> {
+  const order = await prisma.order.findUnique({ where: { id: orderId } });
+  if (!order) return { ok: false, moved: false, amount: 0, error: "Order not found." };
+
+  // Only COD orders with an actually-paid booking advance qualify. "PartiallyPaid"
+  // means the advance cleared but the delivery balance hasn't been collected yet;
+  // once the balance is collected the status is "Paid" and nothing is refunded here.
+  const advanceRupees = Math.round(order.codAdvancePaise / 100);
+  if (
+    order.paymentMethod !== "COD" ||
+    order.codAdvancePaise <= 0 ||
+    order.paymentStatus !== "PartiallyPaid"
+  ) {
+    return { ok: true, moved: false, amount: 0 };
+  }
+  if (order.refundStatus === "Initiated" || order.refundStatus === "Completed") {
+    return { ok: true, moved: false, amount: order.refundAmount || advanceRupees };
+  }
+
+  // Atomic claim — only the caller that flips "" → "Processing" owns the refund.
+  const claim = await prisma.order.updateMany({
+    where: { id: order.id, paymentMethod: "COD", refundStatus: "" },
+    data: { refundStatus: "Processing" },
+  });
+  if (claim.count === 0) {
+    // Another caller already claimed/sent it — log nothing, move no money.
+    return { ok: true, moved: false, amount: order.refundAmount || advanceRupees };
+  }
+
+  const merchantRefundId = `RF-${order.orderNumber}-ADV-${Date.now().toString(36)}`;
+  const res = await initiateRefund({
+    merchantRefundId,
+    merchantOrderId: order.orderNumber,
+    amountPaise: order.codAdvancePaise,
+  });
+  if (!res.ok) {
+    // Release the claim so the cancel can be retried without losing the refund.
+    await prisma.order.updateMany({
+      where: { id: order.id, refundStatus: "Processing" },
+      data: { refundStatus: "" },
+    });
+    return { ok: false, moved: false, amount: advanceRupees, error: res.error };
+  }
+  await prisma.order.update({
+    where: { id: order.id },
+    data: {
+      refundStatus: "Initiated",
+      refundRef: merchantRefundId,
+      refundAmount: advanceRupees,
+    },
+  });
+  return { ok: true, moved: true, amount: advanceRupees };
+}
+
 export interface CancelOutcome {
   ok: boolean;
   note: string;
@@ -67,10 +137,17 @@ export async function cancelOrderEverywhere(orderId: string): Promise<CancelOutc
   const order = await prisma.order.findUnique({ where: { id: orderId } });
   if (!order) return { ok: false, note: "", error: "Order not found." };
 
-  // 1) Refund the customer first.
+  // 1) Refund the customer first. A prepaid PhonePe order returns its full
+  // payment; a COD-advance order returns its booking advance. The two are
+  // mutually exclusive by payment method, so at most one actually moves money —
+  // standard COD / unpaid orders are a no-op and behave exactly as before.
   const r = await refundOrderPayment(orderId);
   if (!r.ok) {
     return { ok: false, note: "", error: r.error ?? "Couldn't start the refund." };
+  }
+  const ar = await refundCodAdvance(orderId);
+  if (!ar.ok) {
+    return { ok: false, note: "", error: ar.error ?? "Couldn't start the advance refund." };
   }
 
   // 2) Cancel the Shiprocket shipment (best-effort; refunds freight to wallet).
@@ -90,8 +167,12 @@ export async function cancelOrderEverywhere(orderId: string): Promise<CancelOutc
   // 3) Mark the order cancelled.
   await prisma.order.update({ where: { id: orderId }, data: { status: "Cancelled" } });
 
-  const note = r.moved
-    ? `Order cancelled. Refund of ₹${r.amount.toLocaleString("en-IN")} started to the original payment method.`
-    : "Order cancelled.";
+  // At most one of the two refunds actually moved money (prepaid full vs. COD
+  // booking advance), so report whichever did.
+  const refunded = r.moved ? r.amount : ar.moved ? ar.amount : 0;
+  const note =
+    r.moved || ar.moved
+      ? `Order cancelled. Refund of ₹${refunded.toLocaleString("en-IN")} started to the original payment method.`
+      : "Order cancelled.";
   return { ok: true, note };
 }
