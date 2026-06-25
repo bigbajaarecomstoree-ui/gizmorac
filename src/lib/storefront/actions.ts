@@ -6,6 +6,8 @@ import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { getCurrentCustomer } from "@/lib/customer-auth";
 import { getSettings } from "@/lib/data/settings";
+import { computeCodAdvance } from "@/lib/data/cod";
+import { getCodPincodeRule, codAllowedForRule } from "@/lib/data/cod-pincode";
 import { MAX_QTY } from "@/lib/checkout-shared";
 import { initiatePayment, getPhonePeConfig } from "@/lib/phonepe";
 import { checkServiceability } from "@/lib/shiprocket";
@@ -57,10 +59,19 @@ export interface CheckoutPayload {
   companyName?: string;
   /** "COD" (default) or "PhonePe" online payment. */
   paymentMethod?: "COD" | "PhonePe";
+  /** Customer accepted T&C / COD Policy / Refund Policy (required for COD advance). */
+  acceptedTerms?: boolean;
 }
 
 export type PlaceOrderResult =
-  | { ok: true; orderNumber: string; trackingToken: string; paymentMethod: "COD" | "PhonePe" }
+  | {
+      ok: true;
+      orderNumber: string;
+      trackingToken: string;
+      paymentMethod: "COD" | "PhonePe";
+      /** True when the COD booking advance must be paid online before confirmation. */
+      requiresAdvance: boolean;
+    }
   | { ok: false; error: string };
 
 /** Fetch authoritative prices for a set of cart line refs. */
@@ -128,7 +139,9 @@ export async function placeOrder(
 
   const settings = await getSettings();
   const wantsOnline = payload.paymentMethod === "PhonePe";
-  if (wantsOnline && !(await getPhonePeConfig()).configured) {
+  const ppCfg = await getPhonePeConfig();
+  const ppReady = ppCfg.configured && paymentsProductionSafe(ppCfg.env);
+  if (wantsOnline && !ppCfg.configured) {
     return { ok: false, error: "Online payment is unavailable right now." };
   }
   if (!wantsOnline && !settings.codEnabled) {
@@ -221,6 +234,37 @@ export async function placeOrder(
     afterDiscount >= settings.freeShippingThreshold ? 0 : settings.shippingFee;
   const total = afterDiscount + shipping;
 
+  // COD booking advance: a small online amount taken now, the rest on delivery.
+  // Applies only when the feature is on, COD is chosen, and the gateway is ready;
+  // otherwise this is a standard COD order (unchanged behaviour).
+  const baseCod = computeCodAdvance(settings, total);
+  // Per-pincode COD rule (no rule / empty table = global behaviour).
+  const pinRule = await getCodPincodeRule(payload.pincode.trim());
+  if (!wantsOnline && !codAllowedForRule(pinRule)) {
+    return {
+      ok: false,
+      error: "Cash on Delivery isn't available for this pincode. Please pay online.",
+    };
+  }
+  // A HIGHER_CHARGE pincode overrides the booking advance for that area.
+  const cod =
+    pinRule?.mode === "HIGHER_CHARGE" && pinRule.advanceOverride != null
+      ? computeCodAdvance(
+          { ...settings, codAdvanceEnabled: true, codAdvanceType: "FIXED", codAdvanceAmount: pinRule.advanceOverride },
+          total,
+        )
+      : baseCod;
+  const needsAdvance = !wantsOnline && cod.enabled && ppReady;
+  if (needsAdvance && !payload.acceptedTerms) {
+    return {
+      ok: false,
+      error: "Please accept the Terms & Conditions and COD Policy to continue.",
+    };
+  }
+  // Orders that take an online payment first (full prepaid OR the COD advance)
+  // stay Pending until that payment clears; standard COD auto-confirms.
+  const needsPayment = wantsOnline || needsAdvance;
+
   const customer = await getCurrentCustomer();
 
   // Generate a unique order number (retry on the rare collision).
@@ -246,7 +290,7 @@ export async function placeOrder(
   const lineSubsPaise = lines.map((l) => rupeesToPaise(l.price) * l.qty);
   const discAllocPaise = prorate(rupeesToPaise(totalDiscount), lineSubsPaise);
   const shipAllocPaise = prorate(rupeesToPaise(shipping), lineSubsPaise);
-  const v2OrderStatus = wantsOnline ? "PENDING" : "CONFIRMED";
+  const v2OrderStatus = needsPayment ? "PENDING" : "CONFIRMED";
 
   try {
     await prisma.$transaction(async (tx) => {
@@ -294,8 +338,9 @@ export async function placeOrder(
         data: {
           orderNumber,
           trackingToken,
-          // COD auto-confirms; online orders stay Pending until payment clears.
-          status: wantsOnline ? "Pending" : "Confirmed",
+          // Standard COD auto-confirms; orders awaiting an online payment (full
+          // prepaid or the COD advance) stay Pending until that payment clears.
+          status: needsPayment ? "Pending" : "Confirmed",
           firstName: payload.firstName.trim(),
           lastName: payload.lastName.trim(),
           email: payload.email.trim().toLowerCase(),
@@ -322,7 +367,11 @@ export async function placeOrder(
           shipping,
           total,
           paymentMethod: wantsOnline ? "PhonePe" : "COD",
-          paymentStatus: wantsOnline ? "Pending" : "",
+          paymentStatus: needsPayment ? "Pending" : "",
+          // COD advance (paise). 0 = full prepaid or standard COD.
+          codAdvancePaise: needsAdvance ? rupeesToPaise(cod.advance) : 0,
+          codRemainingPaise: needsAdvance ? rupeesToPaise(cod.remaining) : 0,
+          deliveryPaymentStatus: needsAdvance ? "PENDING" : "",
           couponCode: appliedCode,
           customerId: customer?.id ?? null,
           // Post-order v2 (shadow until ffPostOrderV2 flips reads to it).
@@ -403,12 +452,18 @@ export async function placeOrder(
     return { ok: false, error: "Could not place order, please try again." };
   }
 
+  const payLabel = wantsOnline ? "PhonePe" : needsAdvance ? "COD+advance" : "COD";
   await logEvent({
     actor: "customer",
     actorEmail: payload.email.trim(),
     action: "order.placed",
-    message: `Order ${orderNumber} placed · ₹${total} · ${wantsOnline ? "PhonePe" : "COD"}`,
-    meta: { orderNumber, total, payment: wantsOnline ? "PhonePe" : "COD" },
+    message: `Order ${orderNumber} placed · ₹${total} · ${payLabel}`,
+    meta: {
+      orderNumber,
+      total,
+      payment: payLabel,
+      ...(needsAdvance ? { codAdvance: cod.advance, codRemaining: cod.remaining } : {}),
+    },
   });
 
   revalidatePath("/account");
@@ -421,6 +476,7 @@ export async function placeOrder(
     orderNumber,
     trackingToken,
     paymentMethod: wantsOnline ? "PhonePe" : "COD",
+    requiresAdvance: needsAdvance,
   };
 }
 
@@ -442,6 +498,24 @@ export async function getDeliveryEstimate(
   const est = await checkServiceability({ deliveryPincode: pincode });
   if (!est) return { ok: false };
   return { ok: true, ...est };
+}
+
+export interface CodPincodeResult {
+  codAllowed: boolean;
+  mode: string;
+  advanceOverride: number | null;
+}
+
+/** COD policy for a pincode (per-pincode rules). Read-only, no PII. */
+export async function lookupCodPincode(pincode: string): Promise<CodPincodeResult> {
+  const blocked = await limitByIp("cod-pincode", 30, 60);
+  if (blocked) return { codAllowed: true, mode: "STANDARD", advanceOverride: null };
+  const rule = await getCodPincodeRule(pincode);
+  return {
+    codAllowed: codAllowedForRule(rule),
+    mode: rule?.mode ?? "STANDARD",
+    advanceOverride: rule?.advanceOverride ?? null,
+  };
 }
 
 export type StartPaymentResult =
@@ -470,7 +544,8 @@ export async function startPhonePePayment(
   );
   const tokenOk = order.trackingToken !== "" && token === order.trackingToken;
   if (!isOwner && !tokenOk) return { ok: false, error: "Order not found." };
-  if (order.paymentStatus === "Paid") {
+  // "PartiallyPaid" = the COD advance already cleared — don't charge it twice.
+  if (order.paymentStatus === "Paid" || order.paymentStatus === "PartiallyPaid") {
     return { ok: false, error: "This order is already paid." };
   }
 
@@ -500,9 +575,11 @@ export async function startPhonePePayment(
     : (process.env.NEXT_PUBLIC_SITE_URL ?? "");
   const redirectUrl = `${origin}/api/payments/phonepe/callback?order=${encodeURIComponent(orderNumber)}`;
 
+  // For a COD-advance order charge only the booking advance; otherwise the full total.
+  const amountPaise = order.codAdvancePaise > 0 ? order.codAdvancePaise : order.total * 100;
   const res = await initiatePayment({
     merchantOrderId: orderNumber,
-    amountPaise: order.total * 100,
+    amountPaise,
     redirectUrl,
   });
   if (!res.ok || !res.redirectUrl) {

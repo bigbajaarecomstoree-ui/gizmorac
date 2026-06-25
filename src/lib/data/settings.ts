@@ -18,6 +18,12 @@ export interface StoreSettings {
   freeShippingThreshold: number;
   shippingFee: number;
   codEnabled: boolean;
+  codAdvanceEnabled: boolean;
+  codAdvanceType: string; // "FIXED" | "PERCENT"
+  codAdvanceAmount: number;
+  codAdvancePercent: number;
+  codAdvanceMax: number;
+  codAdvanceMin: number;
   instagramUrl: string;
   facebookUrl: string;
   youtubeUrl: string;
@@ -54,6 +60,12 @@ export const DEFAULT_SETTINGS: StoreSettings = {
   freeShippingThreshold: 999,
   shippingFee: 79,
   codEnabled: true,
+  codAdvanceEnabled: false,
+  codAdvanceType: "FIXED",
+  codAdvanceAmount: 200,
+  codAdvancePercent: 5,
+  codAdvanceMax: 300,
+  codAdvanceMin: 0,
   instagramUrl: "",
   facebookUrl: "",
   youtubeUrl: "",
@@ -88,6 +100,12 @@ function toSettings(r: StoreSetting): StoreSettings {
     freeShippingThreshold: r.freeShippingThreshold,
     shippingFee: r.shippingFee,
     codEnabled: r.codEnabled,
+    codAdvanceEnabled: r.codAdvanceEnabled,
+    codAdvanceType: r.codAdvanceType,
+    codAdvanceAmount: r.codAdvanceAmount,
+    codAdvancePercent: r.codAdvancePercent,
+    codAdvanceMax: r.codAdvanceMax,
+    codAdvanceMin: r.codAdvanceMin,
     instagramUrl: r.instagramUrl,
     facebookUrl: r.facebookUrl,
     youtubeUrl: r.youtubeUrl,

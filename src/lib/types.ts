@@ -191,8 +191,16 @@ export interface Order {
   shipping: number;
   total: number;
   paymentMethod: string;
-  /** Online-payment status: "" (COD) | "Pending" | "Paid" | "Failed". */
+  /** Online-payment status: "" (COD) | "Pending" | "PartiallyPaid" | "Paid" | "Failed". */
   paymentStatus: string;
+  /** COD booking advance paid online (paise); 0 = full prepaid or standard COD. */
+  codAdvancePaise: number;
+  /** Balance collected on delivery (paise) = total − advance. */
+  codRemainingPaise: number;
+  /** Delivery payment: "" | "PENDING" | "COLLECTED" | "FAILED". */
+  deliveryPaymentStatus: string;
+  /** "NONE" | "DELIVERY_FAILED" | "RTO_INITIATED" | "RTO_RECEIVED". */
+  rtoStatus: string;
   /** Gateway reference (PhonePe transaction / UTR / order id). */
   paymentRef: string;
   /** Friendly instrument used: "" | "UPI" | "Card" | "Netbanking" | "Wallet". */

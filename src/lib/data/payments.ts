@@ -114,12 +114,19 @@ export async function reconcilePhonePeOrder(
 ): Promise<Reconciled> {
   const order = await prisma.order.findUnique({ where: { orderNumber } });
   if (!order) return "NotFound";
-  if (order.paymentStatus === "Paid") return "Paid";
+  // "Paid" (prepaid) or "PartiallyPaid" (COD advance cleared) → already settled.
+  if (order.paymentStatus === "Paid" || order.paymentStatus === "PartiallyPaid") return "Paid";
   if (order.paymentStatus === "Failed") return "Failed"; // already settled — no API call
+
+  // For a COD-advance order the online payment is the booking advance, not the
+  // full total; the balance is collected on delivery.
+  const isCodAdvance = order.paymentMethod === "COD" && order.codAdvancePaise > 0;
 
   const status = await getOrderStatus(orderNumber);
   if (status.state === "COMPLETED") {
-    const expectedPaise = order.totalPaise ?? order.total * 100;
+    const expectedPaise = isCodAdvance
+      ? order.codAdvancePaise
+      : (order.totalPaise ?? order.total * 100);
     // Defense in depth: the hosted flow fixes the amount we sent, but never mark
     // an order paid if the gateway reports a different figure than we billed.
     if (typeof status.amount === "number" && status.amount !== expectedPaise) {
@@ -137,20 +144,24 @@ export async function reconcilePhonePeOrder(
       where: { id: order.id },
       data: {
         status: "Confirmed",
-        paymentStatus: "Paid",
+        // COD advance leaves the order partially paid (balance due on delivery).
+        paymentStatus: isCodAdvance ? "PartiallyPaid" : "Paid",
         paymentRef: status.reference || status.transactionId || order.paymentRef,
         paymentInstrument: status.instrument || order.paymentInstrument,
         // Keep the v2 state in sync so cancel/refund logic sees the payment.
         statusV2: "CONFIRMED",
-        paymentState: "PAID",
+        // v2 paymentState stays PENDING for COD advance (order not fully paid).
+        paymentState: isCodAdvance ? "PENDING" : "PAID",
         amountPaidPaise: expectedPaise,
       },
     });
     await logEvent({
       actor: "customer",
       actorEmail: order.email,
-      action: "payment.paid",
-      message: `Payment received for ${orderNumber} (PhonePe)`,
+      action: isCodAdvance ? "payment.advance_paid" : "payment.paid",
+      message: isCodAdvance
+        ? `COD advance received for ${orderNumber} (PhonePe)`
+        : `Payment received for ${orderNumber} (PhonePe)`,
       meta: { orderNumber, transactionId: status.transactionId ?? "" },
     });
     revalidate(orderNumber);

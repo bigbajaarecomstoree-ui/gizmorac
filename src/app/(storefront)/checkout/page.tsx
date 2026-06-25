@@ -43,6 +43,14 @@ export default async function CheckoutPage() {
           shippingFee={settings.shippingFee}
           codEnabled={settings.codEnabled}
           phonepeEnabled={phonepe.configured}
+          codAdvance={{
+            codAdvanceEnabled: settings.codAdvanceEnabled,
+            codAdvanceType: settings.codAdvanceType,
+            codAdvanceAmount: settings.codAdvanceAmount,
+            codAdvancePercent: settings.codAdvancePercent,
+            codAdvanceMax: settings.codAdvanceMax,
+            codAdvanceMin: settings.codAdvanceMin,
+          }}
         />
       </div>
     </div>

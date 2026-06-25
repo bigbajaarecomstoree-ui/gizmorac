@@ -32,7 +32,8 @@ export async function reconcileStalePendingOrders(opts?: {
 
   const stale = await prisma.order.findMany({
     where: {
-      paymentMethod: "PhonePe",
+      // Any order awaiting an online payment — full prepaid (PhonePe) OR the COD
+      // booking advance — both sit at paymentStatus "Pending" until it clears.
       paymentStatus: "Pending",
       createdAt: { lt: softCutoff },
     },

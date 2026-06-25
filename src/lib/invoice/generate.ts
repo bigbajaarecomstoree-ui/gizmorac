@@ -345,6 +345,11 @@ export async function buildInvoicePdf(
   page.drawRectangle({ x: labelX - 8, y: y - 6, width: PAGE_W - M - (labelX - 8), height: 22, color: SHADE });
   y += 3;
   row("Grand Total (INR)", money(order.total), true);
+  if (order.codAdvancePaise > 0) {
+    y -= 4;
+    row("COD Booking Amount Paid", `- ${money(order.codAdvancePaise / 100)}`, false, rgb(0.12, 0.5, 0.25));
+    row("Remaining Payable on Delivery", money(order.codRemainingPaise / 100), true);
+  }
   y -= 10;
 
   // amount in words
@@ -367,13 +372,17 @@ export async function buildInvoicePdf(
   y -= 22;
   const payLine =
     order.paymentMethod === "COD"
-      ? "Payment: Cash on Delivery"
+      ? order.codAdvancePaise > 0
+        ? `Payment: COD · Booking ${money(order.codAdvancePaise / 100)} paid online, ${money(order.codRemainingPaise / 100)} due on delivery`
+        : "Payment: Cash on Delivery"
       : order.paymentStatus === "Paid"
         ? `Payment: Paid via ${order.paymentInstrument || "PhonePe"}${order.paymentRef ? ` · Ref ${order.paymentRef}` : ""}`
         : `Payment: ${order.paymentMethod} (${order.paymentStatus || "Pending"})`;
   text(payLine, M, y, { size: 8.5, color: MUTED });
   y -= 12;
   text("This is a computer-generated invoice and does not require a physical signature.", M, y, { size: 8, color: MUTED });
+  y -= 12;
+  text("Please refer to our Terms & Conditions, COD Policy and Refund Policy for applicable terms.", M, y, { size: 7.5, color: MUTED });
   y -= 12;
   text(`Questions? ${BIZ.email} · ${BIZ.phone}`, M, y, { size: 8, color: MUTED });
 

@@ -166,6 +166,17 @@ model Order {
   totalPaise             Int?
   amountPaidPaise        Int?
   refundedPaise          Int?               @default(0)
+  // ───────── COD Advance + RTO (additive; dark until codAdvanceEnabled) ─────────
+  // Online booking amount charged at checkout for COD orders (paise). 0 = none.
+  codAdvancePaise        Int                @default(0)
+  // Balance collected at delivery = total − advance (paise).
+  codRemainingPaise      Int                @default(0)
+  // "" (prepaid/standard COD) | "PENDING" | "COLLECTED" | "FAILED".
+  deliveryPaymentStatus  String             @default("")
+  // Amount the courier actually collected on delivery (paise).
+  deliveryCollectedPaise Int                @default(0)
+  // "NONE" | "DELIVERY_FAILED" | "RTO_INITIATED" | "RTO_RECEIVED".
+  rtoStatus              String             @default("NONE")
   // Item-level replacements spawn a new order row (ORD-..-R1).
   isReplacementOrder     Boolean            @default(false)
   replacesOrderId        String?
@@ -184,6 +195,9 @@ model Order {
   @@index([email])
   @@index([customerId])
   @@index([createdAt])
+  // COD/RTO dashboard filters (Phase 3 analytics).
+  @@index([paymentMethod])
+  @@index([rtoStatus])
 }
 
 model Customer {
@@ -360,6 +374,13 @@ model StoreSetting {
   freeShippingThreshold      Int       @default(999)
   shippingFee                Int       @default(79)
   codEnabled                 Boolean   @default(true)
+  // ───────── COD Advance Payment (additive; OFF = standard COD as today) ─────────
+  codAdvanceEnabled          Boolean   @default(false) // master switch
+  codAdvanceType             String    @default("FIXED") // "FIXED" | "PERCENT"
+  codAdvanceAmount           Int       @default(200) // fixed booking amount (₹)
+  codAdvancePercent          Int       @default(5) // % of order total (PERCENT mode)
+  codAdvanceMax              Int       @default(300) // cap for PERCENT mode (₹)
+  codAdvanceMin              Int       @default(0) // floor (₹); 0 = no floor
   // Registered company identity — editable in admin, shown across the
   // storefront (footer, policies) and on the GST tax invoice.
   legalName                  String    @default("BIG BAJAAR ECOM STOREE")
@@ -430,6 +451,19 @@ model StoreSetting {
   cartOfferAmountPaise       Int?
   createdAt                  DateTime  @default(now())
   updatedAt                  DateTime  @updatedAt
+}
+
+// Per-pincode COD rules (additive; empty table = no effect = global behaviour).
+model CodPincodeRule {
+  id              String   @id @default(cuid())
+  pincode         String   @unique
+  // STANDARD | HIGHER_CHARGE | PREPAID_ONLY | COD_DISABLED
+  mode            String   @default("STANDARD")
+  // Booking advance (₹) override for HIGHER_CHARGE; null = use the global amount.
+  advanceOverride Int?
+  note            String   @default("")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 // Activity + error log for support/debugging. Records customer & admin actions

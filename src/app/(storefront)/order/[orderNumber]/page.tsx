@@ -156,6 +156,51 @@ export default async function OrderPage({ params }: { params: Params }) {
           </div>
         ) : null}
 
+        {/* COD delivery reminder once the parcel is on its way */}
+        {order.paymentMethod === "COD" &&
+        order.deliveryPaymentStatus !== "COLLECTED" &&
+        order.status === "Shipped" ? (
+          <div className="mt-5 rounded-xl border border-accent/40 bg-accent-soft/40 px-4 py-3 text-sm">
+            <p className="font-medium text-accent-bright">
+              Your order is on its way — please keep{" "}
+              {formatINR(order.codAdvancePaise > 0 ? order.codRemainingPaise / 100 : order.total)}{" "}
+              ready for the delivery agent.
+            </p>
+          </div>
+        ) : null}
+
+        {/* COD advance payment status */}
+        {order.paymentMethod === "COD" && order.codAdvancePaise > 0 ? (
+          <div className="mt-5">
+            {order.paymentStatus === "PartiallyPaid" ? (
+              <div className="rounded-xl border border-success/30 bg-success/5 px-4 py-3 text-sm">
+                <p className="flex items-center gap-2 font-medium text-success">
+                  <CheckCircle2 size={18} /> Booking amount paid —{" "}
+                  {formatINR(order.codAdvancePaise / 100)} received.
+                </p>
+                <p className="mt-1 pl-7 text-xs text-muted">
+                  Pay the remaining {formatINR(order.codRemainingPaise / 100)} in cash when your
+                  order is delivered.
+                </p>
+              </div>
+            ) : order.paymentStatus === "Pending" ? (
+              <div className="rounded-xl border border-accent/40 bg-accent-soft/40 px-4 py-3 text-sm">
+                <p className="font-medium text-accent-bright">
+                  Pay {formatINR(order.codAdvancePaise / 100)} now to confirm your order.
+                </p>
+                <p className="mt-1 text-xs text-muted">
+                  The remaining {formatINR(order.codRemainingPaise / 100)} is collected on delivery.
+                </p>
+                {isOwner ? (
+                  <div className="mt-3">
+                    <ResumePayment orderNumber={order.orderNumber} token={urlToken} />
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
         {/* online payment status */}
         {order.paymentMethod === "PhonePe" ? (
           <div className="mt-5 space-y-3">
@@ -365,12 +410,30 @@ export default async function OrderPage({ params }: { params: Params }) {
               <dt>Total</dt>
               <dd className="readout">{formatINR(order.total)}</dd>
             </div>
+            {order.codAdvancePaise > 0 ? (
+              <>
+                <div className="flex justify-between text-sm">
+                  <dt className="text-muted">Booking amount paid</dt>
+                  <dd className="font-medium text-accent">
+                    {formatINR(order.codAdvancePaise / 100)}
+                  </dd>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <dt className="text-muted">Pay on delivery</dt>
+                  <dd className="font-medium">{formatINR(order.codRemainingPaise / 100)}</dd>
+                </div>
+              </>
+            ) : null}
             <div className="flex justify-between pt-1 text-xs text-muted">
               <dt>Payment</dt>
               <dd>
                 {order.paymentMethod === "PhonePe"
                   ? `PhonePe · ${order.paymentStatus || "Pending"}`
-                  : "Cash on Delivery"}
+                  : order.codAdvancePaise > 0
+                    ? order.paymentStatus === "PartiallyPaid"
+                      ? "COD · Partially paid"
+                      : "COD · Booking pending"
+                    : "Cash on Delivery"}
               </dd>
             </div>
           </dl>

@@ -12,6 +12,7 @@ import { OrderOperations } from "@/components/admin/order-operations";
 import { AdminOrderActions } from "@/components/admin/admin-order-actions";
 import { AdminNotes } from "@/components/admin/admin-notes";
 import { ShipmentPanel } from "@/components/admin/shipment-panel";
+import { CodPanel } from "@/components/admin/cod-panel";
 import { OrderActivity } from "@/components/admin/order-activity";
 
 type Params = Promise<{ id: string }>;
@@ -259,6 +260,18 @@ export default async function OrderDetailPage({ params }: { params: Params }) {
             replacementLabelUrl={order.replacementLabelUrl}
             replacementStatus={order.replacementStatus}
           />
+
+          {order.paymentMethod === "COD" ? (
+            <CodPanel
+              orderId={order.id}
+              total={order.total}
+              codAdvancePaise={order.codAdvancePaise}
+              codRemainingPaise={order.codRemainingPaise}
+              paymentStatus={order.paymentStatus}
+              deliveryPaymentStatus={order.deliveryPaymentStatus}
+              rtoStatus={order.rtoStatus}
+            />
+          ) : null}
 
           <div className="rounded-xl border border-border bg-surface p-5 text-sm">
             <h2 className="mb-3 font-semibold">Customer</h2>

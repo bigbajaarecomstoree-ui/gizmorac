@@ -193,6 +193,42 @@ export const policies: Policy[] = [
       },
     ],
   },
+  {
+    slug: "cod-policy",
+    title: "COD Policy",
+    summary: "How Cash on Delivery and the booking advance work.",
+    sections: [
+      {
+        heading: "How COD works",
+        body: [
+          "On Cash on Delivery (COD) orders, a small booking amount is collected online at checkout to confirm the order, and the remaining balance is collected in cash at the time of delivery.",
+          "The amount payable on delivery is always the order total minus the booking amount already paid. The exact split is shown at checkout, on your order page, and on your invoice.",
+        ],
+      },
+      {
+        heading: "Delivery payment",
+        body: [
+          "Please keep the balance amount ready in cash when your order is out for delivery. Our courier collects it at the doorstep.",
+          "Once the balance is collected, your order is marked fully paid.",
+        ],
+      },
+      {
+        heading: "Cancellations & the booking advance",
+        body: [
+          "If you cancel before the order is dispatched, the booking amount is refunded to your original payment method.",
+          "If a delivery is refused, returns to origin (RTO), or cannot be completed because you are unreachable, the booking amount is retained to cover shipping and handling costs already incurred.",
+          "In the case of a damaged or defective shipment, our team reviews each case individually and will refund or replace as appropriate.",
+        ],
+      },
+      {
+        heading: "Returns, refunds & support",
+        body: [
+          "Eligible returns and refunds follow our Returns and Refund policies. Refunds of the booking amount, where applicable, are processed to the original payment method.",
+          "For help with a COD order, contact us at {{email}} or {{phone}}.",
+        ],
+      },
+    ],
+  },
 ];
 
 export function getPolicy(slug: string): Policy | undefined {

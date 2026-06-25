@@ -1154,6 +1154,44 @@ export async function updateSettings(
   return { ok: true };
 }
 
+/**
+ * COD Advance settings (RTO module). Separate from updateSettings so the COD
+ * controls are self-contained and additive. Server-authoritative + validated;
+ * the feature stays dark until codAdvanceEnabled is turned on.
+ */
+export async function updateCodSettings(
+  _prev: SettingsState | undefined,
+  formData: FormData,
+): Promise<SettingsState> {
+  await assertAdmin();
+
+  const data = {
+    codAdvanceEnabled: bool(formData, "codAdvanceEnabled"),
+    codAdvanceType: str(formData, "codAdvanceType") === "PERCENT" ? "PERCENT" : "FIXED",
+    codAdvanceAmount: Math.max(0, int(formData, "codAdvanceAmount", 200)),
+    codAdvancePercent: Math.min(100, Math.max(0, int(formData, "codAdvancePercent", 5))),
+    codAdvanceMax: Math.max(0, int(formData, "codAdvanceMax", 300)),
+    codAdvanceMin: Math.max(0, int(formData, "codAdvanceMin", 0)),
+  };
+
+  await prisma.storeSetting.upsert({
+    where: { id: "store" },
+    update: data,
+    create: { id: "store", ...data },
+  });
+
+  await logEvent({
+    actor: "admin",
+    action: "admin.cod.settings.update",
+    message: `COD advance ${data.codAdvanceEnabled ? "enabled" : "disabled"} (${data.codAdvanceType})`,
+    meta: data,
+  });
+
+  revalidatePath("/", "layout");
+  revalidatePath("/admin/cod");
+  return { ok: true };
+}
+
 // Boolean settings that the admin can flip individually and have apply
 // instantly (no separate "Save settings" step). Keep this allow-list tight so a
 // forged call can't write arbitrary columns.

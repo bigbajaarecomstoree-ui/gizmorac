@@ -9,7 +9,8 @@ import { useStore } from "@/components/store/store-provider";
 import { ProductArt } from "@/components/product/product-art";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { formatINR, shortTitle } from "@/lib/format";
-import { applyCoupon, placeOrder, startPhonePePayment, getDeliveryEstimate } from "@/lib/storefront/actions";
+import { applyCoupon, placeOrder, startPhonePePayment, getDeliveryEstimate, lookupCodPincode } from "@/lib/storefront/actions";
+import { computeCodAdvance, type CodAdvanceConfig } from "@/lib/data/cod";
 import { track } from "@/lib/analytics";
 import { COUPON_STORAGE_KEY } from "@/lib/checkout-shared";
 import { INDIAN_STATES, lookupPincode } from "@/lib/india";
@@ -22,6 +23,15 @@ function splitName(full: string): [string, string] {
   return [parts[0] ?? "", parts.slice(1).join(" ")];
 }
 
+const COD_ADVANCE_OFF: CodAdvanceConfig = {
+  codAdvanceEnabled: false,
+  codAdvanceType: "FIXED",
+  codAdvanceAmount: 0,
+  codAdvancePercent: 0,
+  codAdvanceMax: 0,
+  codAdvanceMin: 0,
+};
+
 export function CheckoutView({
   products,
   customer,
@@ -30,6 +40,7 @@ export function CheckoutView({
   shippingFee = 79,
   codEnabled = true,
   phonepeEnabled = false,
+  codAdvance = COD_ADVANCE_OFF,
 }: {
   products: Product[];
   customer: Customer | null;
@@ -38,6 +49,7 @@ export function CheckoutView({
   shippingFee?: number;
   codEnabled?: boolean;
   phonepeEnabled?: boolean;
+  codAdvance?: CodAdvanceConfig;
 }) {
   const router = useRouter();
   const { cart, clearCart, mounted, offer, clearOffer } = useStore();
@@ -78,6 +90,10 @@ export function CheckoutView({
   const [payMethod, setPayMethod] = React.useState<"PhonePe" | "COD">(
     phonepeEnabled ? "PhonePe" : "COD",
   );
+  // COD-advance consent (T&C / COD Policy / Refund Policy).
+  const [accepted, setAccepted] = React.useState(false);
+  // Per-pincode COD rule for the entered pincode (null = global behaviour).
+  const [pinCod, setPinCod] = React.useState<{ codAllowed: boolean; mode: string; advanceOverride: number | null } | null>(null);
   const [coupon, setCoupon] = React.useState<{ code: string; off: number } | null>(null);
   const [code, setCode] = React.useState("");
   const [couponError, setCouponError] = React.useState<string | null>(null);
@@ -133,6 +149,22 @@ export function CheckoutView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted]);
 
+  // Per-pincode COD rule lookup whenever a valid pincode is set. (Declared
+  // before the early returns so the hook order is stable.)
+  React.useEffect(() => {
+    if (!/^\d{6}$/.test(form.pincode)) { setPinCod(null); return; }
+    let active = true;
+    lookupCodPincode(form.pincode).then((r) => { if (active) setPinCod(r); });
+    return () => { active = false; };
+  }, [form.pincode]);
+
+  // If the entered pincode blocks COD while COD is selected, fall back to online.
+  React.useEffect(() => {
+    if (payMethod === "COD" && pinCod && !pinCod.codAllowed && phonepeEnabled) {
+      setPayMethod("PhonePe");
+    }
+  }, [pinCod, payMethod, phonepeEnabled]);
+
   if (!mounted) {
     return <div className="py-20 text-center text-sm text-muted">Loading checkout…</div>;
   }
@@ -162,6 +194,17 @@ export function CheckoutView({
   const shipping = afterDiscount >= freeShippingThreshold ? 0 : shippingFee;
   const total = afterDiscount + shipping;
   const savings = discount + instantOff;
+
+  // COD booking advance (server re-computes authoritatively on submit). A
+  // HIGHER_CHARGE pincode raises the advance; PREPAID_ONLY/COD_DISABLED hide COD.
+  const codBlockedHere = pinCod ? !pinCod.codAllowed : false;
+  const codAvailable = codEnabled && !codBlockedHere;
+  const effCodConfig =
+    pinCod?.mode === "HIGHER_CHARGE" && pinCod.advanceOverride != null
+      ? { ...codAdvance, codAdvanceEnabled: true, codAdvanceType: "FIXED", codAdvanceAmount: pinCod.advanceOverride }
+      : codAdvance;
+  const cod = computeCodAdvance(effCodConfig, total);
+  const codAdvanceActive = payMethod === "COD" && phonepeEnabled && cod.enabled;
 
   // GST is included in the displayed (tax-inclusive) prices; show how much.
   const gstIncl = Math.round(
@@ -267,6 +310,10 @@ export function CheckoutView({
   function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    if (codAdvanceActive && !accepted) {
+      setError("Please accept the Terms & Conditions and COD Policy to continue.");
+      return;
+    }
     const payload = {
       ...form,
       gstin: form.gstin.trim().toUpperCase(),
@@ -274,6 +321,7 @@ export function CheckoutView({
       couponCode: coupon?.code,
       instantOffer: offer?.kind,
       paymentMethod: payMethod,
+      acceptedTerms: accepted,
       items: lines.map((l) => ({ id: l.product.id, qty: l.qty })),
     };
     const finishCod = (trackUrl: string) => {
@@ -292,7 +340,8 @@ export function CheckoutView({
       }
       // Tokenised link so guests can track without an account.
       const trackUrl = `/order/${res.orderNumber}-${res.trackingToken}`;
-      if (res.paymentMethod === "PhonePe") {
+      // Full prepaid OR a COD order that needs its booking advance → PhonePe.
+      if (res.paymentMethod === "PhonePe" || res.requiresAdvance) {
         const pay = await startPhonePePayment(res.orderNumber, res.trackingToken);
         if (pay.ok) {
           clearCart();
@@ -515,7 +564,7 @@ export function CheckoutView({
                   </span>
                 </label>
               ) : null}
-              {codEnabled ? (
+              {codAvailable ? (
                 <label
                   className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${
                     payMethod === "COD"
@@ -535,6 +584,52 @@ export function CheckoutView({
                     <span className="block text-xs text-muted">Pay in cash when your order arrives.</span>
                   </span>
                 </label>
+              ) : null}
+
+              {codEnabled && codBlockedHere ? (
+                <p className="rounded-lg border border-border bg-surface-2 px-3 py-2.5 text-xs text-muted">
+                  Cash on Delivery isn&apos;t available for this pincode — please pay online.
+                </p>
+              ) : null}
+
+              {codAdvanceActive ? (
+                <div className="rounded-lg border border-accent/40 bg-accent-soft/40 p-3.5">
+                  <p className="text-sm font-medium">
+                    Pay {formatINR(cod.advance)} now to confirm your order.
+                  </p>
+                  <p className="mt-0.5 text-xs text-muted">
+                    The remaining amount is collected upon delivery.
+                  </p>
+                  <dl className="mt-3 space-y-1.5 text-sm">
+                    <div className="flex justify-between">
+                      <dt className="text-muted">Order total</dt>
+                      <dd>{formatINR(total)}</dd>
+                    </div>
+                    <div className="flex justify-between font-medium">
+                      <dt className="text-accent">Pay now</dt>
+                      <dd className="text-accent">{formatINR(cod.advance)}</dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt className="text-muted">Pay on delivery</dt>
+                      <dd className="font-medium">{formatINR(cod.remaining)}</dd>
+                    </div>
+                  </dl>
+                  <label className="mt-3 flex cursor-pointer items-start gap-2 border-t border-accent/20 pt-3">
+                    <input
+                      type="checkbox"
+                      checked={accepted}
+                      onChange={(e) => setAccepted(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 accent-[var(--color-accent)]"
+                    />
+                    <span className="text-xs text-muted">
+                      I agree to the{" "}
+                      <Link href="/policies/terms" target="_blank" className="underline hover:text-foreground">Terms &amp; Conditions</Link>,{" "}
+                      <Link href="/policies/cod-policy" target="_blank" className="underline hover:text-foreground">COD Policy</Link>{" "}
+                      and{" "}
+                      <Link href="/policies/refund" target="_blank" className="underline hover:text-foreground">Refund Policy</Link>.
+                    </span>
+                  </label>
+                </div>
               ) : null}
             </div>
           ) : (
@@ -655,6 +750,18 @@ export function CheckoutView({
               <dt>Total</dt>
               <dd className="readout">{formatINR(total)}</dd>
             </div>
+            {codAdvanceActive ? (
+              <>
+                <div className="flex justify-between text-sm font-medium text-accent">
+                  <dt>Pay now (booking)</dt>
+                  <dd>{formatINR(cod.advance)}</dd>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <dt className="text-muted">Pay on delivery</dt>
+                  <dd className="font-medium">{formatINR(cod.remaining)}</dd>
+                </div>
+              </>
+            ) : null}
             <div className="flex justify-between text-xs text-faint">
               <dt>Includes GST</dt>
               <dd>{formatINR(gstIncl)}</dd>
@@ -677,18 +784,24 @@ export function CheckoutView({
             type="submit"
             size="lg"
             className="mt-5 w-full"
-            disabled={placing || (!phonepeEnabled && !codEnabled)}
+            disabled={
+              placing ||
+              (!phonepeEnabled && !codEnabled) ||
+              (codAdvanceActive && !accepted)
+            }
           >
             {placing ? <Loader2 size={16} className="animate-spin" /> : <Lock size={15} />}
             {!phonepeEnabled && !codEnabled
               ? "Payments paused"
               : placing
-                ? payMethod === "PhonePe"
+                ? payMethod === "PhonePe" || codAdvanceActive
                   ? "Redirecting to PhonePe…"
                   : "Placing order…"
-                : payMethod === "PhonePe"
-                  ? `Pay ${formatINR(total)}`
-                  : `Place order · ${formatINR(total)}`}
+                : codAdvanceActive
+                  ? `Pay ${formatINR(cod.advance)} now`
+                  : payMethod === "PhonePe"
+                    ? `Pay ${formatINR(total)}`
+                    : `Place order · ${formatINR(total)}`}
           </Button>
           <p className="mt-3 text-center text-xs text-faint">
             By placing this order you agree to our{" "}
