@@ -16,7 +16,10 @@ Set each for the **Production** environment.
 
 | Variable | Value / where to get it | Powers | If you skip it |
 |---|---|---|---|
-| `CRON_SECRET` | Any long random string (e.g. `openssl rand -hex 32`) | Authorizes the abandoned-order reconcile cron. Vercel auto-sends it as `Authorization: Bearer …` to the cron route. | Cron route returns 401 → stale online orders never auto-release stock/coupons. |
+| 🔴 `JWT_SECRET` | Long random string (`openssl rand -hex 32`), min 16 chars | Signs admin **and** customer session cookies. | **Site fails closed** — every authed page/login throws 500 until set. (Also: without it, sessions would be forgeable — admin + account takeover.) |
+| 🔴 `CRON_SECRET` | Any long random string (e.g. `openssl rand -hex 32`) | Authorizes the abandoned-order reconcile cron. Vercel auto-sends it as `Authorization: Bearer …` to the cron route. | Cron returns **503 (fail-closed)** → stale online orders never auto-release stock/coupons. |
+| 🔴 `PHONEPE_WEBHOOK_AUTH` | The `SHA256(username:password)` you configure in the PhonePe dashboard webhook | Authenticates PhonePe's server-to-server webhook. | Webhook returns **503** (payments still reconcile via the redirect callback + cron, so no payment is lost — but configure it). |
+| 🔴 `SHIPROCKET_WEBHOOK_TOKEN` | The token you set in Shiprocket → Settings → API → Webhooks (`x-api-key`) | Authenticates Shiprocket tracking webhooks. | Webhook returns **503** → live tracking updates stop until set. |
 | `UPSTASH_REDIS_REST_URL` | Upstash console → your Redis DB → REST API | Rate limiting (login, signup, coupon, newsletter, admin login). | Rate limiting **no-ops** (fail-open). Site works, but brute-force/abuse is unthrottled. |
 | `UPSTASH_REDIS_REST_TOKEN` | Same Upstash REST API panel | ↑ (paired with the URL) | ↑ |
 | `BLOB_READ_WRITE_TOKEN` | Vercel → Storage → create a Blob store → connect to project (this var is added automatically) | Admin product image/video uploads. | Uploads **500** — Vercel's filesystem is read-only, so the local fallback can't write. |
@@ -25,6 +28,11 @@ Set each for the **Production** environment.
 
 > `NEXT_PUBLIC_*` are baked into the client bundle → **must redeploy** to appear.
 > The others are read server-side but still need a redeploy to be injected.
+>
+> 🔴 **rows fail closed** after the security hardening batch: set them **before**
+> redeploying or those features return 503 (and the whole site 500s without
+> `JWT_SECRET`). The live site already works, so `JWT_SECRET` is almost certainly
+> already set — **confirm it in Vercel → Production before deploying.**
 
 **Optional / leave unset:**
 - `ALLOW_SANDBOX_IN_PROD` — *do not set.* It's the deliberate-dry-run escape

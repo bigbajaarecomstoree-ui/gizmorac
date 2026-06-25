@@ -293,7 +293,7 @@ export function CheckoutView({
       // Tokenised link so guests can track without an account.
       const trackUrl = `/order/${res.orderNumber}-${res.trackingToken}`;
       if (res.paymentMethod === "PhonePe") {
-        const pay = await startPhonePePayment(res.orderNumber);
+        const pay = await startPhonePePayment(res.orderNumber, res.trackingToken);
         if (pay.ok) {
           clearCart();
           clearOffer();

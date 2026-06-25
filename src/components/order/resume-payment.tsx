@@ -4,14 +4,20 @@ import * as React from "react";
 import { Loader2, CreditCard } from "lucide-react";
 import { startPhonePePayment } from "@/lib/storefront/actions";
 
-export function ResumePayment({ orderNumber }: { orderNumber: string }) {
+export function ResumePayment({
+  orderNumber,
+  token = "",
+}: {
+  orderNumber: string;
+  token?: string;
+}) {
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
   async function pay() {
     setBusy(true);
     setError(null);
-    const res = await startPhonePePayment(orderNumber);
+    const res = await startPhonePePayment(orderNumber, token);
     if (res.ok) {
       window.location.href = res.redirectUrl;
     } else {

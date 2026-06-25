@@ -9,8 +9,14 @@ export const runtime = "nodejs";
 // re-verify status against PhonePe before updating anything. If a webhook auth
 // value is configured, the Authorization header must match.
 export async function POST(req: NextRequest) {
+  // Fail closed: refuse the webhook unless its auth value is configured.
+  // (Payments still reconcile via the redirect callback + cron, so this can't
+  // lose a payment — it only blocks unauthenticated calls.)
   const expected = process.env.PHONEPE_WEBHOOK_AUTH;
-  if (expected && (req.headers.get("authorization") ?? "") !== expected) {
+  if (!expected) {
+    return Response.json({ ok: false, error: "webhook not configured" }, { status: 503 });
+  }
+  if ((req.headers.get("authorization") ?? "") !== expected) {
     return Response.json({ ok: false }, { status: 401 });
   }
 

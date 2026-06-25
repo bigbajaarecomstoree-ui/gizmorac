@@ -109,9 +109,18 @@ export async function applyCoupon(
   );
 }
 
+/** Thrown inside the checkout transaction to surface a precise, safe message
+ *  (and roll the whole order back) when stock or a coupon loses a race. */
+class CheckoutError extends Error {}
+
 export async function placeOrder(
   payload: CheckoutPayload,
 ): Promise<PlaceOrderResult> {
+  const blocked = await limitByIp("checkout", 12, 60);
+  if (blocked) return { ok: false, error: blocked };
+  if ((payload.items?.length ?? 0) > 50) {
+    return { ok: false, error: "Too many items in the cart." };
+  }
   const lines = await resolveLines(payload.items ?? []);
   if (lines.length === 0) {
     return { ok: false, error: "Your cart is empty." };
@@ -243,18 +252,43 @@ export async function placeOrder(
     await prisma.$transaction(async (tx) => {
       const stockAfter = new Map<string, number>();
       for (const l of lines) {
-        const updated = await tx.product.update({
-          where: { id: l.id },
+        // Atomic guard: only decrement when enough stock is still on hand. This
+        // is the backstop against overselling under concurrent checkouts (the
+        // pre-check above can race). updateMany lets us put `stock` in WHERE.
+        const dec = await tx.product.updateMany({
+          where: { id: l.id, stock: { gte: l.qty } },
           data: { stock: { decrement: l.qty } },
+        });
+        if (dec.count === 0) {
+          throw new CheckoutError(
+            `Sorry, ${l.name} just sold out or doesn't have enough stock left. Please adjust your cart.`,
+          );
+        }
+        const fresh = await tx.product.findUnique({
+          where: { id: l.id },
           select: { stock: true },
         });
-        stockAfter.set(l.id, updated.stock);
+        stockAfter.set(l.id, fresh?.stock ?? 0);
       }
       if (appliedCode) {
-        await tx.coupon.updateMany({
+        // Atomic redemption: increment only while under the usage limit, so
+        // concurrent orders can't push a single-use coupon past its cap (TOCTOU).
+        const lim = await tx.coupon.findUnique({
           where: { code: appliedCode },
+          select: { usageLimit: true },
+        });
+        const claim = await tx.coupon.updateMany({
+          where: {
+            code: appliedCode,
+            ...(lim && lim.usageLimit > 0
+              ? { usedCount: { lt: lim.usageLimit } }
+              : {}),
+          },
           data: { usedCount: { increment: 1 } },
         });
+        if (claim.count === 0) {
+          throw new CheckoutError("This coupon has reached its usage limit.");
+        }
       }
       const order = await tx.order.create({
         data: {
@@ -364,7 +398,8 @@ export async function placeOrder(
         });
       }
     });
-  } catch {
+  } catch (e) {
+    if (e instanceof CheckoutError) return { ok: false, error: e.message };
     return { ok: false, error: "Could not place order, please try again." };
   }
 
@@ -401,6 +436,8 @@ export type DeliveryEstimateResult =
 export async function getDeliveryEstimate(
   pincode: string,
 ): Promise<DeliveryEstimateResult> {
+  const blocked = await limitByIp("delivery-est", 20, 60);
+  if (blocked) return { ok: false };
   if (!/^\d{6}$/.test(pincode)) return { ok: false };
   const est = await checkServiceability({ deliveryPincode: pincode });
   if (!est) return { ok: false };
@@ -417,9 +454,22 @@ export type StartPaymentResult =
  */
 export async function startPhonePePayment(
   orderNumber: string,
+  token = "",
 ): Promise<StartPaymentResult> {
+  const blocked = await limitByIp("pay-start", 12, 60);
+  if (blocked) return { ok: false, error: blocked };
   const order = await prisma.order.findUnique({ where: { orderNumber } });
   if (!order) return { ok: false, error: "Order not found." };
+  // Authorize: the signed-in account owner, or anyone holding the unguessable
+  // tracking token (guests have no session). An order number alone is not enough.
+  const payer = await getCurrentCustomer();
+  const isOwner = Boolean(
+    payer &&
+      (order.customerId === payer.id ||
+        order.email.toLowerCase() === payer.email.toLowerCase()),
+  );
+  const tokenOk = order.trackingToken !== "" && token === order.trackingToken;
+  if (!isOwner && !tokenOk) return { ok: false, error: "Order not found." };
   if (order.paymentStatus === "Paid") {
     return { ok: false, error: "This order is already paid." };
   }

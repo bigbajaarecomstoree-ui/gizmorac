@@ -28,6 +28,30 @@ export async function saveUpload(
 }
 
 /**
+ * Detect a file's real type from its magic bytes — never trust the client's
+ * declared Content-Type. Returns the detected MIME, or "" if unrecognised.
+ */
+export function sniffMime(buf: Buffer): string {
+  const b = buf.subarray(0, 16);
+  const sig = (...n: number[]) => n.every((v, i) => b[i] === v);
+  const ascii = (off: number, s: string) =>
+    [...s].every((c, i) => b[off + i] === c.charCodeAt(0));
+
+  if (sig(0xff, 0xd8, 0xff)) return "image/jpeg";
+  if (sig(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a)) return "image/png";
+  if (ascii(0, "GIF8")) return "image/gif";
+  if (ascii(0, "RIFF") && ascii(8, "WEBP")) return "image/webp";
+  if (sig(0x1a, 0x45, 0xdf, 0xa3)) return "video/webm";
+  if (ascii(4, "ftyp")) {
+    const brand = String.fromCharCode(b[8], b[9], b[10], b[11]);
+    if (brand.startsWith("avi")) return "image/avif"; // avif / avis
+    if (brand.startsWith("qt")) return "video/quicktime";
+    return "video/mp4"; // isom / mp41 / mp42 / iso5 / dash …
+  }
+  return "";
+}
+
+/**
  * Best-effort delete of a previously uploaded file. Only Vercel Blob URLs are
  * removed (local /uploads files are left on the read-only prod FS). Never throws
  * — a failed cleanup must not block the admin action.

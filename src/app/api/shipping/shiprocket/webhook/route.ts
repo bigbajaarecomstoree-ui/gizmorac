@@ -7,8 +7,13 @@ export const runtime = "nodejs";
 // Shiprocket tracking webhook. Configure the URL + token in Shiprocket
 // (Settings → API → Webhooks). If a token is set, the x-api-key header must match.
 export async function POST(req: NextRequest) {
+  // Fail closed: refuse the webhook unless its token is configured, so an
+  // unauthenticated caller can't forge shipment status / tracking fields.
   const expected = process.env.SHIPROCKET_WEBHOOK_TOKEN;
-  if (expected && (req.headers.get("x-api-key") ?? "") !== expected) {
+  if (!expected) {
+    return Response.json({ ok: false, error: "webhook not configured" }, { status: 503 });
+  }
+  if ((req.headers.get("x-api-key") ?? "") !== expected) {
     return Response.json({ ok: false }, { status: 401 });
   }
 

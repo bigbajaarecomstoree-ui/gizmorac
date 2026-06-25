@@ -119,6 +119,20 @@ export async function reconcilePhonePeOrder(
 
   const status = await getOrderStatus(orderNumber);
   if (status.state === "COMPLETED") {
+    const expectedPaise = order.totalPaise ?? order.total * 100;
+    // Defense in depth: the hosted flow fixes the amount we sent, but never mark
+    // an order paid if the gateway reports a different figure than we billed.
+    if (typeof status.amount === "number" && status.amount !== expectedPaise) {
+      await logEvent({
+        level: "error",
+        actor: "system",
+        actorEmail: order.email,
+        action: "payment.amount_mismatch",
+        message: `PhonePe amount mismatch for ${orderNumber}: charged ${status.amount}p, expected ${expectedPaise}p — left unconfirmed for manual review.`,
+        meta: { orderNumber, charged: status.amount, expected: expectedPaise },
+      });
+      return "Pending";
+    }
     await prisma.order.update({
       where: { id: order.id },
       data: {
@@ -129,7 +143,7 @@ export async function reconcilePhonePeOrder(
         // Keep the v2 state in sync so cancel/refund logic sees the payment.
         statusV2: "CONFIRMED",
         paymentState: "PAID",
-        amountPaidPaise: order.totalPaise ?? order.total * 100,
+        amountPaidPaise: expectedPaise,
       },
     });
     await logEvent({

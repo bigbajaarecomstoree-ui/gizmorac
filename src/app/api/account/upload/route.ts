@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { randomBytes } from "node:crypto";
 import { getCurrentCustomer } from "@/lib/customer-auth";
-import { saveUpload } from "@/lib/storage";
+import { saveUpload, sniffMime } from "@/lib/storage";
 
 // Customer-authenticated upload for support-ticket photo/video proof.
 export const dynamic = "force-dynamic";
@@ -60,6 +60,14 @@ export async function POST(request: NextRequest) {
 
   try {
     const bytes = Buffer.from(await file.arrayBuffer());
+    // Validate the real bytes, not just the declared MIME — block disguised files.
+    const sniffed = sniffMime(bytes);
+    if (!sniffed || EXT[sniffed] === undefined) {
+      return Response.json(
+        { error: "The file's contents don't match an allowed type." },
+        { status: 415 },
+      );
+    }
     const url = await saveUpload(name, bytes, file.type);
     return Response.json({ url });
   } catch {

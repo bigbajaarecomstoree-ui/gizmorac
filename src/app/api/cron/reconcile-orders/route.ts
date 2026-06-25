@@ -13,11 +13,14 @@ export const maxDuration = 60;
  * and we reject anything else — so the endpoint can't be triggered by the public.
  */
 export async function GET(req: Request) {
+  // Fail closed: an unconfigured secret means the endpoint refuses every
+  // request rather than running unauthenticated.
   const secret = process.env.CRON_SECRET;
-  if (secret) {
-    if (req.headers.get("authorization") !== `Bearer ${secret}`) {
-      return new Response("Unauthorized", { status: 401 });
-    }
+  if (!secret) {
+    return new Response("Cron not configured (CRON_SECRET unset).", { status: 503 });
+  }
+  if (req.headers.get("authorization") !== `Bearer ${secret}`) {
+    return new Response("Unauthorized", { status: 401 });
   }
 
   try {
@@ -36,9 +39,9 @@ export async function GET(req: Request) {
       });
     }
     return Response.json({ ok: true, ...result, at: new Date().toISOString() });
-  } catch (e) {
+  } catch {
     return Response.json(
-      { ok: false, error: e instanceof Error ? e.message : "reconcile failed" },
+      { ok: false, error: "reconcile failed" },
       { status: 500 },
     );
   }

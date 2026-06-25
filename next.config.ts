@@ -16,6 +16,15 @@ const securityHeaders = [
     key: "Strict-Transport-Security",
     value: "max-age=63072000; includeSubDomains; preload",
   },
+  // Partial CSP: only directives that can't break Next's inline runtime, the
+  // JSON-LD, or GA/Pixel (no default-src/script-src, so scripts + connections
+  // stay unrestricted). Covers clickjacking, <base> injection, plugin embeds,
+  // and cross-origin form posts. A nonce-based script-src is a future follow-up.
+  {
+    key: "Content-Security-Policy",
+    value:
+      "frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'self'",
+  },
 ];
 
 const nextConfig: NextConfig = {

@@ -196,7 +196,7 @@ export default async function OrderPage({ params }: { params: Params }) {
                 </p>
                 {isOwner ? (
                   <div className="mt-3">
-                    <ResumePayment orderNumber={order.orderNumber} />
+                    <ResumePayment orderNumber={order.orderNumber} token={urlToken} />
                   </div>
                 ) : null}
               </div>
