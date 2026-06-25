@@ -9,10 +9,197 @@ import {
   FileText,
   AlertTriangle,
   Zap,
+  Pencil,
+  Check,
+  X,
 } from "lucide-react";
-import { pushToShiprocket, syncShipment, shipNow } from "@/lib/admin/actions";
+import {
+  pushToShiprocket,
+  syncShipment,
+  shipNow,
+  setShipmentCost,
+  autoEstimateDeliveryCost,
+} from "@/lib/admin/actions";
 import { Button } from "@/components/ui/button";
 import { formatINR } from "@/lib/format";
+
+/**
+ * Delivery cost row. Auto-detects the freight from Shiprocket for the order's
+ * destination pincode (no manual entry) and stores it; once the order ships,
+ * shipmentCostPaise already holds the real charge, so we just display it. A
+ * refresh re-quotes the rate; the pencil is a manual override for edge cases.
+ */
+function DeliveryCost({
+  orderId,
+  costPaise,
+  connected,
+  shipped,
+}: {
+  orderId: string;
+  costPaise: number;
+  connected: boolean;
+  shipped: boolean;
+}) {
+  const [current, setCurrent] = React.useState(costPaise);
+  const [courier, setCourier] = React.useState("");
+  // A figure on an un-shipped order is a Shiprocket estimate; once shipped it's actual.
+  const [estimated, setEstimated] = React.useState(!shipped && costPaise > 0);
+  const [loading, setLoading] = React.useState(false);
+  const [editing, setEditing] = React.useState(false);
+  const [value, setValue] = React.useState(costPaise > 0 ? String(costPaise / 100) : "");
+  const [pending, start] = React.useTransition();
+  const [err, setErr] = React.useState<string | null>(null);
+  const autoTried = React.useRef(false);
+
+  React.useEffect(() => {
+    setCurrent(costPaise);
+    setValue(costPaise > 0 ? String(costPaise / 100) : "");
+  }, [costPaise]);
+
+  const estimate = React.useCallback(() => {
+    setErr(null);
+    setLoading(true);
+    start(async () => {
+      const res = await autoEstimateDeliveryCost(orderId);
+      setLoading(false);
+      if (!res.ok) {
+        setErr(res.error ?? "Couldn't fetch the rate.");
+        return;
+      }
+      if (typeof res.ratePaise === "number") setCurrent(res.ratePaise);
+      setCourier(res.courier ?? "");
+      setEstimated(Boolean(res.estimated));
+    });
+  }, [orderId]);
+
+  // Auto-detect once, on first view of a connected, not-yet-shipped order with
+  // no figure recorded yet. Stored after, so later views don't re-hit the API.
+  React.useEffect(() => {
+    if (autoTried.current) return;
+    if (connected && !shipped && current === 0) {
+      autoTried.current = true;
+      estimate();
+    }
+  }, [connected, shipped, current, estimate]);
+
+  function open() {
+    setErr(null);
+    setValue(current > 0 ? String(current / 100) : "");
+    setEditing(true);
+  }
+
+  function save() {
+    const rupees = Number(value.trim() === "" ? "0" : value);
+    if (!Number.isFinite(rupees) || rupees < 0) {
+      setErr("Enter a valid amount.");
+      return;
+    }
+    setErr(null);
+    start(async () => {
+      const res = await setShipmentCost(orderId, rupees);
+      if (!res.ok) {
+        setErr(res.error ?? "Could not save.");
+        return;
+      }
+      setCurrent(Math.round(rupees * 100));
+      setEstimated(false); // a hand-entered figure is treated as confirmed
+      setEditing(false);
+    });
+  }
+
+  return (
+    <>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-muted">Delivery cost</span>
+        {editing ? (
+          <span className="flex items-center gap-1">
+            <span className="text-muted">₹</span>
+            <input
+              type="number"
+              inputMode="decimal"
+              min="0"
+              step="1"
+              autoFocus
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") save();
+                if (e.key === "Escape") setEditing(false);
+              }}
+              placeholder="0"
+              aria-label="Delivery cost in rupees"
+              className="w-24 rounded-md border border-border bg-background px-2 py-1 text-right text-sm tabular-nums outline-none focus:border-accent"
+            />
+            <button
+              type="button"
+              onClick={save}
+              disabled={pending}
+              aria-label="Save delivery cost"
+              className="grid h-7 w-7 place-items-center rounded-md bg-accent text-on-accent transition-colors hover:bg-accent-hover disabled:opacity-50"
+            >
+              {pending ? <Loader2 size={13} className="animate-spin" /> : <Check size={14} />}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setEditing(false);
+                setErr(null);
+              }}
+              aria-label="Cancel"
+              className="grid h-7 w-7 place-items-center rounded-md border border-border text-muted transition-colors hover:text-foreground"
+            >
+              <X size={14} />
+            </button>
+          </span>
+        ) : loading ? (
+          <span className="flex items-center gap-1.5 text-muted">
+            <Loader2 size={13} className="animate-spin" /> Estimating…
+          </span>
+        ) : (
+          <span className="flex items-center gap-2">
+            {current > 0 ? (
+              <span className="font-semibold">{formatINR(current / 100)}</span>
+            ) : (
+              <span className="text-faint">—</span>
+            )}
+            {connected && !shipped ? (
+              <button
+                type="button"
+                onClick={estimate}
+                aria-label="Re-estimate from Shiprocket"
+                title="Re-estimate from Shiprocket"
+                className="text-faint transition-colors hover:text-accent"
+              >
+                <RefreshCw size={12} />
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={open}
+              aria-label="Edit delivery cost manually"
+              title="Edit manually"
+              className="text-faint transition-colors hover:text-accent"
+            >
+              <Pencil size={12} />
+            </button>
+          </span>
+        )}
+      </div>
+      {!editing && !loading && current > 0 ? (
+        <p className="text-right text-xs text-faint">
+          {shipped
+            ? "Actual · Shiprocket"
+            : `Estimated${courier ? ` · ${courier}` : " · Shiprocket"}`}
+        </p>
+      ) : null}
+      {err ? (
+        <p className="text-right text-xs text-danger" role="alert">
+          {err}
+        </p>
+      ) : null}
+    </>
+  );
+}
 
 export function ShipmentPanel({
   orderId,
@@ -128,16 +315,12 @@ export function ShipmentPanel({
             <span className="text-muted">AWB</span>
             <span className="font-mono">{awb}</span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-muted">Shipping cost</span>
-            {shipmentCostPaise > 0 ? (
-              <span className="font-semibold">{formatINR(shipmentCostPaise / 100)}</span>
-            ) : (
-              <span className="text-faint" title="Captured at dispatch — older shipments may not have it recorded">
-                Not recorded
-              </span>
-            )}
-          </div>
+          <DeliveryCost
+            orderId={orderId}
+            costPaise={shipmentCostPaise}
+            connected={connected}
+            shipped={shipped}
+          />
           <div className="flex flex-wrap items-center gap-2 pt-2">
             {labelUrl ? (
               <a
@@ -172,6 +355,19 @@ export function ShipmentPanel({
           </div>
         </div>
       )}
+
+      {/* Orders fulfilled outside the Shiprocket auto-flow (no AWB) can still
+          record what was paid for delivery. */}
+      {!shipped ? (
+        <div className="mt-3 border-t border-border pt-3">
+          <DeliveryCost
+            orderId={orderId}
+            costPaise={shipmentCostPaise}
+            connected={connected}
+            shipped={shipped}
+          />
+        </div>
+      ) : null}
 
       {hasReplacement ? (
         <div className="mt-4 space-y-3 border-t border-border pt-4">

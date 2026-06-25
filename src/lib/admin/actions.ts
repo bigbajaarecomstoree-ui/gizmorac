@@ -22,6 +22,7 @@ import {
   createReturnOrder,
   shipReturn,
   generateLabels,
+  estimateOrderFreight,
 } from "@/lib/shiprocket";
 import { refundOrderPayment, cancelOrderEverywhere } from "@/lib/data/order-fulfillment";
 import { getOrderById } from "@/lib/data/orders";
@@ -877,6 +878,69 @@ export async function saveAdminNotes(orderId: string, notes: string): Promise<{ 
   });
   revalidatePath(`/admin/orders/${orderId}`);
   return { ok: true };
+}
+
+/**
+ * Record (or override) the delivery cost we paid the courier for this order, in
+ * rupees. Lets the owner capture spend for shipments booked outside the
+ * Shiprocket auto-flow, or correct an auto-captured freight charge. Pass 0 to
+ * clear it back to "Not recorded".
+ */
+export async function setShipmentCost(
+  orderId: string,
+  rupees: number,
+): Promise<{ ok: boolean; error?: string }> {
+  await assertAdmin();
+  if (!Number.isFinite(rupees) || rupees < 0 || rupees > 1_000_000) {
+    return { ok: false, error: "Enter a valid amount between ₹0 and ₹10,00,000." };
+  }
+  await prisma.order.update({
+    where: { id: orderId },
+    data: { shipmentCostPaise: Math.round(rupees * 100) },
+  });
+  revalidatePath(`/admin/orders/${orderId}`);
+  return { ok: true };
+}
+
+export interface DeliveryRateResult {
+  ok: boolean;
+  ratePaise?: number;
+  courier?: string;
+  /** true = Shiprocket rate estimate; false = real charge captured at dispatch. */
+  estimated?: boolean;
+  error?: string;
+}
+
+/**
+ * Auto-detect the delivery cost from Shiprocket for an order's destination
+ * pincode (no manual entry needed) and store it. Skips overwriting once the
+ * order has actually shipped — by then shipmentCostPaise holds the real freight.
+ */
+export async function autoEstimateDeliveryCost(orderId: string): Promise<DeliveryRateResult> {
+  await assertAdmin();
+  const order = await getOrderById(orderId);
+  if (!order) return { ok: false, error: "Order not found." };
+
+  // Already dispatched → the recorded figure is the actual charge; keep it.
+  if (order.awb) {
+    return {
+      ok: true,
+      ratePaise: order.shipmentCostPaise,
+      courier: order.courier,
+      estimated: false,
+    };
+  }
+
+  const est = await estimateOrderFreight(order);
+  if (!est) {
+    return { ok: false, error: "Shiprocket couldn't rate this pincode right now." };
+  }
+  await prisma.order.update({
+    where: { id: orderId },
+    data: { shipmentCostPaise: est.ratePaise },
+  });
+  revalidatePath(`/admin/orders/${orderId}`);
+  return { ok: true, ratePaise: est.ratePaise, courier: est.courier, estimated: true };
 }
 
 // --- customers (soft delete / restore) ---

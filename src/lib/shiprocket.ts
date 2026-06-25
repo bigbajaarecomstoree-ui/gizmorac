@@ -68,6 +68,10 @@ export interface DeliveryEstimate {
   days: number;
   etd: string;
   codAvailable: boolean;
+  /** Freight for the courier that would actually be used (paise); 0 if unknown. */
+  ratePaise: number;
+  /** Name of that courier. */
+  courier: string;
 }
 
 /** Check courier serviceability + ETA for a delivery pincode. */
@@ -95,16 +99,21 @@ export async function checkServiceability(input: {
     });
     const data = (await res.json().catch(() => ({}))) as {
       data?: {
+        recommended_courier_company_id?: number;
         available_courier_companies?: {
+          courier_company_id?: number;
+          courier_name?: string;
           estimated_delivery_days?: string | number;
           etd?: string;
           cod?: number;
+          rate?: number | string;
+          freight_charge?: number | string;
         }[];
       };
     };
     const couriers = data.data?.available_courier_companies ?? [];
     if (couriers.length === 0) {
-      return { serviceable: false, days: 0, etd: "", codAvailable: false };
+      return { serviceable: false, days: 0, etd: "", codAvailable: false, ratePaise: 0, courier: "" };
     }
     // Fastest available option drives the headline ETA.
     const fastest = couriers.reduce((best, c) => {
@@ -112,15 +121,49 @@ export async function checkServiceability(input: {
       const b = Number(best.estimated_delivery_days) || 99;
       return d < b ? c : best;
     });
+    // Price from the courier that would actually carry it: Shiprocket's
+    // recommended one when present, else the cheapest freight.
+    const priced = couriers
+      .map((c) => ({ c, charge: Number(c.freight_charge ?? c.rate) || 0 }))
+      .filter((x) => x.charge > 0);
+    const recId = data.data?.recommended_courier_company_id;
+    const chosen =
+      priced.find((x) => recId != null && x.c.courier_company_id === recId) ??
+      priced.sort((a, b) => a.charge - b.charge)[0];
     return {
       serviceable: true,
       days: Number(fastest.estimated_delivery_days) || 0,
       etd: fastest.etd || "",
       codAvailable: couriers.some((c) => Number(c.cod) === 1),
+      ratePaise: chosen ? Math.round(chosen.charge * 100) : 0,
+      courier: chosen?.c.courier_name ?? "",
     };
   } catch {
     return null;
   }
+}
+
+export interface FreightEstimate {
+  ratePaise: number;
+  courier: string;
+  days: number;
+  etd: string;
+}
+
+/**
+ * Auto-estimate courier freight for an order from its destination pincode,
+ * computed package weight, and COD flag — the figure that shipNow will later
+ * confirm with the real charge. Returns null when Shiprocket can't rate it.
+ */
+export async function estimateOrderFreight(order: Order): Promise<FreightEstimate | null> {
+  const { weight } = await computePackage(order);
+  const est = await checkServiceability({
+    deliveryPincode: order.pincode,
+    weight,
+    cod: order.paymentMethod === "COD",
+  });
+  if (!est || !est.serviceable || est.ratePaise <= 0) return null;
+  return { ratePaise: est.ratePaise, courier: est.courier, days: est.days, etd: est.etd };
 }
 
 export interface ShiprocketAuth {
