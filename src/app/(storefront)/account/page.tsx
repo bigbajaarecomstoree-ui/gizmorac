@@ -28,7 +28,7 @@ import { OrderHistoryView } from "@/components/account/order-history-view";
 import { ActivityFeed } from "@/components/account/activity-feed";
 import { RecommendedProducts } from "@/components/account/recommended-products";
 import { RecentlyViewed } from "@/components/account/recently-viewed";
-import { canCancelOrder, isDisputeWindowOpen, warrantyClaimOpen } from "@/lib/orders-policy";
+import { canCustomerCancel, isDisputeWindowOpen, warrantyClaimOpen } from "@/lib/orders-policy";
 import { buttonVariants } from "@/components/ui/button";
 import type { DeviceArt, Product } from "@/lib/types";
 
@@ -282,7 +282,7 @@ export default async function AccountPage() {
                       art: artById.get(i.id) ?? ("printer" as DeviceArt),
                       image: imageById.get(i.id) ?? null,
                     })),
-                    canCancel: canCancelOrder(o.status),
+                    canCancel: canCustomerCancel(o.status, o.createdAt),
                     canDispute: isDisputeWindowOpen(o.status, o.deliveredAt),
                     canWarranty: warrantyClaimOpen(
                       o.status,

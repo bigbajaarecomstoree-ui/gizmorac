@@ -12,7 +12,13 @@ import { MAX_QTY } from "@/lib/checkout-shared";
 import { initiatePayment, getPhonePeConfig } from "@/lib/phonepe";
 import { checkServiceability } from "@/lib/shiprocket";
 import { cancelOrderEverywhere } from "@/lib/data/order-fulfillment";
-import { canCancelOrder, isDisputeWindowOpen, warrantyClaimOpen } from "@/lib/orders-policy";
+import {
+  canCancelOrder,
+  cancelWindowOpen,
+  cancelDeadlineLabel,
+  isDisputeWindowOpen,
+  warrantyClaimOpen,
+} from "@/lib/orders-policy";
 import { limitByIp } from "@/lib/rate-limit";
 import { paymentsProductionSafe } from "@/lib/env-check";
 import { logEvent } from "@/lib/data/logs";
@@ -837,6 +843,15 @@ export async function cancelMyOrder(
         order.status === "Cancelled"
           ? "This order is already cancelled."
           : "This order can no longer be cancelled — it's already on its way.",
+    };
+  }
+  // Same-day (IST) window: cancellation closes at 11:59 PM on the order day.
+  if (!cancelWindowOpen(order.createdAt)) {
+    return {
+      ok: false,
+      error: `The cancellation window for this order closed at ${cancelDeadlineLabel(
+        order.createdAt,
+      )}. If there's a problem with the product, you can raise a dispute after delivery.`,
     };
   }
 

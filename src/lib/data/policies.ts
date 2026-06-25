@@ -144,7 +144,8 @@ export const policies: Policy[] = [
       {
         heading: "Cancellations",
         body: [
-          "You can cancel an order before it is shipped at no charge. Once shipped, an order cannot be cancelled but can be returned per our replacement policy.",
+          "You can cancel an order yourself until 11:59 PM (IST) on the day you place it, as long as it has not yet been dispatched — whichever comes first. Cancelling within this window is free and refunds anything you paid online to the original payment method.",
+          "After that window, or once the order has been dispatched, it cannot be cancelled. If there is a problem with the product, you can raise a dispute within 48 hours of delivery and our team will help.",
         ],
       },
       {
@@ -215,7 +216,7 @@ export const policies: Policy[] = [
       {
         heading: "Cancellations & the booking advance",
         body: [
-          "If you cancel before the order is dispatched, the booking amount is refunded to your original payment method.",
+          "If you cancel before the order is dispatched — and within the cancellation window (until 11:59 PM IST on the day you order) — the booking amount is refunded to your original payment method.",
           "If a delivery is refused, returns to origin (RTO), or cannot be completed because you are unreachable, the booking amount is retained to cover shipping and handling costs already incurred.",
           "In the case of a damaged or defective shipment, our team reviews each case individually and will refund or replace as appropriate.",
         ],

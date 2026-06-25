@@ -18,7 +18,12 @@ import { ResumePayment } from "@/components/order/resume-payment";
 import { BuyAgainButton } from "@/components/account/buy-again";
 import { TicketPanel } from "@/components/account/ticket-panel";
 import { OrderActions } from "@/components/account/order-actions";
-import { canCancelOrder, isDisputeWindowOpen, warrantyClaimOpen } from "@/lib/orders-policy";
+import {
+  canCustomerCancel,
+  cancelDeadlineLabel,
+  isDisputeWindowOpen,
+  warrantyClaimOpen,
+} from "@/lib/orders-policy";
 import { buttonVariants } from "@/components/ui/button";
 import { TrackPurchase } from "@/components/analytics/track-event";
 import type { OrderStatus } from "@/lib/types";
@@ -147,7 +152,8 @@ export default async function OrderPage({ params }: { params: Params }) {
             <OrderActions
               orderNumber={order.orderNumber}
               items={order.items.map((i) => ({ id: i.id, qty: i.qty }))}
-              canCancel={canCancelOrder(order.status)}
+              canCancel={canCustomerCancel(order.status, order.createdAt)}
+              cancelDeadlineLabel={cancelDeadlineLabel(order.createdAt)}
               canDispute={isDisputeWindowOpen(order.status, order.deliveredAt)}
               canWarranty={canWarranty}
               hasOpenTicket={Boolean(ticket)}

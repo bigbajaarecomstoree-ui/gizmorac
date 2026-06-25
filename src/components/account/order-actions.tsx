@@ -29,6 +29,7 @@ export function OrderActions({
   orderNumber,
   items,
   canCancel,
+  cancelDeadlineLabel,
   canDispute,
   canWarranty = false,
   hasOpenTicket = false,
@@ -38,6 +39,7 @@ export function OrderActions({
   orderNumber: string;
   items: { id: string; qty: number }[];
   canCancel: boolean;
+  cancelDeadlineLabel?: string;
   canDispute: boolean;
   canWarranty?: boolean;
   hasOpenTicket?: boolean;
@@ -151,6 +153,13 @@ export function OrderActions({
           </Link>
         ) : null}
       </div>
+
+      {canCancel && cancelDeadlineLabel && !confirming && !done ? (
+        <p className="mt-2 text-xs text-faint">
+          Free cancellation until {cancelDeadlineLabel}. After that, any product
+          issue can be raised as a dispute once delivered.
+        </p>
+      ) : null}
 
       {done ? (
         <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-success">
