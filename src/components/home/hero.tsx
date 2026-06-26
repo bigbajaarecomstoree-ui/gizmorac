@@ -82,7 +82,7 @@ function Eyebrow({ className }: { className?: string }) {
       )}
     >
       <span className="h-1.5 w-1.5 rounded-full bg-on-accent shadow-[0_0_8px_rgba(255,255,255,0.9)]" />
-      <span className="tech-label !text-on-accent">
+      <span className="tech-label !text-on-accent whitespace-nowrap !text-[0.5625rem] !tracking-[0.12em] sm:!text-[0.6875rem] sm:!tracking-[0.22em]">
         Precision gadgets · Made for India
       </span>
     </div>
@@ -126,16 +126,26 @@ export async function Hero() {
             convenience — tested before dispatch, shipped across India.
           </p>
 
-          <div className="mt-8 flex flex-wrap items-center gap-3">
-            <Link href="/shop" className={buttonVariants({ size: "lg" })}>
+          <div className="mt-8 flex items-center gap-3">
+            <Link
+              href="/shop"
+              className={cn(
+                buttonVariants({ size: "lg" }),
+                "flex-1 px-3 text-sm sm:flex-initial sm:px-7 sm:text-base",
+              )}
+            >
               Shop Now
               <ArrowRight size={18} />
             </Link>
             <Link
               href="/shop?sort=popular"
-              className={buttonVariants({ variant: "highlight", size: "lg" })}
+              className={cn(
+                buttonVariants({ variant: "highlight", size: "lg" }),
+                "flex-1 px-3 text-sm sm:flex-initial sm:px-7 sm:text-base",
+              )}
             >
-              Explore Best Sellers
+              Best Sellers
+              <ArrowRight size={18} />
             </Link>
           </div>
 
