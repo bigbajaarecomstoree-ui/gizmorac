@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Star, Truck, ShieldCheck, Users } from "lucide-react";
+import { ArrowRight, Star, Truck, ShieldCheck, Users, Heart } from "lucide-react";
 import type { Product } from "@/lib/types";
 import { buttonVariants } from "@/components/ui/button";
 import { ProductArt } from "@/components/product/product-art";
@@ -16,27 +16,41 @@ const TRUST = [
   { icon: ShieldCheck, value: "Secure", label: "Checkout" },
 ];
 
+const CALLOUT_TONES = {
+  surface: "border-border-bright bg-surface/85",
+  dark: "border-transparent bg-foreground",
+  purple: "border-transparent bg-accent",
+} as const;
+
 function Callout({
   value,
   label,
   className,
   delay = 0,
+  tone = "surface",
 }: {
   value: string;
   label: string;
   className?: string;
   delay?: number;
+  tone?: keyof typeof CALLOUT_TONES;
 }) {
+  const onColor = tone !== "surface";
   return (
     <div
       className={cn(
-        "animate-float absolute rounded-lg border border-border-bright bg-surface/85 px-3 py-2 shadow-lg backdrop-blur",
+        "animate-float absolute rounded-lg border px-3 py-2 shadow-lg backdrop-blur",
+        CALLOUT_TONES[tone],
         className,
       )}
       style={{ animationDelay: `${delay}s` }}
     >
-      <div className="readout text-sm font-semibold leading-none">{value}</div>
-      <div className="tech-label mt-1 !text-[0.5625rem]">{label}</div>
+      <div className={cn("readout text-sm font-semibold leading-none", onColor && "text-white")}>
+        {value}
+      </div>
+      <div className={cn("tech-label mt-1 !text-[0.5625rem]", onColor && "!text-white/65")}>
+        {label}
+      </div>
     </div>
   );
 }
@@ -65,8 +79,11 @@ function MiniCard({
         <p className="truncate text-[0.7rem] font-medium text-muted">
           {shortTitle(product.name)}
         </p>
-        <p className="readout mt-0.5 text-xs font-semibold">
+        <p className="readout mt-0.5 text-xs font-semibold text-danger">
           {formatINR(product.price)}
+        </p>
+        <p className="mt-1 flex items-center gap-1 text-[0.625rem] font-medium text-danger">
+          <Heart size={10} className="fill-danger text-danger" /> Your wishlist
         </p>
       </div>
     </div>
@@ -180,12 +197,14 @@ export async function Hero() {
           <Callout
             value={`${off}% OFF`}
             label="Deal of the day"
+            tone="dark"
             className="left-0 top-2 sm:top-10"
             delay={0}
           />
           <Callout
             value="Auto-stop"
             label="Set & forget"
+            tone="purple"
             className="right-0 top-14 sm:right-2 sm:top-24"
             delay={1.2}
           />
