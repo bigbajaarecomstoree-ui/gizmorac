@@ -3,13 +3,13 @@
 import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Pencil, Power, FileText, Trash2, Loader2, Search, X } from "lucide-react";
+import { Pencil, Power, FileText, Copy, Trash2, Loader2, Search, X } from "lucide-react";
 import type { Product } from "@/lib/types";
 import { formatINR } from "@/lib/format";
 import { ProductArt } from "@/components/product/product-art";
 import { Badge } from "@/components/ui/badge";
 import { DeleteProductDialog } from "@/components/admin/delete-product-dialog";
-import { setProductsStatus, deleteProducts } from "@/lib/admin/actions";
+import { setProductsStatus, deleteProducts, duplicateProducts } from "@/lib/admin/actions";
 import { cn } from "@/lib/utils";
 
 const checkboxCls =
@@ -76,6 +76,14 @@ export function ProductsTable({
     if (list.length === 0) return;
     startTransition(async () => {
       await setProductsStatus(list, active);
+      clear();
+    });
+  }
+  function bulkDuplicate() {
+    const list = selectedIds;
+    if (list.length === 0) return;
+    startTransition(async () => {
+      await duplicateProducts(list);
       clear();
     });
   }
@@ -149,6 +157,9 @@ export function ProductsTable({
             </button>
             <button type="button" onClick={() => bulkStatus(false)} disabled={pending} className={actionBtn}>
               <FileText size={14} /> Set as draft
+            </button>
+            <button type="button" onClick={bulkDuplicate} disabled={pending} className={actionBtn}>
+              <Copy size={14} /> Duplicate
             </button>
             <button type="button" onClick={bulkDelete} disabled={pending} className={dangerBtn}>
               <Trash2 size={14} /> Delete

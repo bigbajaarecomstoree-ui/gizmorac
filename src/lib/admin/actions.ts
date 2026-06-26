@@ -262,6 +262,52 @@ export async function deleteProducts(ids: string[]): Promise<void> {
   revalidatePath("/admin/inventory");
 }
 
+/**
+ * Duplicate the selected products. Each copy keeps the original's content but
+ * gets a fresh identity — new id + unique slug, a "(Copy)" name, a cleared
+ * Amazon ASIN (so re-imports don't collide) — and is created as a **Draft**
+ * with no inherited reviews or "deal of the day" flag, so nothing publishes by
+ * accident. The admin reviews/edits each copy before setting it Active.
+ */
+export async function duplicateProducts(ids: string[]): Promise<number> {
+  await assertAdmin();
+  if (ids.length === 0) return 0;
+
+  const sources = await prisma.product.findMany({ where: { id: { in: ids } } });
+  if (sources.length === 0) return 0;
+
+  // Guarantee unique slugs against everything already in the catalog.
+  const taken = new Set(
+    (await prisma.product.findMany({ select: { slug: true } })).map((p) => p.slug),
+  );
+
+  for (const src of sources) {
+    let slug = `${src.slug}-copy`;
+    for (let n = 2; taken.has(slug); n++) slug = `${src.slug}-copy-${n}`;
+    taken.add(slug);
+
+    const { id: _id, createdAt: _c, updatedAt: _u, ...rest } = src;
+    await prisma.product.create({
+      data: {
+        ...rest,
+        id: `p-${slug}-${Math.random().toString(36).slice(2, 6)}`,
+        slug,
+        name: `${src.name} (Copy)`,
+        sku: src.sku ? `${src.sku}-COPY` : src.sku,
+        asin: null, // a copy is a manual product, not tied to a live listing
+        active: false, // create as Draft — don't auto-publish a duplicate
+        isDeal: false, // never end up with two "deal of the day" products
+        rating: 4.5,
+        reviewCount: 0,
+      },
+    });
+  }
+
+  revalidateStorefront();
+  revalidatePath("/admin/inventory");
+  return sources.length;
+}
+
 // --- bulk product import (CSV) ---
 
 export interface ImportResult {
