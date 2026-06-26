@@ -133,7 +133,7 @@ export async function Hero() {
             </Link>
             <Link
               href="/shop?sort=popular"
-              className={buttonVariants({ variant: "outline", size: "lg" })}
+              className={buttonVariants({ variant: "highlight", size: "lg" })}
             >
               Explore Best Sellers
             </Link>
