@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Pencil, Power, FileText, Trash2, Loader2 } from "lucide-react";
+import { Pencil, Power, FileText, Trash2, Loader2, Search, X } from "lucide-react";
 import type { Product } from "@/lib/types";
 import { formatINR } from "@/lib/format";
 import { ProductArt } from "@/components/product/product-art";
@@ -27,10 +27,23 @@ export function ProductsTable({
   categoryNames: Record<string, string>;
 }) {
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
+  const [query, setQuery] = React.useState("");
   const [pending, startTransition] = React.useTransition();
   const barCheckbox = React.useRef<HTMLInputElement>(null);
 
-  const ids = React.useMemo(() => products.map((p) => p.id), [products]);
+  // Live, client-side filter — matches product name, SKU, or category as you type.
+  const filtered = React.useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return products;
+    return products.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        p.sku.toLowerCase().includes(q) ||
+        (categoryNames[p.category] ?? p.category).toLowerCase().includes(q),
+    );
+  }, [products, query, categoryNames]);
+
+  const ids = React.useMemo(() => filtered.map((p) => p.id), [filtered]);
   const idSet = React.useMemo(() => new Set(ids), [ids]);
   // Only act on / count selections that still exist in the current list.
   const selectedIds = React.useMemo(
@@ -82,7 +95,33 @@ export function ProductsTable({
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-surface">
+    <div>
+      <div className="relative mb-4 max-w-md">
+        <Search
+          size={16}
+          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint"
+        />
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search products by name, SKU or category…"
+          aria-label="Search products"
+          className="h-10 w-full rounded-lg border border-border bg-surface pl-9 pr-9 text-sm text-foreground placeholder:text-faint focus:border-accent focus:outline-none"
+        />
+        {query ? (
+          <button
+            type="button"
+            onClick={() => setQuery("")}
+            aria-label="Clear search"
+            className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-md text-faint transition-colors hover:bg-surface-2 hover:text-foreground cursor-pointer"
+          >
+            <X size={15} />
+          </button>
+        ) : null}
+      </div>
+
+      <div className="overflow-hidden rounded-xl border border-border bg-surface">
       {someSelected ? (
         <div className="flex flex-wrap items-center gap-3 border-b border-border bg-accent-soft/60 px-4 py-2.5">
           <input
@@ -136,7 +175,7 @@ export function ProductsTable({
       )}
 
       <div className="divide-y divide-border">
-        {products.map((p) => {
+        {filtered.map((p) => {
           const checked = selected.has(p.id);
           const low = p.stock <= 10;
           return (
@@ -214,6 +253,12 @@ export function ProductsTable({
             </div>
           );
         })}
+      </div>
+      {filtered.length === 0 ? (
+        <div className="px-4 py-10 text-center text-sm text-muted">
+          No products match “{query}”.
+        </div>
+      ) : null}
       </div>
     </div>
   );
