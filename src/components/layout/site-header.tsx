@@ -100,8 +100,8 @@ export function SiteHeader({
               priority
               className="hidden h-9 w-auto object-contain min-[380px]:block"
             />
-            <span className="font-display text-lg font-bold tracking-tight text-white">
-              GIZMORAC
+            <span className="font-display text-lg font-bold tracking-tight text-foreground">
+              GIZMO<span className="text-accent">RAC</span>
             </span>
           </Link>
 
