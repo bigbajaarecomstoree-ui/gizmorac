@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { ArrowRight, Star, Truck, ShieldCheck, Users, Heart } from "lucide-react";
+import { ArrowRight, Star, Truck, ShieldCheck, Users } from "lucide-react";
 import type { Product } from "@/lib/types";
 import { buttonVariants } from "@/components/ui/button";
 import { ProductArt } from "@/components/product/product-art";
+import { WishlistButton } from "@/components/product/wishlist-button";
 import { Price } from "@/components/product/price";
 import { formatINR, discountPercent, shortTitle } from "@/lib/format";
 import { TRUST_STATS } from "@/lib/constants";
@@ -72,6 +73,11 @@ function MiniCard({
       )}
       style={{ animationDelay: `${delay}s` }}
     >
+      <WishlistButton
+        id={product.id}
+        name={shortTitle(product.name)}
+        className="absolute right-2 top-2 z-10 h-7 w-7 border-danger/30 bg-background/80 text-danger hover:border-danger hover:text-danger"
+      />
       <div className="aspect-[4/3]">
         <ProductArt art={product.art} />
       </div>
@@ -81,9 +87,6 @@ function MiniCard({
         </p>
         <p className="readout mt-0.5 text-xs font-semibold text-danger">
           {formatINR(product.price)}
-        </p>
-        <p className="mt-1 flex items-center gap-1 text-[0.625rem] font-medium text-danger">
-          <Heart size={10} className="fill-danger text-danger" /> Your wishlist
         </p>
       </div>
     </div>
