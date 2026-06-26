@@ -253,11 +253,12 @@ export function ProductForm({
           <input
             type="checkbox"
             name="active"
-            defaultChecked={p ? p.active : true}
+            defaultChecked
             className="h-4 w-4 accent-[var(--color-accent)]"
           />
           <span>
-            <span className="font-medium">Active</span> — visible on the storefront.{" "}
+            <span className="font-medium">Active</span> — saving publishes it to the
+            storefront.{" "}
             <span className="text-faint">Uncheck to save as a hidden draft.</span>
           </span>
         </label>
