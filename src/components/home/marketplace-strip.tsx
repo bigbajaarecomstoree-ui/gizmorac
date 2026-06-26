@@ -27,7 +27,7 @@ export function MarketplaceStrip() {
             className="h-[47px] w-auto object-contain"
           />
           <span className="flex items-center gap-1 rounded-full border border-border bg-surface px-2.5 py-1">
-            <Star size={13} className="fill-accent text-accent" />
+            <Star size={13} className="fill-highlight text-highlight" />
             <span className="readout text-xs font-semibold">4.6</span>
           </span>
         </div>
