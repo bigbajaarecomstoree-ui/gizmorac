@@ -77,12 +77,12 @@ function Eyebrow({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "inline-flex items-center gap-2.5 rounded-full border border-border bg-surface/60 px-3.5 py-1.5",
+        "inline-flex items-center gap-2.5 rounded-full border border-accent bg-accent px-3.5 py-1.5",
         className,
       )}
     >
-      <span className="h-1.5 w-1.5 rounded-full bg-accent shadow-[0_0_8px_rgba(245,158,11,0.9)]" />
-      <span className="tech-label !text-muted">
+      <span className="h-1.5 w-1.5 rounded-full bg-on-accent shadow-[0_0_8px_rgba(255,255,255,0.9)]" />
+      <span className="tech-label !text-on-accent">
         Precision gadgets · Made for India
       </span>
     </div>
