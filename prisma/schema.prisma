@@ -61,6 +61,8 @@ model Product {
   features          String                 @default("[]")
   specs             String                 @default("[]")
   faqs              String                 @default("[]")
+  // JSON-encoded array of "what's in the box" item strings.
+  inTheBox          String                 @default("[]")
   isBestSeller      Boolean                @default(false)
   isFeatured        Boolean                @default(false)
   isDeal            Boolean                @default(false)

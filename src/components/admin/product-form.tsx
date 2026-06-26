@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { MediaUploader } from "@/components/admin/media-uploader";
 import { SpecsEditor } from "@/components/admin/specs-editor";
+import { ListEditor } from "@/components/admin/list-editor";
 
 const ART_OPTIONS = [
   "printer",
@@ -322,6 +323,14 @@ export function ProductForm({
       >
         <Field label="Features" hint="Write one per line.">
           <textarea name="features" rows={4} defaultValue={p?.features.join("\n")} className={areaCls} />
+        </Field>
+        <Field label="In the box" hint="Add each included item, one at a time.">
+          <ListEditor
+            name="inTheBox"
+            initial={p?.inTheBox ?? []}
+            placeholder="e.g. 1× USB Cable"
+            addLabel="Add item"
+          />
         </Field>
         <Field label="Specifications" hint="Add a row per spec — the Specification (e.g. Resolution) and its Details (e.g. 203 DPI).">
           <SpecsEditor name="specs" initial={p?.specs ?? []} />

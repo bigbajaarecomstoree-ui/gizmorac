@@ -155,6 +155,7 @@ function productDataFromForm(fd: FormData) {
     ),
     highlights: JSON.stringify(lines(str(fd, "highlights"))),
     features: JSON.stringify(lines(str(fd, "features"))),
+    inTheBox: JSON.stringify(lines(str(fd, "inTheBox"))),
     specs: JSON.stringify(parseSpecs(str(fd, "specs"))),
     faqs: JSON.stringify(parseFaqs(str(fd, "faqs"))),
     isBestSeller: bool(fd, "isBestSeller"),

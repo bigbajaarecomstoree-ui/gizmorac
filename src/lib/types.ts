@@ -107,6 +107,8 @@ export interface Product {
   features: string[];
   specs: ProductSpec[];
   faqs: FaqItem[];
+  /** "What's in the box" — included items. Optional for legacy/mock products. */
+  inTheBox?: string[];
   isBestSeller: boolean;
   isFeatured: boolean;
   isDeal: boolean;

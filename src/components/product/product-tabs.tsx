@@ -1,18 +1,19 @@
 "use client";
 
 import * as React from "react";
-import { Check, Plus, BadgeCheck } from "lucide-react";
+import { Check, Plus, BadgeCheck, Package } from "lucide-react";
 import type { FaqItem, ProductSpec, Review } from "@/lib/types";
 import { RatingStars } from "./rating-stars";
 import { cn } from "@/lib/utils";
 
-const ALL_TABS = ["Description", "Features", "Specifications", "FAQs", "Reviews"] as const;
+const ALL_TABS = ["Description", "Features", "Specifications", "In the box", "FAQs", "Reviews"] as const;
 type Tab = (typeof ALL_TABS)[number];
 
 export function ProductTabs({
   description,
   features,
   specs,
+  inTheBox,
   faqs,
   reviews,
   rating,
@@ -21,6 +22,7 @@ export function ProductTabs({
   description: string;
   features: string[];
   specs: ProductSpec[];
+  inTheBox: string[];
   faqs: FaqItem[];
   reviews: Review[];
   rating: number;
@@ -32,6 +34,7 @@ export function ProductTabs({
   const tabs: Tab[] = ["Description"];
   if (features.length) tabs.push("Features");
   if (specs.length) tabs.push("Specifications");
+  if (inTheBox.length) tabs.push("In the box");
   if (faqs.length) tabs.push("FAQs");
   tabs.push("Reviews");
 
@@ -110,6 +113,20 @@ export function ProductTabs({
               </div>
             ))}
           </div>
+        ) : null}
+
+        {tab === "In the box" ? (
+          <ul className="grid max-w-2xl gap-3 sm:grid-cols-2">
+            {inTheBox.map((item) => (
+              <li
+                key={item}
+                className="flex items-start gap-2.5 rounded-xl border border-border bg-surface px-4 py-3 text-sm"
+              >
+                <Package size={16} className="mt-0.5 shrink-0 text-accent" />
+                <span className="text-foreground">{item}</span>
+              </li>
+            ))}
+          </ul>
         ) : null}
 
         {tab === "FAQs" ? (

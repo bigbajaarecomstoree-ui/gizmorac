@@ -61,6 +61,7 @@ function toProduct(r: ProductRow): Product {
     features: safeParse(r.features),
     specs: normalizeSpecs(safeParse(r.specs)),
     faqs: safeParse(r.faqs),
+    inTheBox: safeParse(r.inTheBox),
     isBestSeller: r.isBestSeller,
     isFeatured: r.isFeatured,
     isDeal: r.isDeal,

@@ -227,6 +227,7 @@ export default async function ProductPage({ params }: { params: Params }) {
           description={product.description}
           features={product.features}
           specs={product.specs}
+          inTheBox={product.inTheBox ?? []}
           faqs={product.faqs}
           reviews={productReviews}
           rating={product.rating}
