@@ -56,9 +56,9 @@ export async function DealOfTheDay() {
 
           {/* details */}
           <div className="flex flex-col">
-            <div className="mb-4 inline-flex w-fit items-center gap-2 rounded-full border border-accent-dim/40 bg-accent-soft px-3 py-1.5">
-              <Zap size={13} className="text-accent-bright" />
-              <span className="tech-label !text-accent-bright">Deal of the day</span>
+            <div className="mb-4 inline-flex w-fit items-center gap-2 rounded-full bg-accent px-3 py-1.5">
+              <Zap size={13} className="text-highlight" />
+              <span className="tech-label !text-white">Deal of the day</span>
             </div>
 
             <h2 className="text-2xl font-bold leading-tight tracking-tight sm:text-3xl">
