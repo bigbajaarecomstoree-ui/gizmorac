@@ -128,7 +128,7 @@ export async function DealOfTheDay() {
                 id={deal.id}
                 name={title}
                 label="Add to Cart"
-                variant="surface"
+                variant="highlight"
                 size="lg"
               />
               <Link

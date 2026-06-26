@@ -92,7 +92,7 @@ export function ProductCard({ product }: { product: Product }) {
           <AddToCartButton
             id={product.id}
             name={title}
-            variant="surface"
+            variant="highlight"
             size="sm"
             className="w-full sm:hidden"
           />
@@ -100,7 +100,7 @@ export function ProductCard({ product }: { product: Product }) {
           <AddToCartButton
             id={product.id}
             name={title}
-            variant="surface"
+            variant="highlight"
             size="sm"
             iconOnly
             className="hidden sm:inline-flex sm:w-11 sm:shrink-0 sm:px-0"

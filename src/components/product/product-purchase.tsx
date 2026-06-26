@@ -82,7 +82,7 @@ export function ProductPurchase({
           Buy Now
         </Button>
         <Button
-          variant="outline"
+          variant="highlight"
           size="lg"
           onClick={add}
           disabled={outOfStock}
