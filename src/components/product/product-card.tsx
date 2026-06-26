@@ -75,7 +75,7 @@ export function ProductCard({ product }: { product: Product }) {
 
         <RatingStars rating={product.rating} count={product.reviewCount} />
 
-        <Price product={product} size="sm" className="mt-0.5" />
+        <Price product={product} size="sm" tone="ink" className="mt-0.5" />
 
         {/* On the narrow 2-col mobile grid the buttons stack so neither is
             clipped; from sm up (wider cards) they sit side by side. */}

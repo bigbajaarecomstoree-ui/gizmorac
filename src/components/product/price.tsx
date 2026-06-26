@@ -12,16 +12,25 @@ const PRICE_SIZE = {
 export function Price({
   product,
   size = "md",
+  tone = "accent",
   className,
 }: {
   product: Pick<Product, "price" | "mrp">;
   size?: keyof typeof PRICE_SIZE;
+  /** "accent" = brand-coloured readout (default); "ink" = plain dark price. */
+  tone?: "accent" | "ink";
   className?: string;
 }) {
   const off = discountPercent(product);
   return (
     <div className={cn("flex flex-wrap items-baseline gap-x-2.5 gap-y-1", className)}>
-      <span className={cn("readout font-semibold leading-none", PRICE_SIZE[size])}>
+      <span
+        className={cn(
+          "readout font-semibold leading-none",
+          tone === "ink" && "text-foreground",
+          PRICE_SIZE[size],
+        )}
+      >
         {formatINR(product.price)}
       </span>
       {off > 0 ? (

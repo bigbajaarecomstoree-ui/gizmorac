@@ -30,7 +30,7 @@ export function RatingStars({
           ))}
         </span>
         <span
-          className="absolute inset-y-0 left-0 flex overflow-hidden text-accent"
+          className="absolute inset-y-0 left-0 flex overflow-hidden text-highlight"
           style={{ width: `${pct}%` }}
         >
           {Array.from({ length: 5 }).map((_, i) => (
