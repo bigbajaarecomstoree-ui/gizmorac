@@ -15,6 +15,7 @@ import type {
 } from "@/lib/types";
 import { discountPercent } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
+import { normalizeSpecs } from "./specs";
 import { reviews } from "./reviews";
 import { siteFaqs } from "./faqs";
 
@@ -58,7 +59,7 @@ function toProduct(r: ProductRow): Product {
     description: r.description,
     highlights: safeParse(r.highlights),
     features: safeParse(r.features),
-    specs: safeParse(r.specs),
+    specs: normalizeSpecs(safeParse(r.specs)),
     faqs: safeParse(r.faqs),
     isBestSeller: r.isBestSeller,
     isFeatured: r.isFeatured,

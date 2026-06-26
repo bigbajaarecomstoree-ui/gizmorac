@@ -16,6 +16,7 @@ import type { Product, Category } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { MediaUploader } from "@/components/admin/media-uploader";
+import { SpecsEditor } from "@/components/admin/specs-editor";
 
 const ART_OPTIONS = [
   "printer",
@@ -322,14 +323,8 @@ export function ProductForm({
         <Field label="Features" hint="Write one per line.">
           <textarea name="features" rows={4} defaultValue={p?.features.join("\n")} className={areaCls} />
         </Field>
-        <Field label="Specifications" hint="One per line, as “Label: Value” — e.g. Battery: 2000mAh">
-          <textarea
-            name="specs"
-            rows={4}
-            defaultValue={p?.specs.map((s) => `${s.label}: ${s.value}`).join("\n")}
-            className={areaCls}
-            placeholder={"Battery: 2000mAh\nWeight: 220g"}
-          />
+        <Field label="Specifications" hint="Add a row per spec — the Specification (e.g. Resolution) and its Details (e.g. 203 DPI).">
+          <SpecsEditor name="specs" initial={p?.specs ?? []} />
         </Field>
         <Field label="FAQs" hint="One per line, as “Question :: Answer”">
           <textarea
