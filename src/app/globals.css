@@ -10,8 +10,8 @@
    (yellow) pairs with the dark `on-highlight` text.
 ---------------------------------------------------------------------------- */
 @theme {
-  --color-background: #fafafa;
-  --color-surface: #ffffff;
+  --color-background: #ffffff;
+  --color-surface: #fafafa;
   --color-surface-2: #f3f4f6;
   --color-elevated: #ffffff;
   --color-border: #e5e7eb;
