@@ -135,7 +135,7 @@ export function ShopFilters({
                 active={active}
               >
                 <span className="flex items-center gap-1.5">
-                  <Star size={13} className="fill-accent text-accent" />
+                  <Star size={13} className="fill-highlight text-highlight" />
                   {r.label}
                 </span>
               </Row>

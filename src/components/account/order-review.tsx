@@ -34,7 +34,7 @@ function StarInput({
             aria-label={`${n} star${n === 1 ? "" : "s"}`}
             onMouseEnter={() => setHover(n)}
             onClick={() => onChange(n)}
-            className="p-0.5 text-accent transition-transform hover:scale-110 cursor-pointer"
+            className="p-0.5 text-highlight transition-transform hover:scale-110 cursor-pointer"
           >
             <Star
               size={28}
@@ -104,7 +104,7 @@ export function OrderItemReview({
             <Pencil size={12} /> Edit
           </button>
         </div>
-        <div className="mt-1.5 flex text-accent">
+        <div className="mt-1.5 flex text-highlight">
           {[1, 2, 3, 4, 5].map((n) => (
             <Star
               key={n}

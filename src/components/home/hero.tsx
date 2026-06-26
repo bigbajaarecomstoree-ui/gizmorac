@@ -142,7 +142,13 @@ export async function Hero() {
           <dl className="mt-10 grid max-w-md grid-cols-2 gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-4">
             {TRUST.map((t) => (
               <div key={t.label} className="bg-surface/80 px-3 py-4 text-center">
-                <t.icon size={16} className="mx-auto mb-1.5 text-accent" />
+                <t.icon
+                  size={16}
+                  className={cn(
+                    "mx-auto mb-1.5",
+                    t.label === "Rating" ? "text-highlight" : "text-accent",
+                  )}
+                />
                 <dt className="text-sm font-semibold text-foreground">{t.value}</dt>
                 <dd className="tech-label mt-0.5 !text-[0.5625rem]">{t.label}</dd>
               </div>
