@@ -117,7 +117,14 @@ export function ProductGallery({
             className="object-contain"
           />
         ) : (
-          <video src={current.src} controls className="h-full w-full bg-black object-contain" />
+          <video
+            src={current.src}
+            controls
+            controlsList="nodownload noplaybackrate"
+            disablePictureInPicture
+            onContextMenu={(e) => e.preventDefault()}
+            className="h-full w-full bg-black object-contain"
+          />
         )}
         <Tags off={off} badges={badges} />
       </div>

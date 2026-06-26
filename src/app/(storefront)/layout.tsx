@@ -1,4 +1,5 @@
 import { StoreProvider } from "@/components/store/store-provider";
+import { ContentGuard } from "@/components/layout/content-guard";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { WhatsAppButton } from "@/components/layout/whatsapp-button";
@@ -21,7 +22,8 @@ export default async function StorefrontLayout({
 
   return (
     <StoreProvider>
-      <div className="flex min-h-full flex-col">
+      <ContentGuard />
+      <div className="content-guard flex min-h-full flex-col">
         <SiteHeader
           customerName={customer ? customer.fullName.split(" ")[0] : null}
           announcement={
