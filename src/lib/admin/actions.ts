@@ -263,11 +263,12 @@ export async function deleteProducts(ids: string[]): Promise<void> {
 }
 
 /**
- * Duplicate the selected products. Each copy keeps the original's content but
- * gets a fresh identity — new id + unique slug, a "(Copy)" name, a cleared
- * Amazon ASIN (so re-imports don't collide) — and is created as a **Draft**
- * with no inherited reviews or "deal of the day" flag, so nothing publishes by
- * accident. The admin reviews/edits each copy before setting it Active.
+ * Duplicate the selected products. Each copy keeps the original's content —
+ * including its **live/draft status**, so a copy of an Active product is created
+ * live and stays live after you edit & save it — but gets a fresh identity (new
+ * id + unique slug, a "(Copy)" name, a cleared Amazon ASIN so re-imports don't
+ * collide). Reviews are reset and the "deal of the day" flag is cleared so a
+ * copy never becomes a second deal.
  */
 export async function duplicateProducts(ids: string[]): Promise<number> {
   await assertAdmin();
@@ -295,7 +296,8 @@ export async function duplicateProducts(ids: string[]): Promise<number> {
         name: `${src.name} (Copy)`,
         sku: src.sku ? `${src.sku}-COPY` : src.sku,
         asin: null, // a copy is a manual product, not tied to a live listing
-        active: false, // create as Draft — don't auto-publish a duplicate
+        // `active` is inherited from the source via ...rest — a copy of a live
+        // product is created live; a copy of a draft stays a draft.
         isDeal: false, // never end up with two "deal of the day" products
         rating: 4.5,
         reviewCount: 0,
