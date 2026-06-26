@@ -34,7 +34,7 @@ export function AccountMenu({ name }: { name?: string | null }) {
     return (
       <Link
         href="/login"
-        className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-medium text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+        className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-medium text-foreground/80 transition-colors hover:bg-black/5 hover:text-foreground"
         aria-label="Log in"
       >
         <User size={18} />
@@ -55,7 +55,7 @@ export function AccountMenu({ name }: { name?: string | null }) {
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="menu"
         aria-expanded={open}
-        className="flex items-center gap-2 rounded-lg py-1 pl-1 pr-1.5 text-sm font-medium text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+        className="flex items-center gap-2 rounded-lg py-1 pl-1 pr-1.5 text-sm font-medium text-foreground/80 transition-colors hover:bg-black/5 hover:text-foreground"
       >
         <span className="grid size-8 place-items-center rounded-full bg-accent text-xs font-bold text-on-accent">
           {initials.toUpperCase()}

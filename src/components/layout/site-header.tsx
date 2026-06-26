@@ -76,16 +76,14 @@ export function SiteHeader({
 
       <div
         className={cn(
-          "border-b transition-colors duration-300",
-          scrolled
-            ? "border-border bg-background/85 backdrop-blur-xl"
-            : "border-transparent bg-background/40 backdrop-blur-md",
+          "border-b border-black/10 bg-highlight transition-shadow duration-300",
+          scrolled ? "shadow-md" : "",
         )}
       >
         <div className="shell flex h-16 items-center gap-2 sm:gap-4">
           <button
             type="button"
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-muted hover:text-foreground lg:hidden cursor-pointer"
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-foreground/80 hover:bg-black/5 hover:text-foreground lg:hidden cursor-pointer"
             onClick={() => setOpen((v) => !v)}
             aria-label="Toggle menu"
             aria-expanded={open}
@@ -112,7 +110,7 @@ export function SiteHeader({
               <Link
                 key={item.href}
                 href={item.href}
-                className="rounded-md px-3 py-2 text-sm font-medium text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+                className="rounded-md px-3 py-2 text-sm font-medium text-foreground/80 transition-colors hover:bg-black/5 hover:text-foreground"
               >
                 {item.label}
               </Link>
@@ -143,7 +141,7 @@ export function SiteHeader({
             <AccountMenu name={customerName} />
             <Link
               href="/wishlist"
-              className="relative grid h-10 w-10 place-items-center rounded-lg text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+              className="relative grid h-10 w-10 place-items-center rounded-lg text-foreground/80 transition-colors hover:bg-black/5 hover:text-foreground"
               aria-label="Wishlist"
             >
               <Heart size={20} />
@@ -151,7 +149,7 @@ export function SiteHeader({
             </Link>
             <Link
               href="/cart"
-              className="relative grid h-10 w-10 place-items-center rounded-lg text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+              className="relative grid h-10 w-10 place-items-center rounded-lg text-foreground/80 transition-colors hover:bg-black/5 hover:text-foreground"
               aria-label="Cart"
             >
               <ShoppingCart size={20} />

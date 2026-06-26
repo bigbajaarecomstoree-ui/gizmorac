@@ -1,18 +1,13 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Sans, DM_Sans, IBM_Plex_Mono } from "next/font/google";
+import { Poppins, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { SITE } from "@/lib/constants";
 
-const plexSans = IBM_Plex_Sans({
+// Poppins drives both display and body type (per the brand design system).
+const poppins = Poppins({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
-  variable: "--font-plex-sans",
-  display: "swap",
-});
-
-const dmSans = DM_Sans({
-  subsets: ["latin"],
-  variable: "--font-dm-sans",
+  variable: "--font-poppins",
   display: "swap",
 });
 
@@ -60,7 +55,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${plexSans.variable} ${dmSans.variable} ${plexMono.variable} h-full antialiased`}
+      className={`${poppins.variable} ${plexMono.variable} h-full antialiased`}
     >
       <body className="min-h-full">
         {/* Track input modality so focus rings show for keyboard users only. */}

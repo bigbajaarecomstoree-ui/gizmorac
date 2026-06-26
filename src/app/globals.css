@@ -1,41 +1,49 @@
 @import "tailwindcss";
 
 /* ----------------------------------------------------------------------------
-   GIZMORAC design tokens — light "instrument" system
-   Clean light surfaces, amber as the brand accent, Plex Sans/Mono engineering type.
-   Note: amber-500 is too light to read as text on white, so `accent-bright` is a
-   readable amber-700 used for amber TEXT, while `accent` (amber-500) is for fills,
-   icons and graphics. `on-accent` is the dark text used on amber fills.
+   GIZMORAC design tokens — purple/yellow brand system (Poppins)
+   Clean light surfaces; PURPLE is the primary brand colour (fills, icons, primary
+   buttons, the hero glyph), YELLOW is the secondary accent (badges/highlights).
+   `accent` (purple-700) is the dominant brand colour for fills/icons/buttons;
+   `accent-bright` (purple-800) is a readable purple used for purple TEXT (prices,
+   readout); `on-accent` is the white text placed on purple fills. `highlight`
+   (yellow) pairs with the dark `on-highlight` text.
 ---------------------------------------------------------------------------- */
 @theme {
-  --color-background: #f4f4f6;
+  --color-background: #fafafa;
   --color-surface: #ffffff;
-  --color-surface-2: #eeeef1;
+  --color-surface-2: #f3f4f6;
   --color-elevated: #ffffff;
-  --color-border: #e5e5ea;
-  --color-border-bright: #d4d4dc;
+  --color-border: #e5e7eb;
+  --color-border-bright: #d1d5db;
 
-  --color-foreground: #18181b;
-  --color-muted: #52525b;
-  --color-faint: #8a8a94;
+  --color-foreground: #111827;
+  --color-muted: #6b7280;
+  --color-faint: #9ca3af;
 
-  --color-accent: #f59e0b;
-  --color-accent-bright: #b45309;
-  --color-accent-hover: #e0900a;
-  --color-accent-dim: #f3d7a3;
-  --color-accent-soft: #fdf1db;
-  --color-on-accent: #1c1206;
+  --color-accent: #6d28d9;
+  --color-accent-bright: #5b21b6;
+  --color-accent-hover: #5b21b6;
+  --color-accent-dim: #c4b5fd;
+  --color-accent-soft: #f5f3ff;
+  --color-on-accent: #ffffff;
 
-  --color-success: #16a34a;
+  --color-highlight: #facc15;
+  --color-highlight-hover: #eab308;
+  --color-highlight-soft: #fef9c3;
+  --color-on-highlight: #111827;
+
+  --color-success: #10b981;
   --color-danger: #dc2626;
+  --color-info: #3b82f6;
 
-  --font-display: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-body: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
 
   --radius: 0.625rem;
 
-  --shadow-glow: 0 8px 22px -8px rgba(245, 158, 11, 0.55);
+  --shadow-glow: 0 8px 22px -8px rgba(109, 40, 217, 0.5);
 
   --animate-float: float 5s ease-in-out infinite;
   --animate-float-slow: float 6s ease-in-out infinite;
@@ -137,9 +145,9 @@
     background-size: 54px 54px;
   }
 
-  /* Amber ambient glow blob */
+  /* Brand ambient glow blob (purple) */
   .glow-amber {
-    background: radial-gradient(closest-side, rgba(245, 158, 11, 0.12), transparent);
+    background: radial-gradient(closest-side, rgba(109, 40, 217, 0.12), transparent);
   }
 }
 
