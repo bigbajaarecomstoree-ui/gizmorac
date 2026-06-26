@@ -127,7 +127,7 @@ export async function Hero() {
       <div className="shell relative grid items-center gap-6 pt-5 pb-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-12 lg:pt-6 lg:pb-16">
         {/* Mobile/tablet: eyebrow leads, above the showcase. Hidden on desktop,
             where the eyebrow lives inside the left column instead. */}
-        <Eyebrow className="order-1 lg:hidden" />
+        <Eyebrow className="order-1 justify-self-start lg:hidden" />
 
         {/* Left: thesis */}
         <div className="order-3 animate-rise lg:order-1">
@@ -187,7 +187,7 @@ export async function Hero() {
             mobile/tablet (order-2), and on the right on desktop. Cards shrink +
             spread out on mobile to avoid overlap; desktop keeps the original
             floating layout via the sm: overrides. */}
-        <div className="relative order-2 mx-auto aspect-square w-full max-w-md sm:max-w-lg lg:order-2">
+        <div className="relative order-2 mx-auto aspect-square w-full max-w-md sm:ml-0 sm:max-w-lg lg:ml-auto lg:order-2">
           {/* main device panel */}
           <div className="absolute inset-x-6 inset-y-10 overflow-hidden rounded-3xl border border-border-bright bg-surface shadow-2xl sm:inset-x-8 sm:inset-y-4">
             {hero ? <ProductArt art={hero.art} glyphClassName="!h-[40%] text-accent" /> : null}
