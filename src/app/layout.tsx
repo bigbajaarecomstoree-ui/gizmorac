@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Poppins, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { SITE } from "@/lib/constants";
+import { EmojiGuard } from "@/components/system/emoji-guard";
 
 // Poppins drives both display and body type (per the brand design system).
 const poppins = Poppins({
@@ -58,6 +59,7 @@ export default function RootLayout({
       className={`${poppins.variable} ${plexMono.variable} h-full antialiased`}
     >
       <body className="min-h-full">
+        <EmojiGuard />
         {/* Track input modality so focus rings show for keyboard users only. */}
         <script
           dangerouslySetInnerHTML={{

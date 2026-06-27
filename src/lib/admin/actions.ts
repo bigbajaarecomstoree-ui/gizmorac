@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { stripEmoji } from "@/lib/sanitize";
 import {
   checkPassword,
   setSessionCookie,
@@ -61,7 +62,8 @@ async function assertAdmin(): Promise<void> {
 }
 
 function str(fd: FormData, key: string): string {
-  return (fd.get(key) ?? "").toString().trim();
+  // Strip emoji from every admin text field (one place) — keeps data clean.
+  return stripEmoji((fd.get(key) ?? "").toString().trim());
 }
 function int(fd: FormData, key: string, fallback = 0): number {
   const n = Number(str(fd, key));

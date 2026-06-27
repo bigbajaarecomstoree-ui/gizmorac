@@ -4,6 +4,7 @@ import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { stripEmoji, cleanStrings } from "@/lib/sanitize";
 import { getCurrentCustomer } from "@/lib/customer-auth";
 import { getSettings } from "@/lib/data/settings";
 import { computeCodAdvance } from "@/lib/data/cod";
@@ -135,6 +136,9 @@ export async function placeOrder(
 ): Promise<PlaceOrderResult> {
   const blocked = await limitByIp("checkout", 12, 60);
   if (blocked) return { ok: false, error: blocked };
+  // Strip emoji from every text field (name, address, etc.) before validating
+  // or persisting — keeps order data clean and searchable.
+  payload = cleanStrings(payload);
   if ((payload.items?.length ?? 0) > 50) {
     return { ok: false, error: "Too many items in the cart." };
   }
@@ -640,8 +644,8 @@ export async function submitReview(input: {
 
   const rating = Math.max(1, Math.min(5, Math.round(input.rating)));
   if (!rating) return { ok: false, error: "Please select a star rating." };
-  const title = (input.title ?? "").trim().slice(0, 120);
-  const body = (input.body ?? "").trim().slice(0, 2000);
+  const title = stripEmoji((input.title ?? "").trim()).slice(0, 120);
+  const body = stripEmoji((input.body ?? "").trim()).slice(0, 2000);
   const location = [order.city, order.state].filter(Boolean).join(", ");
   const author =
     customer.fullName.trim() ||
@@ -771,7 +775,7 @@ export async function raiseTicket(input: {
     return { ok: false, error: "Please select what went wrong." };
   }
   const category = input.category as TicketCategory;
-  const description = (input.description ?? "").trim().slice(0, 4000);
+  const description = stripEmoji((input.description ?? "").trim()).slice(0, 4000);
   if (!description) return { ok: false, error: "Please describe the problem." };
   const attachments = cleanAttachments(input.attachments);
   if (attachments.length === 0) {
@@ -894,7 +898,7 @@ export async function replyToTicket(input: {
     return { ok: false, error: "This ticket is closed." };
   }
 
-  const body = (input.body ?? "").trim().slice(0, 4000);
+  const body = stripEmoji((input.body ?? "").trim()).slice(0, 4000);
   const attachments = cleanAttachments(input.attachments);
   if (!body && attachments.length === 0) {
     return { ok: false, error: "Add a message or attach a photo/video." };
