@@ -20,7 +20,7 @@ export function RatingStars({
   return (
     <div className={cn("flex items-center gap-2", className)}>
       <span
-        className="relative inline-flex"
+        className="stars-fx relative inline-flex"
         role="img"
         aria-label={`Rated ${rating} out of 5`}
       >

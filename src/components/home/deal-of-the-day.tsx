@@ -25,6 +25,7 @@ import { BuyNowButton } from "@/components/product/buy-now-button";
 import { AddToCartButton } from "@/components/product/add-to-cart-button";
 import { WishlistButton } from "@/components/product/wishlist-button";
 import { Badge } from "@/components/ui/badge";
+import { Tilt } from "@/components/ui/tilt";
 import { Countdown } from "./countdown";
 
 function endOfTodayMs() {
@@ -76,7 +77,7 @@ export async function DealOfTheDay() {
 
         <div className="relative grid items-center gap-6 p-5 sm:p-8 lg:grid-cols-2">
           {/* product showcase */}
-          <div className="relative mx-auto aspect-square w-full max-w-2xl overflow-hidden rounded-2xl border border-border bg-surface-2 shadow-sm">
+          <Tilt className="relative mx-auto aspect-square w-full max-w-md overflow-hidden rounded-2xl border border-border bg-surface-2 shadow-sm sm:max-w-lg lg:max-w-2xl">
             <ProductArt art={deal.art} glyphClassName="!h-[60%] !max-h-96 text-accent" />
 
             <Badge variant="accent" size="md" className="absolute left-4 top-4 font-semibold shadow-md">
@@ -119,7 +120,7 @@ export async function DealOfTheDay() {
                 <p className="text-faint">this week</p>
               </div>
             </div>
-          </div>
+          </Tilt>
 
           {/* details */}
           <div className="flex flex-col">

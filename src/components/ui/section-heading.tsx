@@ -41,7 +41,7 @@ export function SectionHeading({
           {hrefLabel}
           <ArrowRight
             size={16}
-            className="transition-transform group-hover:translate-x-0.5"
+            className="transition-transform duration-300 group-hover:translate-x-1"
           />
         </Link>
       ) : null}

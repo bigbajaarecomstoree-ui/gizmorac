@@ -20,10 +20,13 @@ function Segment({ value, label }: { value: string; label: string }) {
   return (
     <div className="flex flex-col items-center gap-1.5">
       <span
-        className="readout !text-on-accent grid h-12 w-12 place-items-center rounded-xl bg-gradient-to-br from-accent to-[#9333ea] text-xl font-bold tabular-nums shadow-[0_10px_22px_-10px_rgba(109,40,217,0.7)] sm:h-14 sm:w-14 sm:text-2xl"
+        className="readout !text-on-accent grid h-12 w-12 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-accent to-[#9333ea] text-xl font-bold tabular-nums shadow-[0_10px_22px_-10px_rgba(109,40,217,0.7)] sm:h-14 sm:w-14 sm:text-2xl"
         suppressHydrationWarning
       >
-        {value}
+        {/* Re-mount on value change so the digit pops in on every tick. */}
+        <span key={value} className="animate-pop inline-block">
+          {value}
+        </span>
       </span>
       <span className="tech-label !text-[0.5625rem]">{label}</span>
     </div>

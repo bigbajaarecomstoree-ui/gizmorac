@@ -6,6 +6,7 @@ import { Play } from "lucide-react";
 import type { DeviceArt } from "@/lib/types";
 import { ProductArt } from "./product-art";
 import { Badge } from "@/components/ui/badge";
+import { Tilt } from "@/components/ui/tilt";
 import { cn } from "@/lib/utils";
 
 const VIEWS = ["Front", "Detail", "In use", "Box"];
@@ -63,7 +64,7 @@ export function ProductGallery({
   if (!hasMedia) {
     return (
       <div className="flex flex-col gap-3">
-        <div className="group relative aspect-square overflow-hidden rounded-2xl border border-border bg-surface">
+        <Tilt className="group relative aspect-square overflow-hidden rounded-2xl border border-border bg-surface">
           <div
             key={active}
             className="animate-rise h-full w-full transition-transform duration-500 group-hover:scale-105"
@@ -79,7 +80,7 @@ export function ProductGallery({
             />
           </div>
           <Tags off={off} badges={badges} />
-        </div>
+        </Tilt>
 
         <div className="grid grid-cols-4 gap-3">
           {VIEWS.map((v, i) => (
@@ -106,8 +107,8 @@ export function ProductGallery({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="relative aspect-square overflow-hidden rounded-2xl border border-border bg-surface">
-        {current.kind === "image" ? (
+      {current.kind === "image" ? (
+        <Tilt className="relative aspect-square overflow-hidden rounded-2xl border border-border bg-surface">
           <Image
             src={current.src}
             alt={name ?? "Product image"}
@@ -116,7 +117,10 @@ export function ProductGallery({
             sizes="(min-width: 1024px) 45vw, 100vw"
             className="object-contain"
           />
-        ) : (
+          <Tags off={off} badges={badges} />
+        </Tilt>
+      ) : (
+        <div className="relative aspect-square overflow-hidden rounded-2xl border border-border bg-surface">
           <video
             src={current.src}
             controls
@@ -125,9 +129,9 @@ export function ProductGallery({
             onContextMenu={(e) => e.preventDefault()}
             className="h-full w-full bg-black object-contain"
           />
-        )}
-        <Tags off={off} badges={badges} />
-      </div>
+          <Tags off={off} badges={badges} />
+        </div>
+      )}
 
       {slides.length > 1 ? (
         <div className="grid grid-cols-5 gap-3">

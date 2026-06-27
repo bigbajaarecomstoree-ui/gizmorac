@@ -122,12 +122,12 @@ export async function Hero() {
   const off = hero ? discountPercent(hero) : 0;
 
   return (
-    <section className="relative overflow-hidden border-b border-border">
+    <section className="relative flex min-h-[calc(100svh-6rem)] flex-col justify-center overflow-hidden border-b border-border">
       <div className="grid-ticks absolute inset-0 opacity-50" />
       <div className="glow-amber absolute -left-40 top-0 h-[600px] w-[600px] opacity-60" />
       <div className="glow-amber absolute -right-32 bottom-0 h-[500px] w-[500px] opacity-40" />
 
-      <div className="shell relative grid items-center gap-6 pt-5 pb-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-12 lg:pt-6 lg:pb-16">
+      <div className="shell relative grid w-full items-center gap-6 pt-5 pb-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-12 lg:pt-6 lg:pb-16">
         {/* Mobile/tablet: eyebrow leads, above the showcase. Hidden on desktop,
             where the eyebrow lives inside the left column instead. */}
         <Eyebrow className="order-1 justify-self-start lg:hidden" />
@@ -151,21 +151,21 @@ export async function Hero() {
               href="/shop"
               className={cn(
                 buttonVariants({ size: "lg" }),
-                "flex-1 px-3 text-sm sm:flex-initial sm:px-7 sm:text-base",
+                "group flex-1 px-3 text-sm sm:flex-initial sm:px-7 sm:text-base",
               )}
             >
               Shop Now
-              <ArrowRight size={18} />
+              <ArrowRight size={18} className="transition-transform duration-300 group-hover:translate-x-1" />
             </Link>
             <Link
               href="/shop?sort=popular"
               className={cn(
                 buttonVariants({ variant: "highlight", size: "lg" }),
-                "flex-1 px-3 text-sm sm:flex-initial sm:px-7 sm:text-base",
+                "group flex-1 px-3 text-sm sm:flex-initial sm:px-7 sm:text-base",
               )}
             >
               Best Sellers
-              <ArrowRight size={18} />
+              <ArrowRight size={18} className="transition-transform duration-300 group-hover:translate-x-1" />
             </Link>
           </div>
 

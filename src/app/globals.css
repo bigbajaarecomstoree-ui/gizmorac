@@ -149,6 +149,51 @@
   .glow-amber {
     background: radial-gradient(closest-side, rgba(109, 40, 217, 0.12), transparent);
   }
+
+  /* Micro-interaction: click ripple on buttons — paints over the fill, under
+     the label (z-index below content, above the element background). */
+  .btn-fx {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+  .btn-fx::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    aspect-ratio: 1;
+    width: 220%;
+    translate: -50% -50%;
+    border-radius: 9999px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0));
+    opacity: 0;
+    scale: 0;
+    pointer-events: none;
+    z-index: -1;
+  }
+  .btn-fx:active::after {
+    animation: btn-ripple 0.55s ease-out;
+  }
+
+  /* Micro-interaction: rating stars twinkle in sequence on hover. */
+  .stars-fx:hover svg {
+    animation: star-sparkle 0.7s ease;
+  }
+  .stars-fx:hover svg:nth-child(2) { animation-delay: 0.05s; }
+  .stars-fx:hover svg:nth-child(3) { animation-delay: 0.1s; }
+  .stars-fx:hover svg:nth-child(4) { animation-delay: 0.15s; }
+  .stars-fx:hover svg:nth-child(5) { animation-delay: 0.2s; }
+}
+
+@keyframes btn-ripple {
+  0% { scale: 0; opacity: 0.6; }
+  100% { scale: 1; opacity: 0; }
+}
+@keyframes star-sparkle {
+  0% { transform: scale(1) rotate(0); }
+  45% { transform: scale(1.3) rotate(-9deg); filter: drop-shadow(0 0 4px rgba(250, 204, 21, 0.9)); }
+  100% { transform: scale(1) rotate(0); }
 }
 
 @media (prefers-reduced-motion: reduce) {

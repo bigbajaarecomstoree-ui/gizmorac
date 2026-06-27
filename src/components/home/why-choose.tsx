@@ -38,8 +38,8 @@ export function WhyChoose() {
             key={r.title}
             className="group rounded-xl border border-border bg-surface p-6 transition-colors hover:border-border-bright"
           >
-            <span className="grid h-11 w-11 place-items-center rounded-lg border border-border bg-surface-2 text-accent transition-colors group-hover:border-accent/40">
-              <r.icon size={20} />
+            <span className="grid h-11 w-11 place-items-center rounded-lg border border-border bg-surface-2 text-accent transition-colors duration-300 group-hover:border-accent/40">
+              <r.icon size={20} className="transition-transform duration-300 ease-out group-hover:rotate-6 group-hover:scale-110" />
             </span>
             <h3 className="mt-4 text-base font-semibold">{r.title}</h3>
             <p className="mt-2 text-sm leading-relaxed text-muted">{r.body}</p>
