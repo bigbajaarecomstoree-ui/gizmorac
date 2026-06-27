@@ -191,11 +191,37 @@ export async function getCategoryById(id: string): Promise<Category | null> {
 }
 
 /** Counts only active products so storefront category filters match what shows. */
-export async function getCategoryCounts(): Promise<Record<CategorySlug, number>> {
+/**
+ * Active products per category. Pass the current shop filters (search, price,
+ * rating, availability — everything except the category itself) to get
+ * faceted counts: how many results each category holds within the current
+ * search, so the sidebar numbers match what clicking a category will show.
+ * Called with no args it returns global catalog counts (home / admin).
+ */
+export async function getCategoryCounts(
+  filters?: Pick<ShopQuery, "q" | "minPrice" | "maxPrice" | "minRating" | "availability">,
+): Promise<Record<CategorySlug, number>> {
   const counts: Record<string, number> = {};
+  const where: Prisma.ProductWhereInput = { active: true };
+  if (filters?.q) {
+    where.OR = [
+      { name: { contains: filters.q } },
+      { shortDescription: { contains: filters.q } },
+      { sku: { contains: filters.q } },
+    ];
+  }
+  if (typeof filters?.minPrice === "number" || typeof filters?.maxPrice === "number") {
+    where.price = {};
+    if (typeof filters.minPrice === "number") where.price.gte = filters.minPrice;
+    if (typeof filters.maxPrice === "number") where.price.lte = filters.maxPrice;
+  }
+  if (typeof filters?.minRating === "number") where.rating = { gte: filters.minRating };
+  if (filters?.availability === "in") where.stock = { gt: 0 };
+  else if (filters?.availability === "out") where.stock = { lte: 0 };
+
   const grouped = await prisma.product.groupBy({
     by: ["category"],
-    where: { active: true },
+    where,
     _count: { _all: true },
   });
   for (const g of grouped) counts[g.category] = g._count._all;

@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Pencil, Power, FileText, Copy, Trash2, Loader2, Search, X } from "lucide-react";
+import { Pencil, Power, FileText, Copy, Trash2, Loader2, Search, X, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import type { Product } from "@/lib/types";
 import { formatINR } from "@/lib/format";
 import { ProductArt } from "@/components/product/product-art";
@@ -28,6 +28,8 @@ export function ProductsTable({
 }) {
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
   const [query, setQuery] = React.useState("");
+  // Click a sortable column to cycle: asc → desc → off (back to original order).
+  const [sort, setSort] = React.useState<{ key: "price" | "stock"; dir: "asc" | "desc" } | null>(null);
   const [pending, startTransition] = React.useTransition();
   const barCheckbox = React.useRef<HTMLInputElement>(null);
 
@@ -42,6 +44,30 @@ export function ProductsTable({
         (categoryNames[p.category] ?? p.category).toLowerCase().includes(q),
     );
   }, [products, query, categoryNames]);
+
+  // Apply the active column sort (stable copy; no sort = original order).
+  const sorted = React.useMemo(() => {
+    if (!sort) return filtered;
+    const arr = [...filtered];
+    arr.sort((a, b) => {
+      const av = sort.key === "price" ? a.price : a.stock;
+      const bv = sort.key === "price" ? b.price : b.stock;
+      return sort.dir === "asc" ? av - bv : bv - av;
+    });
+    return arr;
+  }, [filtered, sort]);
+
+  function cycleSort(key: "price" | "stock") {
+    setSort((cur) => {
+      if (!cur || cur.key !== key) return { key, dir: "asc" };
+      if (cur.dir === "asc") return { key, dir: "desc" };
+      return null; // third click resets
+    });
+  }
+  function sortIcon(key: "price" | "stock") {
+    if (sort?.key !== key) return <ArrowUpDown size={12} className="opacity-40" />;
+    return sort.dir === "asc" ? <ArrowUp size={12} /> : <ArrowDown size={12} />;
+  }
 
   const ids = React.useMemo(() => filtered.map((p) => p.id), [filtered]);
   const idSet = React.useMemo(() => new Set(ids), [ids]);
@@ -129,7 +155,7 @@ export function ProductsTable({
         ) : null}
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-border bg-surface">
+      <div className="overflow-hidden rounded-xl border border-border bg-background">
       {someSelected ? (
         <div className="flex flex-wrap items-center gap-3 border-b border-border bg-accent-soft/60 px-4 py-2.5">
           <input
@@ -179,14 +205,28 @@ export function ProductsTable({
           <span className="flex-1">Product</span>
           <span className="w-20">Status</span>
           <span className="hidden w-32 lg:block">Category</span>
-          <span className="w-24 text-right">Price</span>
-          <span className="hidden w-16 text-right sm:block">Stock</span>
+          <button
+            type="button"
+            onClick={() => cycleSort("price")}
+            aria-label="Sort by price"
+            className="flex w-24 items-center justify-end gap-1 uppercase tracking-wider transition-colors hover:text-foreground cursor-pointer"
+          >
+            Price {sortIcon("price")}
+          </button>
+          <button
+            type="button"
+            onClick={() => cycleSort("stock")}
+            aria-label="Sort by stock"
+            className="hidden w-16 items-center justify-end gap-1 uppercase tracking-wider transition-colors hover:text-foreground cursor-pointer sm:flex"
+          >
+            Stock {sortIcon("stock")}
+          </button>
           <span className="w-20 text-right">Actions</span>
         </div>
       )}
 
       <div className="divide-y divide-border">
-        {filtered.map((p) => {
+        {sorted.map((p) => {
           const checked = selected.has(p.id);
           const low = p.stock <= 10;
           return (

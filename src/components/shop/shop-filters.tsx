@@ -94,19 +94,24 @@ export function ShopFilters({
 
       <div className="border-t border-border">
         <Group title="Category">
-          <Row href={buildShopUrl(params, { category: undefined, page: undefined })} active={!params.category}>
+          {/* The category list is navigation: clicking a category browses it and
+              clears any active search (q), so a click always lands on products. */}
+          <Row
+            href={buildShopUrl(params, { category: undefined, q: undefined, page: undefined })}
+            active={!params.category}
+          >
             All products
           </Row>
           {categories.map((c) => (
             <Row
               key={c.slug}
-              href={buildShopUrl(params, { category: c.slug, page: undefined })}
+              href={buildShopUrl(params, { category: c.slug, q: undefined, page: undefined })}
               active={params.category === c.slug}
             >
               <span className="flex w-full items-center justify-between gap-2">
                 <span>{c.name}</span>
                 <span className="font-mono text-[0.6875rem] text-faint">
-                  {counts[c.slug]}
+                  {counts[c.slug] ?? 0}
                 </span>
               </span>
             </Row>

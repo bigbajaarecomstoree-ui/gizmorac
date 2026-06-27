@@ -83,6 +83,9 @@ export default async function ShopPage({
 
   const [categories, counts, result, priceBounds] = await Promise.all([
     getVisibleCategories(),
+    // Catalog counts per category. The sidebar is category navigation: clicking a
+    // category browses it (dropping any active search), so these counts match the
+    // products that category will actually show.
     getCategoryCounts(),
     queryProducts(query),
     getPriceBounds(),
