@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Gift, ShoppingCart, X } from "lucide-react";
+import { Gift, ShoppingCart, X, Check } from "lucide-react";
 import { useStore } from "@/components/store/store-provider";
 import { formatINR } from "@/lib/format";
 
@@ -93,54 +93,85 @@ export function PromoPopups({
 
   return (
     <div
-      className="fixed inset-0 z-[120] grid place-items-center bg-black/50 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[120] grid place-items-center bg-black/60 p-4 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-label="Special offer"
       onClick={() => setActive(null)}
     >
       <div
-        className="animate-rise relative w-full max-w-md overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl"
+        className="animate-rise relative w-full max-w-sm overflow-hidden rounded-[1.5rem] bg-surface shadow-2xl ring-1 ring-black/5"
         onClick={(e) => e.stopPropagation()}
       >
         <button
           type="button"
           onClick={() => setActive(null)}
           aria-label="Close"
-          className="absolute right-3 top-3 z-10 grid h-8 w-8 place-items-center rounded-full bg-background/80 text-muted transition-colors hover:text-foreground cursor-pointer"
+          className="absolute right-3.5 top-3.5 z-20 grid h-8 w-8 place-items-center rounded-full bg-white/15 text-on-accent backdrop-blur transition-colors hover:bg-white/30 cursor-pointer"
         >
           <X size={16} />
         </button>
 
-        <div className="bg-accent px-6 py-7 text-center text-on-accent">
-          <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-on-accent/15">
-            {isCart ? <ShoppingCart size={24} /> : <Gift size={24} />}
+        {/* gradient header — the offer is the hero */}
+        <div className="relative overflow-hidden bg-gradient-to-br from-accent to-[#a855f7] px-6 pb-10 pt-8 text-center text-on-accent">
+          <div aria-hidden className="pointer-events-none absolute -right-12 -top-12 h-44 w-44 rounded-full bg-white/15 blur-2xl" />
+          <div aria-hidden className="pointer-events-none absolute -bottom-12 -left-10 h-36 w-36 rounded-full bg-highlight/30 blur-2xl" />
+          <div aria-hidden className="grid-ticks pointer-events-none absolute inset-0 opacity-20" />
+
+          <span className="relative mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-white/15 ring-1 ring-white/25 backdrop-blur">
+            {isCart ? <ShoppingCart size={26} /> : <Gift size={26} />}
           </span>
-          <h2 className="mt-3 text-xl font-bold tracking-tight">
-            {isCart ? "Your cart is waiting 🛒" : `Here's ${formatINR(amount)} off 🎁`}
-          </h2>
+          <p className="tech-label relative mt-4 !text-on-accent/70">
+            {isCart ? "Your cart is waiting" : "A gift, just for you"}
+          </p>
+          <div className="relative mt-1.5 flex items-end justify-center gap-1.5">
+            <span className="text-[2.75rem] font-extrabold leading-none tracking-tight">
+              {formatINR(amount)}
+            </span>
+            <span className="mb-1 text-lg font-extrabold text-highlight">OFF</span>
+          </div>
         </div>
 
-        <div className="px-6 py-6 text-center">
+        {/* coupon perforation seam */}
+        <div className="relative h-0">
+          <span aria-hidden className="absolute left-3 -top-3 h-6 w-6 rounded-full bg-surface" />
+          <span aria-hidden className="absolute right-3 -top-3 h-6 w-6 rounded-full bg-surface" />
+          <div className="absolute inset-x-10 -top-px border-t-2 border-dashed border-border" />
+        </div>
+
+        {/* body */}
+        <div className="px-6 pb-6 pt-6 text-center">
           <p className="text-sm leading-relaxed text-muted">
             {isCart
-              ? `Complete your order now and get an extra ${formatINR(amount)} off — applied automatically, on top of any coupon. No code needed.`
-              : `A little nudge to treat yourself. Claim now and we'll take ${formatINR(amount)} off at checkout — no code needed.`}
+              ? `Finish your order and we'll knock an extra ${formatINR(amount)} off — automatically.`
+              : `Treat yourself. Claim it now and we'll take ${formatINR(amount)} off your order.`}
           </p>
+
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-xs font-medium text-foreground">
+            <span className="inline-flex items-center gap-1">
+              <Check size={13} className="text-success" /> No code needed
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <Check size={13} className="text-success" /> Auto-applied
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <Check size={13} className="text-success" /> Stacks with coupons
+            </span>
+          </div>
 
           <button
             type="button"
             onClick={claim}
-            className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-accent px-4 py-3 text-sm font-semibold text-on-accent transition-colors hover:bg-accent-hover cursor-pointer"
+            className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-4 py-3.5 text-sm font-bold text-on-accent shadow-[var(--shadow-glow)] transition-all hover:bg-accent-hover hover:shadow-lg active:scale-[0.99] cursor-pointer"
           >
-            Claim {formatINR(amount)} off
+            <Gift size={16} /> Claim {formatINR(amount)} off
           </button>
 
           {isCart ? (
             <Link
               href="/cart"
               onClick={() => setActive(null)}
-              className="mt-3 inline-block text-sm font-medium text-accent-bright hover:text-accent"
+              className="mt-3 inline-block text-sm font-semibold text-accent-bright hover:text-accent"
             >
               Go to cart →
             </Link>
@@ -148,7 +179,7 @@ export function PromoPopups({
             <button
               type="button"
               onClick={() => setActive(null)}
-              className="mt-3 block w-full text-sm font-medium text-muted underline-offset-2 hover:text-foreground hover:underline cursor-pointer"
+              className="mt-3 block w-full text-sm font-medium text-faint transition-colors hover:text-foreground cursor-pointer"
             >
               Maybe later
             </button>
