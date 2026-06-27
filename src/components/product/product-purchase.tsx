@@ -21,7 +21,7 @@ export function ProductPurchase({
   stock: number;
 }) {
   const router = useRouter();
-  const { addToCart } = useStore();
+  const { addToCart, loggedIn } = useStore();
   const [qty, setQty] = React.useState(1);
   const max = Math.max(1, Math.min(stock, MAX_QTY));
   const outOfStock = stock <= 0;
@@ -40,7 +40,8 @@ export function ProductPurchase({
   function buyNow() {
     addToCart(id, qty, name);
     trackAdd();
-    router.push("/cart");
+    // Buy Now requires an account: guests log in first, then land on checkout.
+    router.push(loggedIn ? "/checkout" : "/login?next=/checkout");
   }
 
   return (

@@ -15,7 +15,13 @@ const POINTS = [
  * form — so the page fills the width instead of a lone centred card. On
  * mobile/tablet it collapses to just the centred form.
  */
-export function AuthScreen({ mode }: { mode: "login" | "signup" }) {
+export function AuthScreen({
+  mode,
+  next = "",
+}: {
+  mode: "login" | "signup";
+  next?: string;
+}) {
   const isSignup = mode === "signup";
   return (
     <div className="shell py-12 sm:py-16">
@@ -57,7 +63,7 @@ export function AuthScreen({ mode }: { mode: "login" | "signup" }) {
 
         {/* form */}
         <div className="lg:p-10">
-          <AuthForm mode={mode} />
+          <AuthForm mode={mode} next={next} />
         </div>
       </div>
     </div>

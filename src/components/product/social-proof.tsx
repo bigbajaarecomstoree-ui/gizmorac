@@ -27,30 +27,31 @@ export function SocialProof({ seed }: { seed: string }) {
   const extra = count - shown;
 
   return (
-    <div className="mt-4 flex items-center gap-3 rounded-xl border border-white/60 bg-surface/50 px-3 py-2.5 shadow-sm backdrop-blur-md backdrop-saturate-150">
-      <div className="flex -space-x-2">
+    <div className="mt-4 flex items-center gap-3 rounded-xl border border-border bg-surface px-3.5 py-3 shadow-sm">
+      <div className="flex -space-x-2.5" aria-hidden="true">
         {initials.map((letter, i) => (
           <span
             key={i}
-            className={`grid h-8 w-8 place-items-center rounded-full text-xs font-semibold ring-2 ring-surface ${TINTS[i % TINTS.length]}`}
+            className={`grid h-9 w-9 place-items-center rounded-full text-xs font-bold ring-2 ring-surface ${TINTS[i % TINTS.length]}`}
           >
             {letter}
           </span>
         ))}
-        <span className="grid h-8 w-8 place-items-center rounded-full border border-border bg-surface-2 text-[0.625rem] font-semibold text-muted ring-2 ring-surface">
+        <span className="grid h-9 w-9 place-items-center rounded-full bg-accent text-[0.625rem] font-bold text-on-accent ring-2 ring-surface">
           +{extra}
         </span>
       </div>
 
-      <p className="flex-1 text-sm leading-snug text-muted">
-        <span className="font-bold text-foreground">{count}</span> people bought
-        this in the last 24 hours
-      </p>
-
-      <span className="relative flex h-2.5 w-2.5 shrink-0" aria-hidden="true">
-        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-60" />
-        <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-success" />
-      </span>
+      <div className="min-w-0 flex-1 leading-tight">
+        <p className="text-sm font-bold text-foreground">{count} bought today</p>
+        <p className="mt-0.5 flex items-center gap-1.5 text-xs text-faint">
+          <span className="relative flex h-2 w-2 shrink-0">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-60" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
+          </span>
+          Updated just now
+        </p>
+      </div>
     </div>
   );
 }

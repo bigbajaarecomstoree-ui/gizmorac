@@ -9,7 +9,13 @@ export const metadata: Metadata = {
   robots: { index: false },
 };
 
-export default async function LoginPage() {
-  if (await getCurrentCustomer()) redirect("/account");
-  return <AuthScreen mode="login" />;
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>;
+}) {
+  const { next } = await searchParams;
+  const safe = next && next.startsWith("/") && !next.startsWith("//") ? next : "";
+  if (await getCurrentCustomer()) redirect(safe || "/account");
+  return <AuthScreen mode="login" next={safe} />;
 }

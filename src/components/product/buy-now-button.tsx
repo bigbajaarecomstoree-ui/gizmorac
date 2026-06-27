@@ -28,13 +28,14 @@ export function BuyNowButton({
   iconSize?: number;
 }) {
   const router = useRouter();
-  const { addToCart } = useStore();
+  const { addToCart, loggedIn } = useStore();
   const [loading, setLoading] = React.useState(false);
 
   function handle() {
     addToCart(id, qty, name);
     setLoading(true);
-    router.push("/checkout");
+    // Buy Now requires an account: send guests to log in, then on to checkout.
+    router.push(loggedIn ? "/checkout" : "/login?next=/checkout");
   }
 
   return (

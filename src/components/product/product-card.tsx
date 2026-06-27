@@ -8,6 +8,7 @@ import { Price } from "./price";
 import { AddToCartButton } from "./add-to-cart-button";
 import { BuyNowButton } from "./buy-now-button";
 import { WishlistButton } from "./wishlist-button";
+import { CompareButton } from "./compare-button";
 import { Badge } from "@/components/ui/badge";
 
 export function ProductCard({ product }: { product: Product }) {
@@ -47,8 +48,9 @@ export function ProductCard({ product }: { product: Product }) {
           ) : null}
         </div>
 
-        <div className="absolute right-3 top-3 z-20">
+        <div className="absolute right-3 top-3 z-20 flex flex-col gap-1.5">
           <WishlistButton id={product.id} name={title} />
+          <CompareButton slug={product.slug} name={title} variant="icon" />
         </div>
 
         {outOfStock ? (

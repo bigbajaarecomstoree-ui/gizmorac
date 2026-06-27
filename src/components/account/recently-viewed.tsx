@@ -1,10 +1,10 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
-import Image from "next/image";
 import { Eye } from "lucide-react";
-import { formatINR } from "@/lib/format";
+import type { Product } from "@/lib/types";
+import { getRecentlyViewedProducts } from "@/lib/storefront/actions";
+import { ProductGrid } from "@/components/product/product-grid";
 
 const KEY = "gz_recently_viewed";
 
@@ -35,7 +35,10 @@ export function TrackRecentlyViewed({ item }: { item: RecentItem }) {
   return null;
 }
 
-/** Show recently-viewed products from localStorage. */
+/**
+ * Show recently-viewed products as full product cards (matching the rest of the
+ * site). Slugs come from localStorage; full product data is hydrated server-side.
+ */
 export function RecentlyViewed({
   excludeSlug,
   limit = 6,
@@ -45,42 +48,35 @@ export function RecentlyViewed({
   limit?: number;
   heading?: boolean;
 }) {
-  const [items, setItems] = React.useState<RecentItem[]>([]);
+  const [products, setProducts] = React.useState<Product[]>([]);
+
   React.useEffect(() => {
-    setItems(read().filter((x) => x.slug !== excludeSlug).slice(0, limit));
+    const slugs = read()
+      .map((x) => x.slug)
+      .filter((s) => s !== excludeSlug)
+      .slice(0, limit);
+    if (slugs.length === 0) {
+      setProducts([]);
+      return;
+    }
+    let active = true;
+    getRecentlyViewedProducts(slugs).then((list) => {
+      if (active) setProducts(list);
+    });
+    return () => {
+      active = false;
+    };
   }, [excludeSlug, limit]);
 
-  if (items.length === 0) return null;
+  if (products.length === 0) return null;
   return (
     <section>
       {heading ? (
-        <h2 className="flex items-center gap-2 text-lg font-semibold">
-          <Eye size={18} className="text-accent" /> Recently viewed
+        <h2 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
+          <Eye size={20} className="text-accent" /> Recently viewed
         </h2>
       ) : null}
-      <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6">
-        {items.map((p) => (
-          <Link
-            key={p.slug}
-            href={`/product/${p.slug}`}
-            className="group rounded-xl border border-border bg-surface p-2 transition-colors hover:border-accent"
-          >
-            <div className="relative aspect-square overflow-hidden rounded-lg bg-background">
-              {p.image ? (
-                <Image
-                  src={p.image}
-                  alt={p.name}
-                  fill
-                  sizes="(max-width: 640px) 33vw, 16vw"
-                  className="object-cover"
-                />
-              ) : null}
-            </div>
-            <p className="mt-2 line-clamp-2 text-xs font-medium leading-snug">{p.name}</p>
-            <p className="mt-0.5 text-xs text-muted">{formatINR(p.price)}</p>
-          </Link>
-        ))}
-      </div>
+      <ProductGrid products={products} className="mt-6 lg:grid-cols-4" />
     </section>
   );
 }

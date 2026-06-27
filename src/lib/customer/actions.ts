@@ -22,6 +22,15 @@ function field(fd: FormData, key: string): string {
   return (fd.get(key) ?? "").toString().trim();
 }
 
+/**
+ * Post-auth redirect target. Only internal, non-protocol-relative paths are
+ * allowed (guards against open-redirect via the `next` param); else /account.
+ */
+function safeNext(fd: FormData): string {
+  const n = (fd.get("next") ?? "").toString();
+  return n.startsWith("/") && !n.startsWith("//") ? n : "/account";
+}
+
 export async function signupAction(
   _prev: AuthState | undefined,
   formData: FormData,
@@ -56,7 +65,7 @@ export async function signupAction(
     action: "customer.signup",
     message: "New customer account created",
   });
-  redirect("/account");
+  redirect(safeNext(formData));
 }
 
 export async function loginAction(
@@ -100,7 +109,7 @@ export async function loginAction(
     action: "customer.login",
     message: "Customer signed in",
   });
-  redirect("/account");
+  redirect(safeNext(formData));
 }
 
 export async function logoutAction(): Promise<void> {

@@ -26,13 +26,21 @@ interface StoreState {
   cartCount: number;
   wishlistCount: number;
   mounted: boolean;
+  /** Whether a customer is signed in (seeded server-side from the session). */
+  loggedIn: boolean;
   offer: ClaimedOffer | null;
+  /** Product slugs queued for side-by-side comparison (max 4). */
+  compare: string[];
+  compareCount: number;
   addToCart: (id: string, qty?: number, name?: string) => void;
   setQty: (id: string, qty: number) => void;
   removeFromCart: (id: string) => void;
   clearCart: () => void;
   toggleWishlist: (id: string, name?: string) => void;
   isInWishlist: (id: string) => boolean;
+  toggleCompare: (slug: string, name?: string) => void;
+  isInCompare: (slug: string) => boolean;
+  clearCompare: () => void;
   claimOffer: (kind: ClaimedOffer["kind"], amount: number) => void;
   clearOffer: () => void;
   toast: (message: string, icon?: Toast["icon"]) => void;
@@ -41,6 +49,8 @@ interface StoreState {
 const CART_KEY = "gizmorac.cart";
 const WISH_KEY = "gizmorac.wishlist";
 const OFFER_KEY = "gizmorac.offer";
+const COMPARE_KEY = "gizmorac.compare";
+const COMPARE_MAX = 4;
 
 const StoreContext = React.createContext<StoreState | null>(null);
 
@@ -50,9 +60,16 @@ export function useStore() {
   return ctx;
 }
 
-export function StoreProvider({ children }: { children: React.ReactNode }) {
+export function StoreProvider({
+  children,
+  loggedIn = false,
+}: {
+  children: React.ReactNode;
+  loggedIn?: boolean;
+}) {
   const [cart, setCart] = React.useState<CartLine[]>([]);
   const [wishlist, setWishlist] = React.useState<string[]>([]);
+  const [compare, setCompare] = React.useState<string[]>([]);
   const [offer, setOffer] = React.useState<ClaimedOffer | null>(null);
   const [toasts, setToasts] = React.useState<Toast[]>([]);
   const [mounted, setMounted] = React.useState(false);
@@ -67,9 +84,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const c = localStorage.getItem(CART_KEY);
       const w = localStorage.getItem(WISH_KEY);
       const o = localStorage.getItem(OFFER_KEY);
+      const cmp = localStorage.getItem(COMPARE_KEY);
       if (c) setCart(JSON.parse(c));
       if (w) setWishlist(JSON.parse(w));
       if (o) setOffer(JSON.parse(o));
+      if (cmp) setCompare(JSON.parse(cmp));
     } catch {
       // ignore malformed storage
     }
@@ -83,6 +102,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     if (mounted) localStorage.setItem(WISH_KEY, JSON.stringify(wishlist));
   }, [wishlist, mounted]);
+  React.useEffect(() => {
+    if (mounted) localStorage.setItem(COMPARE_KEY, JSON.stringify(compare));
+  }, [compare, mounted]);
   React.useEffect(() => {
     if (!mounted) return;
     if (offer) localStorage.setItem(OFFER_KEY, JSON.stringify(offer));
@@ -149,6 +171,31 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     [wishlist],
   );
 
+  const toggleCompare = React.useCallback(
+    (slug: string, name?: string) => {
+      setCompare((prev) => {
+        if (prev.includes(slug)) {
+          toast(name ? `Removed ${name} from compare` : "Removed from compare", "info");
+          return prev.filter((s) => s !== slug);
+        }
+        if (prev.length >= COMPARE_MAX) {
+          toast(`You can compare up to ${COMPARE_MAX} products`, "info");
+          return prev;
+        }
+        toast(name ? `Added ${name} to compare` : "Added to compare", "info");
+        return [...prev, slug];
+      });
+    },
+    [toast],
+  );
+
+  const isInCompare = React.useCallback(
+    (slug: string) => compare.includes(slug),
+    [compare],
+  );
+
+  const clearCompare = React.useCallback(() => setCompare([]), []);
+
   const claimOffer = React.useCallback(
     (kind: ClaimedOffer["kind"], amount: number) => {
       setOffer({ kind, amount });
@@ -165,13 +212,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     cartCount: cart.reduce((n, l) => n + l.qty, 0),
     wishlistCount: wishlist.length,
     mounted,
+    loggedIn,
     offer,
+    compare,
+    compareCount: compare.length,
     addToCart,
     setQty,
     removeFromCart,
     clearCart,
     toggleWishlist,
     isInWishlist,
+    toggleCompare,
+    isInCompare,
+    clearCompare,
     claimOffer,
     clearOffer,
     toast,

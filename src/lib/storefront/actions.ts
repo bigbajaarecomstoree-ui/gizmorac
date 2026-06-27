@@ -12,6 +12,7 @@ import { getCodPincodeRule, codAllowedForRule } from "@/lib/data/cod-pincode";
 import { MAX_QTY } from "@/lib/checkout-shared";
 import { initiatePayment, getPhonePeConfig } from "@/lib/phonepe";
 import { checkServiceability } from "@/lib/shiprocket";
+import { getProductsBySlugs } from "@/lib/data/queries";
 import { cancelOrderEverywhere } from "@/lib/data/order-fulfillment";
 import {
   canCancelOrder,
@@ -36,7 +37,7 @@ import {
   setTicketStatus,
   TICKET_CATEGORIES,
 } from "@/lib/data/tickets";
-import type { TicketCategory } from "@/lib/types";
+import type { TicketCategory, Product } from "@/lib/types";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // 15-char GSTIN: 2-digit state + 10-char PAN + entity + 'Z' + checksum.
@@ -240,8 +241,21 @@ export async function placeOrder(
   const totalDiscount = discount + instantDiscount;
 
   const afterDiscount = Math.max(0, subtotal - totalDiscount);
-  const shipping =
-    afterDiscount >= settings.freeShippingThreshold ? 0 : settings.shippingFee;
+  // Shipping: free over the threshold; otherwise the live Shiprocket courier
+  // rate for the delivery pincode. If Shiprocket reports the pincode isn't
+  // serviceable, refuse the order. If it can't rate it at all (not connected /
+  // unreachable), fall back to the flat fee so checkout still works.
+  let shipping: number;
+  if (afterDiscount >= settings.freeShippingThreshold) {
+    shipping = 0;
+  } else {
+    const est = await checkServiceability({ deliveryPincode: payload.pincode.trim() });
+    if (est && !est.serviceable) {
+      return { ok: false, error: "Sorry, we don't deliver to this pincode yet." };
+    }
+    shipping =
+      est && est.ratePaise > 0 ? Math.round(est.ratePaise / 100) : settings.shippingFee;
+  }
   const total = afterDiscount + shipping;
 
   // COD booking advance: a small online amount taken now, the rest on delivery.
@@ -491,7 +505,16 @@ export async function placeOrder(
 }
 
 export type DeliveryEstimateResult =
-  | { ok: true; serviceable: boolean; days: number; etd: string; codAvailable: boolean }
+  | {
+      ok: true;
+      serviceable: boolean;
+      days: number;
+      etd: string;
+      codAvailable: boolean;
+      /** Courier freight for this pincode in paise (0 if unknown). */
+      ratePaise: number;
+      courier: string;
+    }
   | { ok: false };
 
 /**
@@ -508,6 +531,16 @@ export async function getDeliveryEstimate(
   const est = await checkServiceability({ deliveryPincode: pincode });
   if (!est) return { ok: false };
   return { ok: true, ...est };
+}
+
+/**
+ * Hydrate a list of product slugs (from the client's Recently Viewed
+ * localStorage) into full product cards. Order is preserved; inactive/missing
+ * products drop out.
+ */
+export async function getRecentlyViewedProducts(slugs: string[]): Promise<Product[]> {
+  if (!Array.isArray(slugs) || slugs.length === 0) return [];
+  return getProductsBySlugs(slugs);
 }
 
 export interface CodPincodeResult {

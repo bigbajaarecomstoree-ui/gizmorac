@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Check, ShieldCheck, RotateCcw, Banknote } from "lucide-react";
+import { Check } from "lucide-react";
 import {
   getProductBySlug,
   getProductSlugs,
@@ -17,6 +17,10 @@ import { Price } from "@/components/product/price";
 import { RatingStars } from "@/components/product/rating-stars";
 import { ProductGallery } from "@/components/product/product-gallery";
 import { ProductPurchase } from "@/components/product/product-purchase";
+import { ProductTrust } from "@/components/product/product-trust";
+import { ShareButton } from "@/components/product/share-button";
+import { CompareButton } from "@/components/product/compare-button";
+import { StickyBuyBar } from "@/components/product/sticky-buy-bar";
 import { SocialProof } from "@/components/product/social-proof";
 import { PincodeChecker } from "@/components/product/pincode-checker";
 import { ProductTabs } from "@/components/product/product-tabs";
@@ -54,19 +58,13 @@ export async function generateMetadata({
   };
 }
 
-const TRUST = [
-  { icon: ShieldCheck, label: "Warranty included" },
-  { icon: RotateCcw, label: "7-day replacement" },
-  { icon: Banknote, label: "COD available" },
-];
-
 export default async function ProductPage({ params }: { params: Params }) {
   const { slug } = await params;
   const product = await getProductBySlug(slug);
   if (!product) notFound();
 
   const [related, allReviews, dbReviews, category] = await Promise.all([
-    getRelatedProducts(product, 4),
+    getRelatedProducts(product, 3),
     getReviews(50),
     getDbReviewsForSlug(product.slug),
     getCategoryBySlug(product.category),
@@ -144,7 +142,13 @@ export default async function ProductPage({ params }: { params: Params }) {
         />
 
         <div>
-          <p className="tech-label">{product.brand}</p>
+          <div className="flex items-start justify-between gap-3">
+            <p className="tech-label pt-1">{product.brand}</p>
+            <div className="flex shrink-0 items-center gap-2">
+              <ShareButton title={product.name} />
+              <CompareButton slug={product.slug} name={shortTitle(product.name)} />
+            </div>
+          </div>
           <h1 className="mt-1.5 text-2xl font-bold leading-tight sm:text-3xl">
             {product.name}
           </h1>
@@ -197,7 +201,7 @@ export default async function ProductPage({ params }: { params: Params }) {
             ))}
           </ul>
 
-          <div className="mt-7">
+          <div id="pdp-purchase" className="mt-7">
             <ProductPurchase id={product.id} name={shortTitle(product.name)} price={product.price} stock={product.stock} />
           </div>
 
@@ -205,18 +209,8 @@ export default async function ProductPage({ params }: { params: Params }) {
             <PincodeChecker />
           </div>
 
-          <div className="mt-6 grid grid-cols-3 gap-3">
-            {TRUST.map((t) => (
-              <div
-                key={t.label}
-                className="flex flex-col items-center gap-1.5 rounded-lg border border-border bg-surface px-2 py-3 text-center"
-              >
-                <t.icon size={18} className="text-accent" />
-                <span className="text-[0.6875rem] leading-tight text-muted">
-                  {t.label}
-                </span>
-              </div>
-            ))}
+          <div className="mt-6">
+            <ProductTrust warrantyMonths={product.warrantyMonths} />
           </div>
         </div>
       </div>
@@ -243,14 +237,23 @@ export default async function ProductPage({ params }: { params: Params }) {
             title="Related products"
             href={category ? `/shop?category=${category.slug}` : "/shop"}
           />
-          <ProductGrid products={related} className="mt-8 lg:grid-cols-4" />
+          <ProductGrid products={related} className="mt-8 lg:grid-cols-3" />
         </div>
       ) : null}
 
       {/* recently viewed (excludes the current product) */}
       <div className="mt-16">
-        <RecentlyViewed excludeSlug={product.slug} limit={6} />
+        <RecentlyViewed excludeSlug={product.slug} limit={4} />
       </div>
+
+      {/* mobile sticky buy bar */}
+      <StickyBuyBar
+        id={product.id}
+        name={product.name}
+        price={product.price}
+        stock={product.stock}
+        art={product.art}
+      />
     </div>
   );
 }

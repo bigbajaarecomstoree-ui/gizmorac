@@ -3,6 +3,7 @@ import { ContentGuard } from "@/components/layout/content-guard";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { WhatsAppButton } from "@/components/layout/whatsapp-button";
+import { CompareTray } from "@/components/product/compare-tray";
 import { PromoPopups } from "@/components/promo/promo-popups";
 import { Analytics } from "@/components/analytics/analytics";
 import { getCurrentCustomer } from "@/lib/customer-auth";
@@ -21,7 +22,7 @@ export default async function StorefrontLayout({
   const waHref = whatsappLink(settings.whatsappNumber);
 
   return (
-    <StoreProvider>
+    <StoreProvider loggedIn={Boolean(customer)}>
       <ContentGuard />
       <div className="content-guard flex min-h-full flex-col">
         <SiteHeader
@@ -47,6 +48,7 @@ export default async function StorefrontLayout({
           supportEmail={settings.supportEmail}
         />
         <WhatsAppButton href={waHref} />
+        <CompareTray />
         <Analytics />
         <PromoPopups
           browse={{

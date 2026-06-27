@@ -85,6 +85,12 @@ export function CheckoutView({
     days: number;
     codAvailable: boolean;
   } | null>(null);
+  // Live per-pincode delivery fee (Shiprocket). "ok"/"error" → fee is known
+  // (error falls back to the flat fee); "unserviceable" → we can't deliver.
+  const [shipStatus, setShipStatus] = React.useState<
+    "idle" | "checking" | "ok" | "unserviceable" | "error"
+  >("idle");
+  const [shipFee, setShipFee] = React.useState(shippingFee);
   // Online payment is the default whenever it's available; COD is only the
   // fallback when PhonePe isn't configured.
   const [payMethod, setPayMethod] = React.useState<"PhonePe" | "COD">(
@@ -191,9 +197,18 @@ export function CheckoutView({
     ? Math.min(offer.amount, Math.max(0, subtotal - discount))
     : 0;
   const afterDiscount = Math.max(0, subtotal - discount - instantOff);
-  const shipping = afterDiscount >= freeShippingThreshold ? 0 : shippingFee;
-  const total = afterDiscount + shipping;
+  // Shipping: free over the threshold; otherwise the live per-pincode courier
+  // fee once a serviceable pincode is known.
+  const freeShip = afterDiscount >= freeShippingThreshold;
+  const pinValid = /^\d{6}$/.test(form.pincode);
+  const feeKnown = shipStatus === "ok" || shipStatus === "error";
+  const notDeliverable = pinValid && shipStatus === "unserviceable";
+  // null = not resolved yet (needs a pincode) so we don't show a misleading total.
+  const shipping: number | null = freeShip ? 0 : feeKnown ? shipFee : null;
+  const total = afterDiscount + (shipping ?? 0);
   const savings = discount + instantOff;
+  // Free-shipping nudge: how much more to add to cross the threshold.
+  const awayFromFree = freeShip ? 0 : Math.max(0, freeShippingThreshold - afterDiscount);
 
   // COD booking advance (server re-computes authoritatively on submit). A
   // HIGHER_CHARGE pincode raises the advance; PREPAID_ONLY/COD_DISABLED hide COD.
@@ -244,6 +259,34 @@ export function CheckoutView({
       setForm((f) => ({ ...f, [key]: e.target.value }));
   }
 
+  // Fetch the live courier ETA + freight for a pincode (Shiprocket). Drives both
+  // the delivery estimate line and the order's shipping fee.
+  function checkDelivery(pin: string) {
+    if (!/^\d{6}$/.test(pin)) {
+      setEta(null);
+      setShipStatus("idle");
+      return;
+    }
+    setEta(null);
+    setShipStatus("checking");
+    getDeliveryEstimate(pin).then((res) => {
+      if (!res.ok) {
+        // Shiprocket not connected / unreachable → flat fallback, still checkout-able.
+        setEta(null);
+        setShipFee(shippingFee);
+        setShipStatus("error");
+        return;
+      }
+      setEta({ serviceable: res.serviceable, days: res.days, codAvailable: res.codAvailable });
+      if (!res.serviceable) {
+        setShipStatus("unserviceable");
+        return;
+      }
+      setShipFee(res.ratePaise > 0 ? Math.round(res.ratePaise / 100) : shippingFee);
+      setShipStatus("ok");
+    });
+  }
+
   // Pincode → auto-detect state (and city if empty) via India Post.
   function onPincode(e: React.ChangeEvent<HTMLInputElement>) {
     const v = e.target.value.replace(/\D/g, "").slice(0, 6);
@@ -251,6 +294,7 @@ export function CheckoutView({
     if (v.length !== 6) {
       setPinStatus("idle");
       setEta(null);
+      setShipStatus("idle");
       return;
     }
     setPinStatus("checking");
@@ -262,11 +306,8 @@ export function CheckoutView({
         setPinStatus("notfound");
       }
     });
-    // Delivery ETA via Shiprocket (hidden if not connected / unserviceable).
-    setEta(null);
-    getDeliveryEstimate(v).then((res) => {
-      setEta(res.ok ? { serviceable: res.serviceable, days: res.days, codAvailable: res.codAvailable } : null);
-    });
+    // Delivery ETA + freight via Shiprocket.
+    checkDelivery(v);
   }
 
   // Pick a saved address → fill the shipping fields and refresh the ETA.
@@ -285,17 +326,11 @@ export function CheckoutView({
     setSelectedAddr(a.id);
     if (/^\d{6}$/.test(a.pincode)) {
       setPinStatus("found");
-      setEta(null);
-      getDeliveryEstimate(a.pincode).then((res) => {
-        setEta(
-          res.ok
-            ? { serviceable: res.serviceable, days: res.days, codAvailable: res.codAvailable }
-            : null,
-        );
-      });
+      checkDelivery(a.pincode);
     } else {
       setPinStatus("idle");
       setEta(null);
+      setShipStatus("idle");
     }
   }
 
@@ -305,11 +340,20 @@ export function CheckoutView({
     setForm((f) => ({ ...f, address: "", city: "", state: "", pincode: "" }));
     setPinStatus("idle");
     setEta(null);
+    setShipStatus("idle");
   }
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    if (notDeliverable) {
+      setError("Sorry, we don't deliver to this pincode yet.");
+      return;
+    }
+    if (!freeShip && !feeKnown) {
+      setError("Enter your delivery pincode to calculate shipping.");
+      return;
+    }
     if (codAdvanceActive && !accepted) {
       setError("Please accept the Terms & Conditions and COD Policy to continue.");
       return;
@@ -744,7 +788,19 @@ export function CheckoutView({
             ) : null}
             <div className="flex justify-between">
               <dt className="text-muted">Shipping</dt>
-              <dd>{shipping === 0 ? "Free" : formatINR(shipping)}</dd>
+              <dd>
+                {freeShip ? (
+                  <span className="font-medium text-success">Free</span>
+                ) : !pinValid ? (
+                  <span className="text-faint">Enter pincode</span>
+                ) : shipStatus === "checking" ? (
+                  <span className="text-faint">Calculating…</span>
+                ) : notDeliverable ? (
+                  <span className="text-danger">Not serviceable</span>
+                ) : (
+                  formatINR(shipping ?? 0)
+                )}
+              </dd>
             </div>
             <div className="flex justify-between border-t border-border pt-3 text-base font-semibold">
               <dt>Total</dt>
@@ -774,6 +830,18 @@ export function CheckoutView({
             ) : null}
           </dl>
 
+          {awayFromFree > 0 ? (
+            <div className="mt-4 flex items-start gap-2 rounded-lg border border-highlight/50 bg-highlight/10 px-3 py-2.5 text-xs leading-snug">
+              <Truck size={15} className="mt-0.5 shrink-0 text-accent-bright" />
+              <span>
+                You&apos;re{" "}
+                <span className="font-bold text-accent-bright">{formatINR(awayFromFree)}</span>{" "}
+                away from <span className="font-semibold">FREE home delivery</span> — add a
+                little more to your cart and save on shipping.
+              </span>
+            </div>
+          ) : null}
+
           {error ? (
             <p className="mt-4 rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger" role="alert">
               {error}
@@ -787,7 +855,8 @@ export function CheckoutView({
             disabled={
               placing ||
               (!phonepeEnabled && !codEnabled) ||
-              (codAdvanceActive && !accepted)
+              (codAdvanceActive && !accepted) ||
+              notDeliverable
             }
           >
             {placing ? <Loader2 size={16} className="animate-spin" /> : <Lock size={15} />}

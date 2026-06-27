@@ -127,6 +127,20 @@ export async function getProductById(id: string): Promise<Product | null> {
   return row ? toProduct(row) : null;
 }
 
+/**
+ * Active products for a set of slugs, returned in the requested order — powers
+ * Recently Viewed (hydrating the localStorage slug list into full cards).
+ */
+export async function getProductsBySlugs(slugs: string[]): Promise<Product[]> {
+  const wanted = slugs.filter((s) => typeof s === "string").slice(0, 24);
+  if (wanted.length === 0) return [];
+  const rows = await prisma.product.findMany({
+    where: { slug: { in: wanted }, active: true },
+  });
+  const bySlug = new Map(rows.map((r) => [r.slug, toProduct(r)]));
+  return wanted.map((s) => bySlug.get(s)).filter((p): p is Product => Boolean(p));
+}
+
 /** Active product slugs only — used for SSG params and the sitemap. */
 export async function getProductSlugs(): Promise<string[]> {
   const rows = await prisma.product.findMany({

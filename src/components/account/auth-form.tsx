@@ -14,7 +14,13 @@ import { Button } from "@/components/ui/button";
 const inputCls =
   "h-12 w-full rounded-lg border border-border bg-background px-4 text-sm placeholder:text-faint focus:border-accent focus:outline-none";
 
-export function AuthForm({ mode }: { mode: "login" | "signup" }) {
+export function AuthForm({
+  mode,
+  next = "",
+}: {
+  mode: "login" | "signup";
+  next?: string;
+}) {
   const action = mode === "login" ? loginAction : signupAction;
   const [state, formAction, pending] = useActionState<
     AuthState | undefined,
@@ -22,6 +28,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   >(action, undefined);
 
   const isSignup = mode === "signup";
+  const nextQuery = next ? `?next=${encodeURIComponent(next)}` : "";
 
   return (
     <div className="mx-auto w-full max-w-md">
@@ -50,6 +57,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         action={formAction}
         className="mt-8 space-y-4 rounded-2xl border border-border bg-surface p-6 sm:p-8 lg:border-0 lg:bg-transparent lg:p-0"
       >
+        {next ? <input type="hidden" name="next" value={next} /> : null}
         {isSignup ? (
           <label className="block">
             <span className="mb-1.5 block text-sm font-medium">Full name</span>
@@ -120,14 +128,14 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         {isSignup ? (
           <>
             Already have an account?{" "}
-            <Link href="/login" className="font-medium text-accent-bright hover:text-accent">
+            <Link href={`/login${nextQuery}`} className="font-medium text-accent-bright hover:text-accent">
               Log in
             </Link>
           </>
         ) : (
           <>
             New to GIZMORAC?{" "}
-            <Link href="/signup" className="font-medium text-accent-bright hover:text-accent">
+            <Link href={`/signup${nextQuery}`} className="font-medium text-accent-bright hover:text-accent">
               Create an account
             </Link>
           </>
