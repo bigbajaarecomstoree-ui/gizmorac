@@ -71,17 +71,12 @@ export async function DealOfTheDay() {
 
   return (
     <section className="shell py-8 sm:py-12">
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-accent-soft/70 via-surface to-highlight/15 ring-1 ring-accent/15 shadow-[0_30px_80px_-45px_rgba(109,40,217,0.55)]">
+      <div className="relative overflow-hidden rounded-3xl border border-border bg-surface shadow-[0_24px_64px_-44px_rgba(0,0,0,0.3)]">
         <div className="grid-ticks absolute inset-0 opacity-25" />
-        <div className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-accent/20 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-28 -left-24 h-80 w-80 rounded-full bg-highlight/25 blur-3xl" />
 
         <div className="relative grid items-center gap-8 p-6 sm:p-10 lg:grid-cols-2">
           {/* product showcase */}
-          <div className="relative mx-auto aspect-square w-full max-w-xl overflow-hidden rounded-2xl border border-border-bright bg-gradient-to-br from-surface to-accent-soft/60 shadow-sm">
-            <div className="pointer-events-none absolute inset-0 grid place-items-center">
-              <div className="h-2/3 w-2/3 rounded-full bg-accent/10 blur-3xl" />
-            </div>
+          <div className="relative mx-auto aspect-square w-full max-w-xl overflow-hidden rounded-2xl border border-border bg-surface-2 shadow-sm">
             <ProductArt art={deal.art} glyphClassName="!h-[46%] !max-h-64 text-accent" />
 
             <Badge variant="accent" size="md" className="absolute left-4 top-4 font-semibold shadow-md">
