@@ -20,37 +20,54 @@ export async function CategoryGrid() {
         href="/shop"
         hrefLabel="All products"
       />
-      <div className="mt-10 grid grid-cols-2 gap-4 lg:grid-cols-3">
-        {categories.map((c) => (
-          <Link
-            key={c.slug}
-            href={`/shop?category=${c.slug}`}
-            className="group relative flex flex-col gap-3 overflow-hidden rounded-xl border border-border bg-surface p-4 transition-all hover:border-border-bright hover:bg-surface-2 sm:flex-row sm:items-center sm:gap-4 sm:p-5"
-          >
-            <ArrowUpRight
-              size={16}
-              className="absolute right-3 top-3 text-faint transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-accent"
-            />
-            <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-border sm:h-20 sm:w-20">
-              {c.image ? (
-                <Image
-                  src={c.image}
-                  alt={c.name}
-                  fill
-                  sizes="80px"
-                  className="object-cover transition-transform duration-300 group-hover:scale-105"
-                />
-              ) : (
-                <ProductArt art={c.art} glyphClassName="!h-[44%] group-hover:text-accent" />
-              )}
-            </div>
-            <div className="min-w-0">
-              <h3 className="pr-5 text-[0.95rem] font-semibold leading-snug">{c.name}</h3>
-              <p className="mt-1 line-clamp-1 text-xs text-muted">{c.tagline}</p>
-              <p className="tech-label mt-2">{counts[c.slug]} products</p>
-            </div>
-          </Link>
-        ))}
+      <div className="mt-10 grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-3">
+        {categories.map((c) => {
+          const n = counts[c.slug] ?? 0;
+          return (
+            <Link
+              key={c.slug}
+              href={`/shop?category=${c.slug}`}
+              className="group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-all duration-300 hover:-translate-y-1 hover:border-accent/40 hover:shadow-[0_20px_44px_-20px_rgba(109,40,217,0.45)]"
+            >
+              {/* image */}
+              <div className="relative aspect-[16/10] overflow-hidden bg-surface-2">
+                {c.image ? (
+                  <Image
+                    src={c.image}
+                    alt={c.name}
+                    fill
+                    sizes="(min-width:1024px) 33vw, 50vw"
+                    className="object-cover transition-transform duration-500 group-hover:scale-[1.07]"
+                  />
+                ) : (
+                  <ProductArt art={c.art} glyphClassName="!h-[42%] transition-colors group-hover:text-accent" />
+                )}
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/15 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+
+                {/* count pill */}
+                <span className="absolute bottom-3 left-3 rounded-full bg-background/85 px-2.5 py-1 text-[0.6875rem] font-semibold text-foreground shadow-sm backdrop-blur">
+                  {n} {n === 1 ? "product" : "products"}
+                </span>
+
+                {/* arrow badge — fills purple on hover */}
+                <span className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-background/85 text-foreground shadow-sm backdrop-blur transition-colors duration-300 group-hover:bg-accent group-hover:text-on-accent">
+                  <ArrowUpRight
+                    size={16}
+                    className="transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+                  />
+                </span>
+              </div>
+
+              {/* content */}
+              <div className="p-4">
+                <h3 className="text-[0.95rem] font-semibold leading-snug transition-colors group-hover:text-accent-bright sm:text-base">
+                  {c.name}
+                </h3>
+                <p className="mt-1 line-clamp-1 text-sm text-muted">{c.tagline}</p>
+              </div>
+            </Link>
+          );
+        })}
       </div>
     </section>
   );
