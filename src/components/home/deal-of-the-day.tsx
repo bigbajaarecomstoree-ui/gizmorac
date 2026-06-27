@@ -3,7 +3,7 @@ import {
   Flame,
   Truck,
   ShieldCheck,
-  RotateCcw,
+  RefreshCw,
   Lock,
   IndianRupee,
   Users,
@@ -45,6 +45,9 @@ export async function DealOfTheDay() {
   const remaining = deal.stock;
   const total = sold + remaining;
   const claimed = total > 0 ? Math.round((sold / total) * 100) : remaining === 0 ? 100 : 0;
+  // Marketing urgency counters: baselines that grow with real sales.
+  const bought = 500 + sold; // "this week" social proof
+  const soldToday = 40 + sold; // "today" urgency banner
 
   const warranty =
     deal.warrantyMonths >= 12
@@ -57,7 +60,7 @@ export async function DealOfTheDay() {
   const trust = [
     { icon: Truck, title: "Free Delivery", sub: "Pan India" },
     { icon: ShieldCheck, title: warranty, sub: "Guaranteed" },
-    { icon: RotateCcw, title: "Easy Returns", sub: "Hassle free" },
+    { icon: RefreshCw, title: "Easy Returns", sub: "Hassle free" },
   ];
 
   const avatarGradients = [
@@ -101,22 +104,20 @@ export async function DealOfTheDay() {
             ) : null}
 
             {/* social proof */}
-            {sold > 0 ? (
-              <div className="absolute bottom-3 left-3 flex items-center gap-2.5 rounded-2xl bg-surface/90 px-3 py-2 shadow-md ring-1 ring-border backdrop-blur">
-                <div className="flex -space-x-2">
-                  {avatarGradients.map((g, i) => (
-                    <span
-                      key={i}
-                      className={`h-6 w-6 rounded-full bg-gradient-to-br ${g} ring-2 ring-surface`}
-                    />
-                  ))}
-                </div>
-                <div className="text-xs leading-tight">
-                  <p className="font-bold text-foreground">{formatCount(sold)} bought</p>
-                  <p className="text-faint">recently</p>
-                </div>
+            <div className="absolute bottom-3 left-3 flex items-center gap-2.5 rounded-2xl bg-surface/90 px-3 py-2 shadow-md ring-1 ring-border backdrop-blur">
+              <div className="flex -space-x-2">
+                {avatarGradients.map((g, i) => (
+                  <span
+                    key={i}
+                    className={`h-6 w-6 rounded-full bg-gradient-to-br ${g} ring-2 ring-surface`}
+                  />
+                ))}
               </div>
-            ) : null}
+              <div className="text-xs leading-tight">
+                <p className="font-bold text-foreground">{formatCount(bought)} bought</p>
+                <p className="text-faint">this week</p>
+              </div>
+            </div>
           </div>
 
           {/* details */}
@@ -139,7 +140,12 @@ export async function DealOfTheDay() {
             </div>
 
             <div className="mt-5">
-              <Price product={deal} size="lg" />
+              <div className="flex flex-wrap items-center gap-3">
+                <Price product={deal} size="lg" />
+                <Badge variant="accent" size="sm" className="font-semibold">
+                  {off}% OFF
+                </Badge>
+              </div>
               <p className="mt-1.5 text-sm font-semibold text-success">
                 You save {formatINR(savings(deal))}
               </p>
@@ -165,17 +171,15 @@ export async function DealOfTheDay() {
               )}
             </div>
 
-            {/* urgency */}
-            {sold > 0 ? (
-              <div className="mt-3 flex items-center gap-3 rounded-xl bg-surface px-4 py-3 shadow-sm ring-1 ring-accent-dim/60">
-                <Flame size={18} className="shrink-0 text-accent" />
-                <p className="text-sm font-semibold leading-snug text-accent-bright">
-                  Hurry! Over{" "}
-                  <span className="text-lg font-extrabold">{formatCount(sold)}</span> already
-                  sold — don&apos;t miss out!
-                </p>
-              </div>
-            ) : null}
+            {/* urgency — always shown */}
+            <div className="mt-3 flex items-center gap-3 rounded-xl bg-danger/5 px-4 py-3 shadow-sm ring-1 ring-danger/20">
+              <Flame size={18} className="shrink-0 text-danger" />
+              <p className="text-sm font-semibold leading-snug text-foreground">
+                Hurry! Over{" "}
+                <span className="font-extrabold text-danger">{formatCount(soldToday)}</span>{" "}
+                sold today — don&apos;t miss out!
+              </p>
+            </div>
 
             {/* countdown */}
             <div className="mt-6">
@@ -232,14 +236,24 @@ export async function DealOfTheDay() {
               ))}
             </div>
             <div className="flex items-center gap-2">
-              {["UPI", "Cards", "COD"].map((m) => (
+              {[
+                { src: "/payments/visa.svg", alt: "Visa" },
+                { src: "/payments/mastercard.svg", alt: "Mastercard" },
+                { src: "/payments/upi.svg", alt: "UPI" },
+              ].map((p) => (
                 <span
-                  key={m}
-                  className="rounded-md bg-surface px-2.5 py-1 text-[0.6875rem] font-bold text-muted ring-1 ring-border"
+                  key={p.alt}
+                  className="grid h-8 w-12 place-items-center rounded-md bg-surface px-2 ring-1 ring-border"
                 >
-                  {m}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={p.src} alt={p.alt} className="max-h-4 w-auto object-contain" />
                 </span>
               ))}
+              <span className="rounded-md bg-accent-soft px-2.5 py-1 text-center text-[0.625rem] font-bold uppercase leading-tight tracking-wide text-accent-bright ring-1 ring-accent-dim/50">
+                COD
+                <br />
+                Available
+              </span>
             </div>
           </div>
         </div>
