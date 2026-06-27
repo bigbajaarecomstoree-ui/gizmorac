@@ -16,6 +16,7 @@ export function BuyNowButton({
   className,
   variant = "primary",
   size = "md",
+  iconSize = 16,
 }: {
   id: string;
   name: string;
@@ -24,6 +25,7 @@ export function BuyNowButton({
   className?: string;
   variant?: ButtonProps["variant"];
   size?: ButtonProps["size"];
+  iconSize?: number;
 }) {
   const router = useRouter();
   const { addToCart } = useStore();
@@ -44,7 +46,7 @@ export function BuyNowButton({
       disabled={loading}
       aria-label={`Buy ${name} now`}
     >
-      {loading ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />}
+      {loading ? <Loader2 size={iconSize} className="animate-spin" /> : <Zap size={iconSize} />}
       {label}
     </Button>
   );

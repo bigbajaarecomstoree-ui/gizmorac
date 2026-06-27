@@ -13,12 +13,15 @@ export function Price({
   product,
   size = "md",
   tone = "accent",
+  showDiscount = true,
   className,
 }: {
   product: Pick<Product, "price" | "mrp">;
   size?: keyof typeof PRICE_SIZE;
   /** "accent" = brand-coloured readout (default); "ink" = plain dark price. */
   tone?: "accent" | "ink";
+  /** Show the green "N% off" tag next to the MRP. Default true. */
+  showDiscount?: boolean;
   className?: string;
 }) {
   const off = discountPercent(product);
@@ -38,7 +41,9 @@ export function Price({
           <span className="font-mono text-sm text-faint line-through">
             {formatINR(product.mrp)}
           </span>
-          <span className="text-sm font-semibold text-success">{off}% off</span>
+          {showDiscount ? (
+            <span className="text-sm font-semibold text-success">{off}% off</span>
+          ) : null}
         </>
       ) : null}
     </div>

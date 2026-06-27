@@ -70,18 +70,24 @@ export async function DealOfTheDay() {
   ];
 
   return (
-    <section className="shell py-8 sm:py-12">
+    <section className="shell py-6 sm:py-10">
       <div className="relative overflow-hidden rounded-3xl border border-border bg-surface shadow-[0_24px_64px_-44px_rgba(0,0,0,0.3)]">
         <div className="grid-ticks absolute inset-0 opacity-25" />
 
-        <div className="relative grid items-center gap-8 p-6 sm:p-10 lg:grid-cols-2">
+        <div className="relative grid items-center gap-6 p-5 sm:p-8 lg:grid-cols-2">
           {/* product showcase */}
-          <div className="relative mx-auto aspect-square w-full max-w-xl overflow-hidden rounded-2xl border border-border bg-surface-2 shadow-sm">
-            <ProductArt art={deal.art} glyphClassName="!h-[46%] !max-h-64 text-accent" />
+          <div className="relative mx-auto aspect-square w-full max-w-2xl overflow-hidden rounded-2xl border border-border bg-surface-2 shadow-sm">
+            <ProductArt art={deal.art} glyphClassName="!h-[60%] !max-h-96 text-accent" />
 
             <Badge variant="accent" size="md" className="absolute left-4 top-4 font-semibold shadow-md">
               {off}% OFF
             </Badge>
+
+            <WishlistButton
+              id={deal.id}
+              name={title}
+              className="absolute right-4 top-4 h-10 w-10 shadow-md"
+            />
 
             {/* floating feature callouts (from the product's real highlights) */}
             {feats.length > 0 ? (
@@ -125,18 +131,18 @@ export async function DealOfTheDay() {
               <span className="text-sm font-semibold text-accent-bright">Limited time offer</span>
             </div>
 
-            <h2 className="mt-4 text-2xl font-bold leading-tight tracking-tight sm:text-4xl">
+            <h2 className="mt-3 text-2xl font-bold leading-tight tracking-tight sm:text-3xl">
               {title}
             </h2>
 
-            <div className="mt-3 flex items-center gap-2">
+            <div className="mt-2 flex items-center gap-2">
               <RatingStars rating={deal.rating} count={deal.reviewCount} size="md" />
               <span className="text-sm text-faint">Reviews</span>
             </div>
 
-            <div className="mt-5">
+            <div className="mt-4">
               <div className="flex flex-wrap items-center gap-3">
-                <Price product={deal} size="lg" />
+                <Price product={deal} size="lg" showDiscount={false} />
                 <Badge variant="accent" size="sm" className="font-semibold">
                   {off}% OFF
                 </Badge>
@@ -146,7 +152,7 @@ export async function DealOfTheDay() {
               </p>
             </div>
 
-            <div className="my-6 h-px w-full bg-border" />
+            <div className="my-5 h-px w-full bg-border" />
 
             {/* claimed progress + live stock */}
             <div className="h-2.5 overflow-hidden rounded-full bg-surface-2 ring-1 ring-border">
@@ -177,24 +183,35 @@ export async function DealOfTheDay() {
             </div>
 
             {/* countdown */}
-            <div className="mt-6">
+            <div className="mt-5">
               <p className="tech-label mb-3">Offer ends in</p>
               <Countdown target={endOfTodayMs()} />
             </div>
 
-            {/* CTAs */}
-            <div className="mt-7 flex flex-wrap items-stretch gap-3">
-              <BuyNowButton id={deal.id} name={title} label="Buy Now" variant="primary" size="lg" />
-              <AddToCartButton id={deal.id} name={title} label="Add to Cart" variant="highlight" size="lg" />
-              <WishlistButton
+            {/* CTAs — side by side (Add to Cart first, then Buy Now) */}
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              <AddToCartButton
                 id={deal.id}
                 name={title}
-                className="h-12 w-12 rounded-[var(--radius)] border-border-bright"
+                label="Add to Cart"
+                variant="highlight"
+                size="lg"
+                iconSize={20}
+                className="w-full gap-2 px-3 text-sm sm:gap-2.5 sm:px-7 sm:text-base [&_svg]:shrink-0"
+              />
+              <BuyNowButton
+                id={deal.id}
+                name={title}
+                label="Buy Now"
+                variant="primary"
+                size="lg"
+                iconSize={20}
+                className="w-full gap-2 px-3 text-sm sm:gap-2.5 sm:px-7 sm:text-base [&_svg]:shrink-0"
               />
             </div>
 
             {/* trust row */}
-            <div className="mt-6 grid grid-cols-3 gap-3 border-t border-border pt-5">
+            <div className="mt-5 grid grid-cols-3 gap-3 border-t border-border pt-4">
               {trust.map((t) => (
                 <div key={t.title} className="flex items-center gap-2.5">
                   <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-accent-soft text-accent">

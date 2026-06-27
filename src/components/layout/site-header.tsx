@@ -9,12 +9,12 @@ import { useStore } from "@/components/store/store-provider";
 import { AccountMenu } from "@/components/layout/account-menu";
 import { cn } from "@/lib/utils";
 
-const NAV = [
+const NAV: { label: string; href: string; badge?: string }[] = [
   { label: "Shop All", href: "/shop" },
   { label: "Health", href: "/shop?category=health-devices" },
   { label: "Office", href: "/shop?category=office-solutions" },
   { label: "Car", href: "/shop?category=car-accessories" },
-  { label: "Deals", href: "/shop?sort=discount" },
+  { label: "Deals", href: "/shop?sort=discount", badge: "Hot" },
 ];
 
 function CountBadge({ count }: { count: number }) {
@@ -110,9 +110,14 @@ export function SiteHeader({
               <Link
                 key={item.href}
                 href={item.href}
-                className="rounded-md px-3 py-2 text-sm font-medium text-foreground/80 transition-colors hover:bg-black/5 hover:text-foreground"
+                className="relative rounded-md px-3 py-2 text-sm font-medium text-foreground/80 transition-colors hover:bg-black/5 hover:text-foreground"
               >
                 {item.label}
+                {item.badge ? (
+                  <span className="absolute -right-1 -top-1 rounded-full bg-accent px-1.5 py-0.5 text-[0.5rem] font-bold uppercase leading-none tracking-wider text-on-accent shadow-sm">
+                    {item.badge}
+                  </span>
+                ) : null}
               </Link>
             ))}
           </nav>
@@ -185,7 +190,14 @@ export function SiteHeader({
                 onClick={() => setOpen(false)}
                 className="flex items-center justify-between rounded-lg px-3 py-3 text-sm font-medium text-muted hover:bg-surface-2 hover:text-foreground"
               >
-                {item.label}
+                <span className="flex items-center gap-2">
+                  {item.label}
+                  {item.badge ? (
+                    <span className="rounded-full bg-accent px-1.5 py-0.5 text-[0.5rem] font-bold uppercase leading-none tracking-wider text-on-accent">
+                      {item.badge}
+                    </span>
+                  ) : null}
+                </span>
                 <ChevronRight size={16} className="text-faint" />
               </Link>
             ))}

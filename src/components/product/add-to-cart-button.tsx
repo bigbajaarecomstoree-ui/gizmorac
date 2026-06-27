@@ -15,6 +15,7 @@ export function AddToCartButton({
   variant = "surface",
   size = "md",
   iconOnly = false,
+  iconSize,
 }: {
   id: string;
   name: string;
@@ -24,6 +25,7 @@ export function AddToCartButton({
   variant?: ButtonProps["variant"];
   size?: ButtonProps["size"];
   iconOnly?: boolean;
+  iconSize?: number;
 }) {
   const { addToCart } = useStore();
   const [added, setAdded] = React.useState(false);
@@ -43,7 +45,11 @@ export function AddToCartButton({
       aria-label={`Add ${name} to cart`}
       title={iconOnly ? "Add to cart" : undefined}
     >
-      {added ? <Check size={16} /> : <ShoppingCart size={iconOnly ? 18 : 16} />}
+      {added ? (
+        <Check size={iconSize ?? 16} />
+      ) : (
+        <ShoppingCart size={iconSize ?? (iconOnly ? 18 : 16)} />
+      )}
       {iconOnly ? null : added ? "Added" : label}
     </Button>
   );
