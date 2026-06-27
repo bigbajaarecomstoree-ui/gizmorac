@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Scale, X } from "lucide-react";
 import type { Product } from "@/lib/types";
 import { useStore } from "@/components/store/store-provider";
@@ -116,7 +117,11 @@ export function CompareView() {
               </button>
               <Link href={`/product/${p.slug}`} className="block">
                 <div className="relative mx-auto aspect-square w-full max-w-[140px] overflow-hidden rounded-lg border border-border bg-surface">
-                  <ProductArt art={p.art} glyphClassName="!h-[44%]" />
+                  {p.image ? (
+                    <Image src={p.image} alt={shortTitle(p.name)} fill sizes="140px" className="object-cover" />
+                  ) : (
+                    <ProductArt art={p.art} glyphClassName="!h-[44%]" />
+                  )}
                 </div>
                 <p className="mt-2 line-clamp-2 text-sm font-semibold leading-snug hover:text-accent-bright">
                   {shortTitle(p.name)}

@@ -50,7 +50,7 @@ export function ProductCard({ product }: { product: Product }) {
 
         <div className="absolute right-3 top-3 z-20 flex flex-col gap-1.5">
           <WishlistButton id={product.id} name={title} />
-          <CompareButton slug={product.slug} name={title} variant="icon" />
+          <CompareButton slug={product.slug} name={title} category={product.category} variant="icon" />
         </div>
 
         {outOfStock ? (

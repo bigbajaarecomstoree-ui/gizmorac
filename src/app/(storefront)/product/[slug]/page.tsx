@@ -146,7 +146,7 @@ export default async function ProductPage({ params }: { params: Params }) {
             <p className="tech-label pt-1">{product.brand}</p>
             <div className="flex shrink-0 items-center gap-2">
               <ShareButton title={product.name} />
-              <CompareButton slug={product.slug} name={shortTitle(product.name)} />
+              <CompareButton slug={product.slug} name={shortTitle(product.name)} category={product.category} />
             </div>
           </div>
           <h1 className="mt-1.5 text-2xl font-bold leading-tight sm:text-3xl">

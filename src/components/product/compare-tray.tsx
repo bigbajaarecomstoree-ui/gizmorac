@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Scale, X } from "lucide-react";
 import type { Product } from "@/lib/types";
 import { useStore } from "@/components/store/store-provider";
@@ -45,7 +46,11 @@ export function CompareTray() {
               key={p.id}
               className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg border border-border bg-surface"
             >
-              <ProductArt art={p.art} glyphClassName="!h-[44%]" />
+              {p.image ? (
+                <Image src={p.image} alt={shortTitle(p.name)} fill sizes="44px" className="object-cover" />
+              ) : (
+                <ProductArt art={p.art} glyphClassName="!h-[44%]" />
+              )}
               <button
                 type="button"
                 onClick={() => toggleCompare(p.slug, shortTitle(p.name))}

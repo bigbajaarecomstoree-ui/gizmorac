@@ -38,7 +38,7 @@ interface StoreState {
   clearCart: () => void;
   toggleWishlist: (id: string, name?: string) => void;
   isInWishlist: (id: string) => boolean;
-  toggleCompare: (slug: string, name?: string) => void;
+  toggleCompare: (slug: string, name?: string, category?: string) => void;
   isInCompare: (slug: string) => boolean;
   clearCompare: () => void;
   claimOffer: (kind: ClaimedOffer["kind"], amount: number) => void;
@@ -50,6 +50,7 @@ const CART_KEY = "gizmorac.cart";
 const WISH_KEY = "gizmorac.wishlist";
 const OFFER_KEY = "gizmorac.offer";
 const COMPARE_KEY = "gizmorac.compare";
+const COMPARE_CAT_KEY = "gizmorac.compareCat";
 const COMPARE_MAX = 4;
 
 const StoreContext = React.createContext<StoreState | null>(null);
@@ -70,6 +71,8 @@ export function StoreProvider({
   const [cart, setCart] = React.useState<CartLine[]>([]);
   const [wishlist, setWishlist] = React.useState<string[]>([]);
   const [compare, setCompare] = React.useState<string[]>([]);
+  // Category all compared products must share (set by the first added item).
+  const [compareCategory, setCompareCategory] = React.useState<string | null>(null);
   const [offer, setOffer] = React.useState<ClaimedOffer | null>(null);
   const [toasts, setToasts] = React.useState<Toast[]>([]);
   const [mounted, setMounted] = React.useState(false);
@@ -85,10 +88,12 @@ export function StoreProvider({
       const w = localStorage.getItem(WISH_KEY);
       const o = localStorage.getItem(OFFER_KEY);
       const cmp = localStorage.getItem(COMPARE_KEY);
+      const cmpCat = localStorage.getItem(COMPARE_CAT_KEY);
       if (c) setCart(JSON.parse(c));
       if (w) setWishlist(JSON.parse(w));
       if (o) setOffer(JSON.parse(o));
       if (cmp) setCompare(JSON.parse(cmp));
+      if (cmpCat) setCompareCategory(cmpCat);
     } catch {
       // ignore malformed storage
     }
@@ -105,6 +110,11 @@ export function StoreProvider({
   React.useEffect(() => {
     if (mounted) localStorage.setItem(COMPARE_KEY, JSON.stringify(compare));
   }, [compare, mounted]);
+  React.useEffect(() => {
+    if (!mounted) return;
+    if (compareCategory) localStorage.setItem(COMPARE_CAT_KEY, compareCategory);
+    else localStorage.removeItem(COMPARE_CAT_KEY);
+  }, [compareCategory, mounted]);
   React.useEffect(() => {
     if (!mounted) return;
     if (offer) localStorage.setItem(OFFER_KEY, JSON.stringify(offer));
@@ -172,21 +182,29 @@ export function StoreProvider({
   );
 
   const toggleCompare = React.useCallback(
-    (slug: string, name?: string) => {
-      setCompare((prev) => {
-        if (prev.includes(slug)) {
-          toast(name ? `Removed ${name} from compare` : "Removed from compare", "info");
-          return prev.filter((s) => s !== slug);
-        }
-        if (prev.length >= COMPARE_MAX) {
-          toast(`You can compare up to ${COMPARE_MAX} products`, "info");
-          return prev;
-        }
-        toast(name ? `Added ${name} to compare` : "Added to compare", "info");
-        return [...prev, slug];
-      });
+    (slug: string, name?: string, category?: string) => {
+      // Remove if already queued (clearing the shared category when emptied).
+      if (compare.includes(slug)) {
+        const next = compare.filter((s) => s !== slug);
+        setCompare(next);
+        if (next.length === 0) setCompareCategory(null);
+        toast(name ? `Removed ${name} from compare` : "Removed from compare", "info");
+        return;
+      }
+      if (compare.length >= COMPARE_MAX) {
+        toast(`You can compare up to ${COMPARE_MAX} products`, "info");
+        return;
+      }
+      // Compare only works within one category.
+      if (compare.length > 0 && compareCategory && category && category !== compareCategory) {
+        toast("You can only compare products from the same category — pick another from this category.", "info");
+        return;
+      }
+      setCompare([...compare, slug]);
+      if (compare.length === 0 && category) setCompareCategory(category);
+      toast(name ? `Added ${name} to compare` : "Added to compare", "info");
     },
-    [toast],
+    [compare, compareCategory, toast],
   );
 
   const isInCompare = React.useCallback(
@@ -194,7 +212,10 @@ export function StoreProvider({
     [compare],
   );
 
-  const clearCompare = React.useCallback(() => setCompare([]), []);
+  const clearCompare = React.useCallback(() => {
+    setCompare([]);
+    setCompareCategory(null);
+  }, []);
 
   const claimOffer = React.useCallback(
     (kind: ClaimedOffer["kind"], amount: number) => {

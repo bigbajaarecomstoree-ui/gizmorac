@@ -11,11 +11,13 @@ import { cn } from "@/lib/utils";
 export function CompareButton({
   slug,
   name,
+  category,
   variant = "label",
   className,
 }: {
   slug: string;
   name: string;
+  category?: string;
   variant?: "label" | "icon";
   className?: string;
 }) {
@@ -28,7 +30,7 @@ export function CompareButton({
         type="button"
         onClick={(e) => {
           e.preventDefault();
-          toggleCompare(slug, name);
+          toggleCompare(slug, name, category);
         }}
         aria-pressed={active}
         aria-label={active ? `Remove ${name} from compare` : `Add ${name} to compare`}
@@ -47,7 +49,7 @@ export function CompareButton({
   return (
     <button
       type="button"
-      onClick={() => toggleCompare(slug, name)}
+      onClick={() => toggleCompare(slug, name, category)}
       aria-pressed={active}
       className={cn(
         "inline-flex items-center gap-2 rounded-[var(--radius)] border px-3.5 py-2 text-sm font-medium transition-colors cursor-pointer",
