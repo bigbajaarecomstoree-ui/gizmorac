@@ -197,9 +197,12 @@ export default async function AdminDashboard() {
                     {o.firstName} {o.lastName} · {o.city}
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  <OrderStatusBadge status={o.status} />
-                  <span className="readout text-sm font-semibold">
+                <div className="flex shrink-0 items-center gap-3">
+                  {/* fixed columns so badges and prices line up across rows */}
+                  <span className="flex w-24 justify-end">
+                    <OrderStatusBadge status={o.status} />
+                  </span>
+                  <span className="readout w-20 text-right text-sm font-semibold">
                     {formatINR(o.total)}
                   </span>
                 </div>
