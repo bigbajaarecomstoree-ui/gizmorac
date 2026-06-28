@@ -17,6 +17,13 @@ import { shortTitle } from "@/lib/format";
 export function CompareTray() {
   const { compare, compareCount, toggleCompare, clearCompare, mounted } = useStore();
   const [products, setProducts] = React.useState<Product[]>([]);
+  // Hide shopper chrome when the owner is previewing a product from the admin
+  // panel ("View on store" opens the page with ?preview=1).
+  const [preview, setPreview] = React.useState(false);
+
+  React.useEffect(() => {
+    setPreview(new URLSearchParams(window.location.search).has("preview"));
+  }, []);
 
   React.useEffect(() => {
     if (compare.length === 0) {
@@ -32,7 +39,7 @@ export function CompareTray() {
     };
   }, [compare]);
 
-  if (!mounted || compareCount === 0) return null;
+  if (!mounted || preview || compareCount === 0) return null;
 
   return (
     <div className="fixed inset-x-0 bottom-4 z-40 flex justify-center px-4 print:hidden">

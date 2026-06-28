@@ -256,7 +256,7 @@ export function ProductsTable({
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <Link
-                    href={`/product/${p.slug}`}
+                    href={`/product/${p.slug}?preview=1`}
                     target="_blank"
                     className="truncate text-sm font-semibold transition-colors hover:text-accent-bright hover:underline"
                     title={`View ${p.name} on the store`}
