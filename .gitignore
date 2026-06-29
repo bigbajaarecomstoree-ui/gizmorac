@@ -47,3 +47,7 @@ next-env.d.ts
 # uploaded media (runtime user uploads; keep the folder, ignore contents)
 /public/uploads/*
 !/public/uploads/.gitkeep
+
+# MemPalace per-project files (issue #185)
+mempalace.yaml
+entities.json
