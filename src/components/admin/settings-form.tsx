@@ -258,7 +258,7 @@ export function SettingsForm({
             label="Support phone"
             name="supportPhone"
             defaultValue={settings.supportPhone}
-            placeholder="+91 99999 99999"
+            placeholder="+91 93102 14091"
           />
           <Field
             label="WhatsApp number"

@@ -15,7 +15,7 @@ const TRUST = [
 
 // Fallbacks used only until the admin fills these in under Settings → Company.
 const FALLBACK_COMPANY = "BIG BAJAAR ECOM STOREE";
-const FALLBACK_PHONE = "+91 99999 99999";
+const FALLBACK_PHONE = "+91 93102 14091";
 const FALLBACK_EMAIL = "care@gizmorac.com";
 
 // Brand glyphs as inline SVG (lucide dropped brand/logo icons).

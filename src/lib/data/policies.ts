@@ -15,7 +15,7 @@ export interface Policy {
 
 export const POLICY_CONTACT = {
   email: "support@gizmorac.com",
-  phone: "+91 99999 99999",
+  phone: "+91 93102 14091",
   address: "GIZMORAC, India",
 };
 
@@ -23,32 +23,67 @@ export const policies: Policy[] = [
   {
     slug: "privacy",
     title: "Privacy Policy",
-    summary: "How we collect, use and protect your personal information.",
+    summary:
+      "This Privacy Policy outlines how personal information is collected, used, and safeguarded when you interact with this website. By accessing or using the website, you agree to the practices described below.",
     sections: [
       {
-        heading: "Information we collect",
+        heading: "1. Information We Collect",
         body: [
-          "We collect the details you provide when you create an account or place an order — your name, email, phone number and shipping address — along with order history.",
-          "We do not store card or UPI credentials on our servers; payments (when enabled) are handled by our payment partner.",
+          "We may collect the following types of information:",
+          "Personal Information: Name, phone number, email address, billing/shipping address.",
+          "Payment Information: Used to process orders securely through third-party payment gateways.",
+          "Technical Information: IP address, browser type, device information, and usage data via cookies or similar technologies.",
         ],
       },
       {
-        heading: "How we use your information",
+        heading: "2. How We Use Your Information",
         body: [
-          "Your information is used to process and deliver orders, provide support, send order updates, and — only if you opt in — share offers and product news.",
+          "To process and deliver orders.",
+          "To send transactional communications such as order updates or shipping alerts.",
+          "To respond to customer inquiries or service requests.",
+          "To improve website functionality, services, and user experience.",
+          "For marketing purposes (only with your explicit consent).",
         ],
       },
       {
-        heading: "Sharing & security",
+        heading: "3. Data Sharing",
         body: [
-          "We share data only with logistics and payment partners needed to fulfil your order. We never sell your personal information.",
-          "Passwords are stored as salted hashes and account sessions use secure, signed cookies.",
+          "We do not sell, rent, or trade your personal data.",
+          "We may share necessary information with third-party service providers such as payment gateways, delivery partners, or IT service providers — only to fulfill your order or maintain the website.",
+          "Personal information may be disclosed if required by law or legal proceedings.",
         ],
       },
       {
-        heading: "Your choices",
+        heading: "4. Data Security",
         body: [
-          "You can view and update your details from your account page, unsubscribe from emails at any time, or request deletion of your account by contacting us.",
+          "We implement reasonable security measures to protect your data from unauthorized access, alteration, or disclosure.",
+          "However, no online transmission is 100% secure. You acknowledge this risk when using the site.",
+        ],
+      },
+      {
+        heading: "5. Cookies and Tracking Technologies",
+        body: [
+          "Cookies are used to personalize your experience, analyze site traffic, and provide relevant ads.",
+          "You can manage or disable cookies via your browser settings, although this may affect site functionality.",
+        ],
+      },
+      {
+        heading: "6. Third-Party Links",
+        body: [
+          "This website may contain links to third-party websites. We are not responsible for the privacy practices or content of those websites.",
+        ],
+      },
+      {
+        heading: "7. Your Rights",
+        body: [
+          "You may request access to or correction of your personal data.",
+          "You may opt out of marketing communications at any time.",
+        ],
+      },
+      {
+        heading: "8. Changes to This Policy",
+        body: [
+          "This privacy policy may be updated periodically. Continued use of the website after changes indicates acceptance of the revised policy.",
         ],
       },
     ],
@@ -56,31 +91,68 @@ export const policies: Policy[] = [
   {
     slug: "terms",
     title: "Terms & Conditions",
-    summary: "The terms that govern your use of the GIZMORAC store.",
+    summary:
+      "These Terms and Conditions govern your use of this website and the purchase of products or services offered herein. By accessing or using this website, you agree to be bound by these terms. Please read them carefully.",
     sections: [
       {
-        heading: "Using this website",
+        heading: "1. General Use",
         body: [
-          "By browsing or ordering from GIZMORAC you agree to these terms. You must provide accurate information and are responsible for activity on your account.",
+          "By using this website, you confirm that you are at least 18 years old or are using the website under the supervision of a parent or legal guardian.",
+          "All content on this website is for informational purposes only and is subject to change without notice.",
         ],
       },
       {
-        heading: "Orders & pricing",
+        heading: "2. User Responsibilities",
         body: [
-          "All prices are in Indian Rupees and inclusive of applicable taxes. We may correct pricing errors and cancel affected orders with a full refund.",
-          "Placing an order is an offer to buy; we confirm acceptance when the order is processed.",
+          "Users agree not to misuse the website by knowingly introducing viruses, trojans, or other malicious material.",
+          "You must not attempt to gain unauthorized access to the server, database, or any part of the site.",
         ],
       },
       {
-        heading: "Product information",
+        heading: "3. Product & Service Descriptions",
         body: [
-          "We work to keep product descriptions, images and stock accurate, but minor variations may occur. Warranty terms, where applicable, are as stated on the product page.",
+          "All efforts are made to ensure accuracy in product descriptions, images, pricing, and availability.",
+          "However, we do not warrant that product descriptions or other content are complete, current, or error-free.",
         ],
       },
       {
-        heading: "Liability",
+        heading: "4. Order Acceptance & Cancellation",
         body: [
-          "GIZMORAC is not liable for indirect or incidental damages arising from product use beyond the value of the product purchased, to the extent permitted by law.",
+          "Placing an order on this website does not constitute a confirmed order. We reserve the right to refuse or cancel any order for reasons including but not limited to product availability, pricing errors, or suspected fraud.",
+          "Once placed, orders may not be canceled or modified unless otherwise stated in the return policy.",
+        ],
+      },
+      {
+        heading: "5. Pricing and Payment",
+        body: [
+          "All prices are displayed in INR or the local currency and are inclusive or exclusive of taxes as indicated.",
+          "Payments must be made through secure and approved payment gateways. The website is not liable for any payment gateway errors.",
+        ],
+      },
+      {
+        heading: "6. Intellectual Property",
+        body: [
+          "All text, graphics, logos, images, and other materials on this website are the intellectual property of their respective owners and protected by copyright and trademark laws.",
+          "Unauthorized use or duplication of any materials is prohibited.",
+        ],
+      },
+      {
+        heading: "7. Limitation of Liability",
+        body: [
+          "We are not responsible for any indirect or consequential damages that may arise from the use or inability to use the website or the products purchased through it.",
+          "Liability is limited to the value of the product purchased, if applicable.",
+        ],
+      },
+      {
+        heading: "8. Modifications to Terms",
+        body: [
+          "These terms may be revised at any time without prior notice. Continued use of the site after changes implies acceptance of those changes.",
+        ],
+      },
+      {
+        heading: "9. Governing Law",
+        body: [
+          "These terms shall be governed by and construed in accordance with the laws of India.",
         ],
       },
     ],
@@ -116,22 +188,24 @@ export const policies: Policy[] = [
     summary: "Our 7-day replacement promise for eligible items.",
     sections: [
       {
-        heading: "7-day replacement",
+        heading: "7-Day Return & Replacement",
         body: [
-          "If your product arrives damaged, defective or different from what you ordered, request a replacement within 7 days of delivery.",
-          "Items must be unused, in original packaging with all accessories and tags.",
+          "If your product arrives damaged, defective, or different from what you ordered, you must request a Return or Replacement within 7 days of delivery.",
+          "Items must be unused, in their original packaging, and include all accessories and tags.",
         ],
       },
       {
-        heading: "How to raise a request",
+        heading: "How to Raise a Request",
         body: [
-          `Contact us at {{email}} or via WhatsApp with your order number and photos of the issue. We'll arrange a pickup and replacement.`,
+          "To initiate your request, please share your order number and photos of the issue with our customer support team by email at {{email}}.",
+          "Resolution: Once verified, we will arrange a pickup. Your replaced product will be delivered within 7 days.",
         ],
       },
       {
-        heading: "Non-returnable cases",
+        heading: "Non-Returnable Cases",
         body: [
-          "Products damaged due to misuse, or returned without original packaging and accessories, may not be eligible for replacement.",
+          "Products may not be eligible for replacement if they are damaged due to misuse.",
+          "Products may not be eligible for replacement if they are returned without their original packaging, accessories, or tags.",
         ],
       },
     ],

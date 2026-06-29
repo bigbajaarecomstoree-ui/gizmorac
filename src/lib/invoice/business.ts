@@ -29,7 +29,7 @@ export const DEFAULT_BUSINESS: InvoiceBusiness = {
   gstin: "07ABEFB8495P1ZL",
   stateCode: "07",
   stateName: "Delhi",
-  phone: "+91 99999 99999",
+  phone: "+91 93102 14091",
   email: "care@gizmorac.com",
   website: "gizmorac.com",
 };
