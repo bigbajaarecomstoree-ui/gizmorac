@@ -1,3 +1,4 @@
+import Image from "next/image";
 import {
   Zap,
   Flame,
@@ -78,7 +79,18 @@ export async function DealOfTheDay() {
         <div className="relative grid items-center gap-6 p-5 sm:p-8 lg:grid-cols-2">
           {/* product showcase */}
           <Tilt className="relative mx-auto aspect-square w-full max-w-md overflow-hidden rounded-2xl border border-border bg-surface-2 shadow-sm sm:max-w-lg lg:max-w-2xl">
-            <ProductArt art={deal.art} glyphClassName="!h-[60%] !max-h-96 text-accent" />
+            {deal.image ? (
+              <Image
+                src={deal.image}
+                alt={title}
+                fill
+                sizes="(min-width: 1024px) 40vw, 90vw"
+                className="object-cover"
+                priority
+              />
+            ) : (
+              <ProductArt art={deal.art} glyphClassName="!h-[60%] !max-h-96 text-accent" />
+            )}
 
             <Badge variant="accent" size="md" className="absolute left-4 top-4 font-semibold shadow-md">
               {off}% OFF

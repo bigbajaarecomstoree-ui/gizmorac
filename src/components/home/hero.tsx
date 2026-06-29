@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowRight, Star, Truck, ShieldCheck, Users } from "lucide-react";
 import type { Product } from "@/lib/types";
 import { buttonVariants } from "@/components/ui/button";
@@ -68,27 +69,44 @@ function MiniCard({
   return (
     <div
       className={cn(
-        "animate-float-slow absolute w-36 overflow-hidden rounded-xl border border-border bg-surface/90 shadow-xl backdrop-blur",
+        "animate-float-slow group absolute w-36 overflow-hidden rounded-xl border border-border bg-surface/90 shadow-xl backdrop-blur transition-colors hover:border-border-bright",
         className,
       )}
       style={{ animationDelay: `${delay}s` }}
     >
+      {/* Heart sits above the link overlay so it toggles wishlist without navigating. */}
       <WishlistButton
         id={product.id}
         name={shortTitle(product.name)}
-        className="absolute right-2 top-2 z-10 h-7 w-7 border-danger/30 bg-background/80 text-danger hover:border-danger hover:text-danger"
+        className="absolute right-2 top-2 z-20 h-7 w-7 border-danger/30 bg-background/80 text-danger hover:border-danger hover:text-danger"
       />
-      <div className="aspect-[4/3]">
-        <ProductArt art={product.art} />
-      </div>
-      <div className="p-2.5">
-        <p className="truncate text-[0.7rem] font-medium text-muted">
-          {shortTitle(product.name)}
-        </p>
-        <p className="readout mt-0.5 text-xs font-semibold text-danger">
-          {formatINR(product.price)}
-        </p>
-      </div>
+      <Link
+        href={`/product/${product.slug}`}
+        aria-label={shortTitle(product.name)}
+        className="block after:absolute after:inset-0 after:content-['']"
+      >
+        <div className="relative aspect-[4/3]">
+          {product.image ? (
+            <Image
+              src={product.image}
+              alt={shortTitle(product.name)}
+              fill
+              sizes="144px"
+              className="object-cover"
+            />
+          ) : (
+            <ProductArt art={product.art} />
+          )}
+        </div>
+        <div className="p-2.5">
+          <p className="truncate text-[0.7rem] font-medium text-muted">
+            {shortTitle(product.name)}
+          </p>
+          <p className="readout mt-0.5 text-xs font-semibold text-danger">
+            {formatINR(product.price)}
+          </p>
+        </div>
+      </Link>
     </div>
   );
 }
@@ -190,10 +208,30 @@ export async function Hero() {
             mobile/tablet (order-2), and on the right on desktop. Cards shrink +
             spread out on mobile to avoid overlap; desktop keeps the original
             floating layout via the sm: overrides. */}
-        <div className="relative order-2 mx-auto aspect-square w-full max-w-md sm:ml-0 sm:max-w-lg lg:ml-auto lg:order-2">
+        <div className="relative order-2 mx-auto aspect-square w-full max-w-md sm:max-w-lg lg:ml-auto lg:order-2">
           {/* main device panel */}
           <div className="absolute inset-x-6 inset-y-10 overflow-hidden rounded-3xl border border-border-bright bg-surface shadow-2xl sm:inset-x-8 sm:inset-y-4">
-            {hero ? <ProductArt art={hero.art} glyphClassName="!h-[40%] text-accent" /> : null}
+            {hero ? (
+              hero.image ? (
+                <Image
+                  src={hero.image}
+                  alt={shortTitle(hero.name)}
+                  fill
+                  sizes="(min-width: 1024px) 45vw, 90vw"
+                  className="object-cover"
+                  priority
+                />
+              ) : (
+                <ProductArt art={hero.art} glyphClassName="!h-[40%] text-accent" />
+              )
+            ) : null}
+            {hero ? (
+              <Link
+                href={`/product/${hero.slug}`}
+                aria-label={shortTitle(hero.name)}
+                className="absolute inset-0"
+              />
+            ) : null}
           </div>
 
           {/* floating spec callouts */}
@@ -222,26 +260,29 @@ export async function Hero() {
           {secondary ? (
             <MiniCard
               product={secondary}
-              className="right-0 top-[33%] w-24 sm:top-auto sm:-right-2 sm:bottom-6 sm:w-36"
+              className="bottom-0 right-0 w-[5.5rem] sm:bottom-6 sm:-right-2 sm:w-36"
               delay={0.4}
             />
           ) : null}
           {tertiary ? (
             <MiniCard
               product={tertiary}
-              className="left-0 top-[30%] w-24 sm:top-auto sm:-left-6 sm:bottom-0 sm:w-36 lg:hidden xl:block"
+              className="bottom-0 left-0 w-[5.5rem] sm:bottom-0 sm:-left-6 sm:w-36 lg:hidden xl:block"
               delay={1.6}
             />
           ) : null}
 
           {/* hero product nameplate */}
           {hero ? (
-            <div className="absolute bottom-1 left-1/2 w-44 -translate-x-1/2 rounded-xl border border-border-bright bg-background/90 p-3 text-center shadow-xl backdrop-blur sm:bottom-8 sm:w-56">
+            <Link
+              href={`/product/${hero.slug}`}
+              className="absolute bottom-2 left-1/2 z-10 w-36 -translate-x-1/2 rounded-xl border border-border-bright bg-background/90 p-2.5 text-center shadow-xl backdrop-blur transition-colors hover:border-accent sm:bottom-8 sm:w-56 sm:p-3"
+            >
               <p className="line-clamp-2 text-xs font-medium text-muted">
                 {shortTitle(hero.name)}
               </p>
               <Price product={hero} size="sm" className="mt-1 justify-center" />
-            </div>
+            </Link>
           ) : null}
         </div>
       </div>
