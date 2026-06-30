@@ -63,7 +63,7 @@ export function ProductGallery({
   // --- Fallback: original illustration gallery ---
   if (!hasMedia) {
     return (
-      <div className="mx-auto flex w-full max-w-[440px] flex-col gap-3">
+      <div className="mx-auto flex w-full max-w-[420px] flex-col gap-3">
         <Tilt className="group relative aspect-square overflow-hidden rounded-2xl border border-border bg-surface">
           <div
             key={active}
@@ -106,7 +106,7 @@ export function ProductGallery({
   const current = slides[Math.min(active, slides.length - 1)];
 
   return (
-    <div className="mx-auto flex w-full max-w-[440px] flex-col gap-3">
+    <div className="mx-auto flex w-full max-w-[420px] flex-col gap-3">
       {current.kind === "image" ? (
         <Tilt className="relative aspect-square overflow-hidden rounded-2xl border border-border bg-surface">
           <Image

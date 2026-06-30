@@ -6,8 +6,15 @@ import { deliveryWindow } from "@/lib/format";
 import { getDeliveryEstimate } from "@/lib/storefront/actions";
 
 type Result =
-  | { ok: true; eta: string; cod: boolean }
+  | { ok: true; eta: string; cod: boolean; arriveBy: string }
   | { ok: false; message: string };
+
+/** Human arrival date N days out, e.g. "Sat, 5 Jul". */
+function arrivalDate(daysFromNow: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + daysFromNow);
+  return d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
+}
 
 export function PincodeChecker() {
   const [pin, setPin] = React.useState("");
@@ -27,7 +34,7 @@ export function PincodeChecker() {
       if (est.ok) {
         if (est.serviceable) {
           const d = est.days > 0 ? est.days : 3;
-          setResult({ ok: true, eta: deliveryWindow(d, d + 2), cod: est.codAvailable });
+          setResult({ ok: true, eta: deliveryWindow(d, d + 2), cod: est.codAvailable, arriveBy: arrivalDate(d + 2) });
         } else {
           setResult({ ok: false, message: "Sorry, we don't deliver to this pincode yet." });
         }
@@ -39,6 +46,7 @@ export function PincodeChecker() {
           ok: true,
           eta: fast ? deliveryWindow(2, 4) : deliveryWindow(4, 7),
           cod: first !== "8",
+          arriveBy: arrivalDate(fast ? 4 : 7),
         });
       }
     } finally {
@@ -47,12 +55,12 @@ export function PincodeChecker() {
   }
 
   return (
-    <div className="rounded-xl border border-border bg-surface p-4">
-      <div className="flex items-center gap-2 text-sm font-medium">
-        <MapPin size={16} className="text-accent" />
+    <div className="rounded-xl border border-border bg-surface px-3.5 py-3">
+      <div className="flex items-center gap-1.5 text-xs font-medium text-muted">
+        <MapPin size={14} className="text-accent" />
         Check delivery
       </div>
-      <form onSubmit={check} className="mt-3 flex gap-2">
+      <form onSubmit={check} className="mt-2 flex gap-2">
         <input
           inputMode="numeric"
           maxLength={6}
@@ -84,8 +92,9 @@ export function PincodeChecker() {
             </div>
             <div className="flex items-center gap-2 text-muted">
               <Truck size={15} className="text-faint" />
-              Estimated delivery{" "}
-              <span className="font-medium text-foreground">{result.eta}</span>
+              Get it by{" "}
+              <span className="font-medium text-foreground">{result.arriveBy}</span>
+              <span className="text-faint">({result.eta})</span>
             </div>
             <p className="text-xs text-faint">
               {result.cod ? "Cash on Delivery available" : "Prepaid only at this pincode"}

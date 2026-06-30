@@ -12,10 +12,13 @@ export function ShareButton({
   title,
   text,
   className,
+  iconOnly = false,
 }: {
   title: string;
   text?: string;
   className?: string;
+  /** Compact round icon button (e.g. overlaid on the product image). */
+  iconOnly?: boolean;
 }) {
   const [copied, setCopied] = React.useState(false);
 
@@ -37,6 +40,23 @@ export function ShareButton({
     } catch {
       // clipboard blocked — nothing more we can do
     }
+  }
+
+  if (iconOnly) {
+    return (
+      <button
+        type="button"
+        onClick={share}
+        aria-label="Share this product"
+        title={copied ? "Link copied" : "Share"}
+        className={cn(
+          "grid h-9 w-9 place-items-center rounded-full border border-border bg-background/70 text-muted backdrop-blur transition-colors hover:border-accent hover:text-accent cursor-pointer",
+          className,
+        )}
+      >
+        {copied ? <Check size={16} className="text-success" /> : <Share2 size={16} />}
+      </button>
+    );
   }
 
   return (

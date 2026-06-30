@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Check } from "lucide-react";
+import { Flame } from "lucide-react";
 import {
   getProductBySlug,
   getProductSlugs,
@@ -23,6 +23,9 @@ import { CompareButton } from "@/components/product/compare-button";
 import { StickyBuyBar } from "@/components/product/sticky-buy-bar";
 import { SocialProof } from "@/components/product/social-proof";
 import { PincodeChecker } from "@/components/product/pincode-checker";
+import { ProductAssurance } from "@/components/product/product-assurance";
+import { ProductBenefits } from "@/components/product/product-benefits";
+import { ValueCompare } from "@/components/product/value-compare";
 import { ProductTabs } from "@/components/product/product-tabs";
 import { ProductGrid } from "@/components/product/product-grid";
 import { SectionHeading } from "@/components/ui/section-heading";
@@ -131,24 +134,30 @@ export default async function ProductPage({ params }: { params: Params }) {
         ]}
       />
 
-      <div className="mt-6 grid gap-8 lg:grid-cols-2 lg:gap-12">
-        <ProductGallery
-          art={product.art}
-          name={product.name}
-          images={product.images}
-          video={product.video}
-          off={off}
-          badges={product.badges}
-        />
+      <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,420px)_1fr] lg:gap-12">
+        <div className="relative mx-auto w-full max-w-[420px]">
+          <ProductGallery
+            art={product.art}
+            name={product.name}
+            images={product.images}
+            video={product.video}
+            off={off}
+            badges={product.badges}
+          />
+          {/* Amazon-style: compact share + compare icons on the image corner. */}
+          <div className="absolute right-3 top-3 z-10 flex items-center gap-2">
+            <ShareButton title={product.name} iconOnly />
+            <CompareButton
+              slug={product.slug}
+              name={shortTitle(product.name)}
+              category={product.category}
+              variant="icon"
+            />
+          </div>
+        </div>
 
         <div>
-          <div className="flex items-start justify-between gap-3">
-            <p className="tech-label pt-1">{product.brand}</p>
-            <div className="flex shrink-0 items-center gap-2">
-              <ShareButton title={product.name} />
-              <CompareButton slug={product.slug} name={shortTitle(product.name)} category={product.category} />
-            </div>
-          </div>
+          <p className="tech-label">{product.brand}</p>
           <h1 className="mt-2.5 text-pretty text-xl font-semibold leading-snug sm:text-2xl">
             {product.name}
           </h1>
@@ -156,6 +165,8 @@ export default async function ProductPage({ params }: { params: Params }) {
           <div className="mt-3">
             <RatingStars rating={product.rating} count={product.reviewCount} size="md" />
           </div>
+
+          <ProductAssurance warrantyMonths={product.warrantyMonths} />
 
           <div className="mt-5 border-y border-border py-5">
             <Price product={product} size="lg" />
@@ -174,8 +185,9 @@ export default async function ProductPage({ params }: { params: Params }) {
               />
               {inStock ? (
                 lowStock ? (
-                  <span className="text-accent-bright">
-                    Only {product.stock} left in stock
+                  <span className="inline-flex items-center gap-1.5 font-medium text-accent-bright">
+                    <Flame size={14} className="text-danger" />
+                    Selling fast — only {product.stock} left
                   </span>
                 ) : (
                   <span className="text-success">In stock</span>
@@ -192,21 +204,16 @@ export default async function ProductPage({ params }: { params: Params }) {
             <ProductPurchase id={product.id} name={shortTitle(product.name)} price={product.price} stock={product.stock} />
           </div>
 
+          <div className="mt-4">
+            <PincodeChecker />
+          </div>
+
           <p className="mt-6 text-[0.95rem] leading-relaxed text-muted">
             {product.shortDescription}
           </p>
 
-          <ul className="mt-4 space-y-2">
-            {product.highlights.map((h) => (
-              <li key={h} className="flex items-start gap-2.5 text-sm">
-                <Check size={16} className="mt-0.5 shrink-0 text-accent" />
-                <span className="text-foreground">{h}</span>
-              </li>
-            ))}
-          </ul>
-
-          <div className="mt-6">
-            <PincodeChecker />
+          <div className="mt-5">
+            <ProductBenefits highlights={product.highlights} />
           </div>
 
           <div className="mt-6">
@@ -227,6 +234,17 @@ export default async function ProductPage({ params }: { params: Params }) {
           rating={product.rating}
           reviewCount={product.reviewCount}
         />
+      </div>
+
+      {/* why GIZMORAC — value comparison */}
+      <div className="mt-16 text-center">
+        <p className="tech-label !text-accent-bright">Why GIZMORAC</p>
+        <h2 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
+          Buy with confidence
+        </h2>
+        <div className="mt-8">
+          <ValueCompare />
+        </div>
       </div>
 
       {/* related */}
@@ -251,8 +269,10 @@ export default async function ProductPage({ params }: { params: Params }) {
         id={product.id}
         name={product.name}
         price={product.price}
+        mrp={product.mrp}
         stock={product.stock}
         art={product.art}
+        image={product.image ?? null}
       />
     </div>
   );
