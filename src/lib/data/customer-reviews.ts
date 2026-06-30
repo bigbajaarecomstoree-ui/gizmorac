@@ -26,6 +26,15 @@ export async function getDbReviewsForSlug(slug: string): Promise<Review[]> {
   return rows.map(toReview);
 }
 
+/** Most recent real customer reviews store-wide (for the social-proof spotlight). */
+export async function getRecentReviews(limit = 12): Promise<Review[]> {
+  const rows = await prisma.review.findMany({
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  });
+  return rows.map(toReview);
+}
+
 /** Reviews a customer has already left on an order, keyed by productId. */
 export async function getReviewsForOrder(
   orderId: string,

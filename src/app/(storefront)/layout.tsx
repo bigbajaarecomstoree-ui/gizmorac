@@ -8,18 +8,50 @@ import { PromoPopups } from "@/components/promo/promo-popups";
 import { Analytics } from "@/components/analytics/analytics";
 import { getCurrentCustomer } from "@/lib/customer-auth";
 import { getSettings, whatsappLink } from "@/lib/data/settings";
-import { getVisibleCategories } from "@/lib/data/queries";
+import { getVisibleCategories, getReviews, getProductsBySlugs } from "@/lib/data/queries";
+import { getRecentReviews } from "@/lib/data/customer-reviews";
+import { shortTitle } from "@/lib/format";
+import { ReviewSpotlight, type SpotlightReview } from "@/components/product/review-spotlight";
 
 export default async function StorefrontLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const [customer, settings, categories] = await Promise.all([
+  const [customer, settings, categories, seeded, realReviews] = await Promise.all([
     getCurrentCustomer(),
     getSettings(),
     getVisibleCategories(),
+    getReviews(12),
+    getRecentReviews(12),
   ]);
 
   const waHref = whatsappLink(settings.whatsappNumber);
+
+  // Floating review spotlight — real customer reviews first, then the existing
+  // review set; both are reviews already shown on the product pages.
+  const reviewPool = [...realReviews, ...seeded].filter((r) => r.productSlug);
+  const reviewProducts = await getProductsBySlugs([
+    ...new Set(reviewPool.map((r) => r.productSlug as string)),
+  ]);
+  const productBySlug = new Map(reviewProducts.map((p) => [p.slug, p]));
+  const spotlight: SpotlightReview[] = reviewPool
+    .map((r) => {
+      const p = productBySlug.get(r.productSlug as string);
+      if (!p) return null;
+      return {
+        id: r.id,
+        author: r.author,
+        rating: r.rating,
+        title: r.title,
+        body: r.body,
+        verified: r.verified,
+        productName: shortTitle(p.name),
+        productSlug: p.slug,
+        image: p.image ?? null,
+        art: p.art,
+      };
+    })
+    .filter((x): x is SpotlightReview => x !== null)
+    .slice(0, 10);
 
   return (
     <StoreProvider loggedIn={Boolean(customer)}>
@@ -49,6 +81,7 @@ export default async function StorefrontLayout({
         />
         <WhatsAppButton href={waHref} />
         <CompareTray />
+        <ReviewSpotlight items={spotlight} />
         <Analytics />
         <PromoPopups
           browse={{

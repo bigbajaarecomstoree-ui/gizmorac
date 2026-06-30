@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Image from "next/image";
-import { Play } from "lucide-react";
+import { Play, ZoomIn, X } from "lucide-react";
 import type { DeviceArt } from "@/lib/types";
 import { ProductArt } from "./product-art";
 import { Badge } from "@/components/ui/badge";
@@ -59,6 +59,16 @@ export function ProductGallery({
   ];
   const hasMedia = slides.length > 0;
   const [active, setActive] = React.useState(0);
+  const [zoom, setZoom] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!zoom) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setZoom(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [zoom]);
 
   // --- Fallback: original illustration gallery ---
   if (!hasMedia) {
@@ -106,6 +116,7 @@ export function ProductGallery({
   const current = slides[Math.min(active, slides.length - 1)];
 
   return (
+    <>
     <div className="mx-auto flex w-full max-w-[420px] flex-col gap-3">
       {current.kind === "image" ? (
         <Tilt className="relative aspect-square overflow-hidden rounded-2xl border border-border bg-surface">
@@ -117,6 +128,15 @@ export function ProductGallery({
             sizes="(min-width: 1024px) 45vw, 100vw"
             className="object-contain"
           />
+          <button
+            type="button"
+            onClick={() => setZoom(true)}
+            aria-label="Zoom image"
+            className="absolute inset-0 z-[5] cursor-zoom-in"
+          />
+          <span className="pointer-events-none absolute bottom-3 right-3 z-10 grid h-8 w-8 place-items-center rounded-full bg-background/80 text-muted shadow-sm backdrop-blur">
+            <ZoomIn size={15} />
+          </span>
           <Tags off={off} badges={badges} />
         </Tilt>
       ) : (
@@ -162,5 +182,36 @@ export function ProductGallery({
         </div>
       ) : null}
     </div>
+
+    {zoom && current.kind === "image" ? (
+      <div
+        role="dialog"
+        aria-modal="true"
+        onClick={() => setZoom(false)}
+        className="fixed inset-0 z-[90] flex items-center justify-center bg-black/90 p-4 print:hidden"
+      >
+        <button
+          type="button"
+          onClick={() => setZoom(false)}
+          aria-label="Close zoom"
+          className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 cursor-pointer"
+        >
+          <X size={20} />
+        </button>
+        <div
+          className="relative h-full max-h-[88vh] w-full max-w-4xl"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Image
+            src={current.src}
+            alt={name ?? "Product image"}
+            fill
+            sizes="90vw"
+            className="object-contain"
+          />
+        </div>
+      </div>
+    ) : null}
+    </>
   );
 }

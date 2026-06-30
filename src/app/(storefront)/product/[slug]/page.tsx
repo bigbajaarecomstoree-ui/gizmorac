@@ -26,6 +26,7 @@ import { PincodeChecker } from "@/components/product/pincode-checker";
 import { ProductAssurance } from "@/components/product/product-assurance";
 import { ProductBenefits } from "@/components/product/product-benefits";
 import { ValueCompare } from "@/components/product/value-compare";
+import { BundleAdd } from "@/components/product/bundle-add";
 import { ProductTabs } from "@/components/product/product-tabs";
 import { ProductGrid } from "@/components/product/product-grid";
 import { SectionHeading } from "@/components/ui/section-heading";
@@ -235,6 +236,22 @@ export default async function ProductPage({ params }: { params: Params }) {
           reviewCount={product.reviewCount}
         />
       </div>
+
+      {/* complete your setup — honest cross-sell */}
+      {related.length > 0 ? (
+        <div className="mx-auto mt-12 max-w-3xl">
+          <BundleAdd
+            items={[product, ...related].slice(0, 3).map((p) => ({
+              id: p.id,
+              slug: p.slug,
+              name: p.name,
+              price: p.price,
+              image: p.image ?? null,
+              art: p.art,
+            }))}
+          />
+        </div>
+      ) : null}
 
       {/* why GIZMORAC — value comparison */}
       <div className="mt-16 text-center">
