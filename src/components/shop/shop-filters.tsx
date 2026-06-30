@@ -1,13 +1,26 @@
 import Link from "next/link";
-import { Check, Star, X } from "lucide-react";
+import { Check, X } from "lucide-react";
 import type { Category, CategorySlug } from "@/lib/types";
 import { buildShopUrl, type RawParams } from "@/lib/shop-url";
-import { PriceSlider } from "./price-slider";
 import { cn } from "@/lib/utils";
 
-const RATINGS = [
-  { label: "4★ & above", value: "4" },
-  { label: "3★ & above", value: "3" },
+type Bracket = { label: string; min?: number; max?: number };
+
+// Quick price brackets — faster than dragging a slider, and consistent with the
+// rest of the (navigation-style) filter rows. Filtered to the live price range.
+const PRICE_BRACKETS: Bracket[] = [
+  { label: "Under ₹500", max: 500 },
+  { label: "₹500 – ₹1,000", min: 500, max: 1000 },
+  { label: "₹1,000 – ₹3,000", min: 1000, max: 3000 },
+  { label: "₹3,000 – ₹5,000", min: 3000, max: 5000 },
+  { label: "Above ₹5,000", min: 5000 },
+];
+
+const DISCOUNTS = [
+  { label: "20% off or more", value: "20" },
+  { label: "40% off or more", value: "40" },
+  { label: "60% off or more", value: "60" },
+  { label: "80% off or more", value: "80" },
 ];
 
 function Group({ title, children }: { title: string; children: React.ReactNode }) {
@@ -51,20 +64,19 @@ export function ShopFilters({
   counts,
   priceFloor,
   priceCeil,
-  priceValue,
 }: {
   params: RawParams;
   categories: Category[];
   counts: Record<CategorySlug, number>;
   priceFloor: number;
   priceCeil: number;
-  priceValue: number;
 }) {
   const hasFilters = Boolean(
     params.category ||
       params.minPrice ||
       params.maxPrice ||
       params.minRating ||
+      params.minDiscount ||
       params.availability,
   );
   const clearHref = buildShopUrl(params, {
@@ -72,9 +84,17 @@ export function ShopFilters({
     minPrice: undefined,
     maxPrice: undefined,
     minRating: undefined,
+    minDiscount: undefined,
     availability: undefined,
     page: undefined,
   });
+
+  const curMin = params.minPrice ? Number(params.minPrice) : undefined;
+  const curMax = params.maxPrice ? Number(params.maxPrice) : undefined;
+  // Only show brackets that can hold products within the catalog's price range.
+  const brackets = PRICE_BRACKETS.filter(
+    (b) => (b.min ?? 0) < priceCeil && (b.max ?? Infinity) > priceFloor,
+  );
 
   return (
     <div className="rounded-xl border border-border bg-surface p-5">
@@ -119,30 +139,37 @@ export function ShopFilters({
         </Group>
 
         <Group title="Price">
-          <PriceSlider
-            floor={priceFloor}
-            ceil={priceCeil}
-            value={priceValue}
-            params={params}
-          />
-        </Group>
-
-        <Group title="Rating">
-          {RATINGS.map((r) => {
-            const active = params.minRating === r.value;
+          {brackets.map((b) => {
+            const active = (b.min ?? undefined) === curMin && (b.max ?? undefined) === curMax;
             return (
               <Row
-                key={r.value}
+                key={b.label}
                 href={buildShopUrl(params, {
-                  minRating: active ? undefined : r.value,
+                  minPrice: active ? undefined : b.min ? String(b.min) : undefined,
+                  maxPrice: active ? undefined : b.max ? String(b.max) : undefined,
                   page: undefined,
                 })}
                 active={active}
               >
-                <span className="flex items-center gap-1.5">
-                  <Star size={13} className="fill-highlight text-highlight" />
-                  {r.label}
-                </span>
+                {b.label}
+              </Row>
+            );
+          })}
+        </Group>
+
+        <Group title="Discount">
+          {DISCOUNTS.map((d) => {
+            const active = params.minDiscount === d.value;
+            return (
+              <Row
+                key={d.value}
+                href={buildShopUrl(params, {
+                  minDiscount: active ? undefined : d.value,
+                  page: undefined,
+                })}
+                active={active}
+              >
+                {d.label}
               </Row>
             );
           })}

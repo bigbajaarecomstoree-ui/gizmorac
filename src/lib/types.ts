@@ -131,6 +131,8 @@ export interface ShopQuery {
   minPrice?: number;
   maxPrice?: number;
   minRating?: number;
+  /** Minimum discount off MRP, as a whole percent (e.g. 40 = "40% off or more"). */
+  minDiscount?: number;
   /** "in" = in stock, "out" = out of stock. */
   availability?: "in" | "out";
   q?: string;

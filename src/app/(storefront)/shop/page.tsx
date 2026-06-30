@@ -12,6 +12,7 @@ import {
 import { ProductGrid } from "@/components/product/product-grid";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { ShopFilters } from "@/components/shop/shop-filters";
+import { ActiveFilters } from "@/components/shop/active-filters";
 import { SortSelect } from "@/components/shop/sort-select";
 import { Pagination } from "@/components/shop/pagination";
 import { buttonVariants } from "@/components/ui/button";
@@ -35,7 +36,7 @@ function one(v: string | string[] | undefined): string | undefined {
 
 function toRaw(sp: Record<string, string | string[] | undefined>): RawParams {
   const out: RawParams = {};
-  for (const k of ["category", "sort", "minPrice", "maxPrice", "minRating", "availability", "q", "page"]) {
+  for (const k of ["category", "sort", "minPrice", "maxPrice", "minRating", "minDiscount", "availability", "q", "page"]) {
     const v = one(sp[k]);
     if (v) out[k] = v;
   }
@@ -73,6 +74,7 @@ export default async function ShopPage({
     minPrice: raw.minPrice ? Number(raw.minPrice) : undefined,
     maxPrice: raw.maxPrice ? Number(raw.maxPrice) : undefined,
     minRating: raw.minRating ? Number(raw.minRating) : undefined,
+    minDiscount: raw.minDiscount ? Number(raw.minDiscount) : undefined,
     availability:
       raw.availability === "in" || raw.availability === "out"
         ? raw.availability
@@ -93,9 +95,6 @@ export default async function ShopPage({
 
   const priceFloor = 100;
   const priceCeil = Math.max(priceFloor + 100, Math.ceil(priceBounds.max / 100) * 100);
-  const priceValue = raw.maxPrice
-    ? Math.min(priceCeil, Math.max(priceFloor, Number(raw.maxPrice)))
-    : priceCeil;
 
   const category = raw.category
     ? await getCategoryBySlug(raw.category)
@@ -133,7 +132,6 @@ export default async function ShopPage({
               counts={counts}
               priceFloor={priceFloor}
               priceCeil={priceCeil}
-              priceValue={priceValue}
             />
           </div>
         </aside>
@@ -170,10 +168,12 @@ export default async function ShopPage({
                 counts={counts}
                 priceFloor={priceFloor}
                 priceCeil={priceCeil}
-                priceValue={priceValue}
               />
             </div>
           </details>
+
+          {/* active filters as removable chips */}
+          <ActiveFilters params={raw} categories={categories} />
 
           {/* grid */}
           {result.items.length > 0 ? (

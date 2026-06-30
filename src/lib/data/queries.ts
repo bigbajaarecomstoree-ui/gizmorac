@@ -342,7 +342,13 @@ export async function queryProducts(
   else if (query.availability === "out") where.stock = { lte: 0 };
 
   const rows = await prisma.product.findMany({ where });
-  const sorted = sortProducts(rows.map(toProduct), query.sort ?? "popular");
+  let mapped = rows.map(toProduct);
+  // Discount is derived (MRP vs price), so it's filtered in-memory rather than
+  // in the SQL WHERE — fine at this catalog size, same pattern as sorting.
+  if (typeof query.minDiscount === "number" && query.minDiscount > 0) {
+    mapped = mapped.filter((p) => discountPercent(p) >= query.minDiscount!);
+  }
+  const sorted = sortProducts(mapped, query.sort ?? "popular");
 
   const total = sorted.length;
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
