@@ -14,6 +14,8 @@ import { limitByIp } from "@/lib/rate-limit";
 
 export interface AuthState {
   error?: string;
+  /** Echoed back on failure so the form can preserve the entered email. */
+  email?: string;
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -43,15 +45,15 @@ export async function signupAction(
   const password = (formData.get("password") ?? "").toString();
   const confirm = (formData.get("confirm") ?? "").toString();
 
-  if (!fullName) return { error: "Please enter your full name." };
-  if (!EMAIL_RE.test(email)) return { error: "Enter a valid email address." };
+  if (!fullName) return { error: "Please enter your full name.", email };
+  if (!EMAIL_RE.test(email)) return { error: "Enter a valid email address.", email };
   if (password.length < 8)
-    return { error: "Password must be at least 8 characters." };
-  if (password !== confirm) return { error: "Passwords do not match." };
+    return { error: "Password must be at least 8 characters.", email };
+  if (password !== confirm) return { error: "Passwords do not match.", email };
 
   const existing = await prisma.customer.findUnique({ where: { email } });
   if (existing) {
-    return { error: "An account with this email already exists. Try logging in." };
+    return { error: "An account with this email already exists. Try logging in.", email };
   }
 
   const customer = await prisma.customer.create({
@@ -91,13 +93,14 @@ export async function loginAction(
       action: "customer.login.failed",
       message: "Failed customer login",
     });
-    return { error: "Incorrect email or password." };
+    return { error: "Incorrect email or password.", email };
   }
 
   if (customer.deactivatedAt) {
     return {
       error:
         "This account has been deactivated. Please contact us to restore it.",
+      email,
     };
   }
 

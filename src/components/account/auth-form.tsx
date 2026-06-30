@@ -1,9 +1,9 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Loader2 } from "lucide-react";
+import { Loader2, Eye, EyeOff, ArrowRight, Lock } from "lucide-react";
 import {
   loginAction,
   signupAction,
@@ -12,7 +12,40 @@ import {
 import { Button } from "@/components/ui/button";
 
 const inputCls =
-  "h-12 w-full rounded-lg border border-border bg-background px-4 text-sm placeholder:text-faint focus:border-accent focus:outline-none";
+  "h-12 w-full rounded-lg border border-border bg-background px-4 text-sm transition-colors placeholder:text-faint focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none";
+
+/** Password input with a show/hide eye toggle. */
+function PasswordField({
+  name,
+  autoComplete,
+  placeholder,
+}: {
+  name: string;
+  autoComplete: string;
+  placeholder: string;
+}) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="relative">
+      <input
+        name={name}
+        type={show ? "text" : "password"}
+        required
+        autoComplete={autoComplete}
+        className={`${inputCls} pr-11`}
+        placeholder={placeholder}
+      />
+      <button
+        type="button"
+        onClick={() => setShow((s) => !s)}
+        aria-label={show ? "Hide password" : "Show password"}
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-faint transition-colors hover:text-foreground cursor-pointer"
+      >
+        {show ? <EyeOff size={18} /> : <Eye size={18} />}
+      </button>
+    </div>
+  );
+}
 
 export function AuthForm({
   mode,
@@ -49,7 +82,7 @@ export function AuthForm({
         <p className="mt-1.5 text-sm text-muted">
           {isSignup
             ? "Track orders, save addresses and check out faster."
-            : "Log in to view your orders and account."}
+            : "Sign in to track orders, manage warranties and check out faster."}
         </p>
       </div>
 
@@ -61,7 +94,14 @@ export function AuthForm({
         {isSignup ? (
           <label className="block">
             <span className="mb-1.5 block text-sm font-medium">Full name</span>
-            <input name="fullName" required autoComplete="name" className={inputCls} placeholder="Aarav Sharma" />
+            <input
+              name="fullName"
+              required
+              autoComplete="name"
+              autoFocus
+              className={inputCls}
+              placeholder="Aarav Sharma"
+            />
           </label>
         ) : null}
 
@@ -72,6 +112,8 @@ export function AuthForm({
             type="email"
             required
             autoComplete="email"
+            autoFocus={!isSignup}
+            defaultValue={state?.email ?? ""}
             className={inputCls}
             placeholder="you@example.com"
           />
@@ -88,12 +130,9 @@ export function AuthForm({
 
         <label className="block">
           <span className="mb-1.5 block text-sm font-medium">Password</span>
-          <input
+          <PasswordField
             name="password"
-            type="password"
-            required
             autoComplete={isSignup ? "new-password" : "current-password"}
-            className={inputCls}
             placeholder={isSignup ? "At least 8 characters" : "Your password"}
           />
         </label>
@@ -101,14 +140,7 @@ export function AuthForm({
         {isSignup ? (
           <label className="block">
             <span className="mb-1.5 block text-sm font-medium">Confirm password</span>
-            <input
-              name="confirm"
-              type="password"
-              required
-              autoComplete="new-password"
-              className={inputCls}
-              placeholder="Re-enter password"
-            />
+            <PasswordField name="confirm" autoComplete="new-password" placeholder="Re-enter password" />
           </label>
         ) : null}
 
@@ -118,10 +150,28 @@ export function AuthForm({
           </p>
         ) : null}
 
-        <Button type="submit" size="lg" className="w-full" disabled={pending}>
-          {pending ? <Loader2 size={16} className="animate-spin" /> : null}
-          {isSignup ? "Create account" : "Log in"}
+        <Button
+          type="submit"
+          size="lg"
+          className="group w-full transition-transform hover:-translate-y-0.5"
+          disabled={pending}
+        >
+          {pending ? (
+            <>
+              <Loader2 size={16} className="animate-spin" />
+              {isSignup ? "Creating account…" : "Signing in…"}
+            </>
+          ) : (
+            <>
+              {isSignup ? "Create your free account" : "Secure Login"}
+              <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
+            </>
+          )}
         </Button>
+
+        <p className="flex items-center justify-center gap-1.5 text-xs text-faint">
+          <Lock size={12} /> Your information is encrypted and secure.
+        </p>
       </form>
 
       <p className="mt-5 text-center text-sm text-muted">
@@ -136,7 +186,7 @@ export function AuthForm({
           <>
             New to GIZMORAC?{" "}
             <Link href={`/signup${nextQuery}`} className="font-medium text-accent-bright hover:text-accent">
-              Create an account
+              Create your free account →
             </Link>
           </>
         )}
