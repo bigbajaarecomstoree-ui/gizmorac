@@ -66,6 +66,7 @@ function MiniCard({
   className?: string;
   delay?: number;
 }) {
+  const off = discountPercent(product);
   return (
     <div
       className={cn(
@@ -102,9 +103,14 @@ function MiniCard({
           <p className="truncate text-[0.7rem] font-medium text-muted">
             {shortTitle(product.name)}
           </p>
-          <p className="readout mt-0.5 text-xs font-semibold text-danger">
-            {formatINR(product.price)}
-          </p>
+          <div className="mt-0.5 flex flex-wrap items-baseline gap-x-1.5">
+            <span className="readout text-xs font-semibold text-success">
+              {formatINR(product.price)}
+            </span>
+            {off > 0 ? (
+              <span className="text-[0.625rem] font-semibold text-success">{off}% off</span>
+            ) : null}
+          </div>
         </div>
       </Link>
     </div>
@@ -190,13 +196,7 @@ export async function Hero() {
           <dl className="mt-10 grid max-w-md grid-cols-2 gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-4">
             {TRUST.map((t) => (
               <div key={t.label} className="bg-surface/80 px-3 py-4 text-center">
-                <t.icon
-                  size={16}
-                  className={cn(
-                    "mx-auto mb-1.5",
-                    t.label === "Rating" ? "text-highlight" : "text-accent",
-                  )}
-                />
+                <t.icon size={16} className="mx-auto mb-1.5 text-accent" />
                 <dt className="text-sm font-semibold text-foreground">{t.value}</dt>
                 <dd className="tech-label mt-0.5 !text-[0.5625rem]">{t.label}</dd>
               </div>
@@ -281,7 +281,7 @@ export async function Hero() {
               <p className="line-clamp-2 text-xs font-medium text-muted">
                 {shortTitle(hero.name)}
               </p>
-              <Price product={hero} size="sm" className="mt-1 justify-center" />
+              <Price product={hero} size="sm" tone="ink" className="mt-1 justify-center" />
             </Link>
           ) : null}
         </div>

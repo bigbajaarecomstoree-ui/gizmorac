@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ChevronRight, Heart, Menu, Search, Settings, ShoppingCart, User, X } from "lucide-react";
 import { useStore } from "@/components/store/store-provider";
@@ -91,15 +90,8 @@ export function SiteHeader({
             {open ? <X size={20} /> : <Menu size={20} />}
           </button>
 
-          <Link href="/" className="flex shrink-0 items-center gap-1" aria-label="GIZMORAC home">
-            <Image
-              src="/logo.png"
-              alt=""
-              width={523}
-              height={586}
-              priority
-              className="hidden h-9 w-auto object-contain min-[380px]:block"
-            />
+          {/* Logo mark removed until the client's new logo is supplied — wordmark kept. */}
+          <Link href="/" className="flex shrink-0 items-center" aria-label="GIZMORAC home">
             <span className="font-display text-lg font-bold tracking-tight text-foreground">
               GIZMO<span className="text-accent">RAC</span>
             </span>
@@ -114,7 +106,7 @@ export function SiteHeader({
               >
                 {item.label}
                 {item.badge ? (
-                  <span className="absolute -right-1 -top-1 rounded-full bg-accent px-1.5 py-0.5 text-[0.5rem] font-bold uppercase leading-none tracking-wider text-on-accent shadow-sm">
+                  <span className="absolute -right-1 -top-1 animate-hot-pulse rounded-full bg-accent px-1.5 py-0.5 text-[0.5rem] font-bold uppercase leading-none tracking-wider text-on-accent shadow-sm">
                     {item.badge}
                   </span>
                 ) : null}
@@ -193,7 +185,7 @@ export function SiteHeader({
                 <span className="flex items-center gap-2">
                   {item.label}
                   {item.badge ? (
-                    <span className="rounded-full bg-accent px-1.5 py-0.5 text-[0.5rem] font-bold uppercase leading-none tracking-wider text-on-accent">
+                    <span className="animate-hot-pulse rounded-full bg-accent px-1.5 py-0.5 text-[0.5rem] font-bold uppercase leading-none tracking-wider text-on-accent">
                       {item.badge}
                     </span>
                   ) : null}

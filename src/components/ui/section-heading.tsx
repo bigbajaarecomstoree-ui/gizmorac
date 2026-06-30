@@ -26,7 +26,7 @@ export function SectionHeading({
             <span className="tech-label !text-accent-bright">{eyebrow}</span>
           </div>
         ) : null}
-        <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">{title}</h2>
+        <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h2>
         {description ? (
           <p className="mt-3 text-[0.95rem] leading-relaxed text-muted">
             {description}

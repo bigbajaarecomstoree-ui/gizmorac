@@ -149,7 +149,7 @@ export default async function ProductPage({ params }: { params: Params }) {
               <CompareButton slug={product.slug} name={shortTitle(product.name)} category={product.category} />
             </div>
           </div>
-          <h1 className="mt-1.5 text-2xl font-bold leading-tight sm:text-3xl">
+          <h1 className="mt-2.5 text-pretty text-xl font-semibold leading-snug sm:text-2xl">
             {product.name}
           </h1>
 
@@ -188,7 +188,11 @@ export default async function ProductPage({ params }: { params: Params }) {
             <SocialProof seed={product.slug} />
           </div>
 
-          <p className="mt-5 text-[0.95rem] leading-relaxed text-muted">
+          <div id="pdp-purchase" className="mt-6">
+            <ProductPurchase id={product.id} name={shortTitle(product.name)} price={product.price} stock={product.stock} />
+          </div>
+
+          <p className="mt-6 text-[0.95rem] leading-relaxed text-muted">
             {product.shortDescription}
           </p>
 
@@ -200,10 +204,6 @@ export default async function ProductPage({ params }: { params: Params }) {
               </li>
             ))}
           </ul>
-
-          <div id="pdp-purchase" className="mt-7">
-            <ProductPurchase id={product.id} name={shortTitle(product.name)} price={product.price} stock={product.stock} />
-          </div>
 
           <div className="mt-6">
             <PincodeChecker />

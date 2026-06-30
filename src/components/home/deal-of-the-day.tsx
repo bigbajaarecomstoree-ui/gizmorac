@@ -155,7 +155,7 @@ export async function DealOfTheDay() {
 
             <div className="mt-4">
               <div className="flex flex-wrap items-center gap-3">
-                <Price product={deal} size="lg" showDiscount={false} />
+                <Price product={deal} size="lg" tone="ink" showDiscount={false} />
                 <Badge variant="accent" size="sm" className="font-semibold">
                   {off}% OFF
                 </Badge>
