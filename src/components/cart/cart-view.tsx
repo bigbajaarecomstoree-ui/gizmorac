@@ -231,7 +231,9 @@ export function CartView({
           <dl className="mt-4 space-y-3 text-sm">
             <div className="flex justify-between">
               <dt className="text-muted">Subtotal</dt>
-              <dd>{formatINR(subtotal)}</dd>
+              {/* Show the list-price (MRP) subtotal so the discount line below
+                  reconciles: Subtotal − Product discount = selling price. */}
+              <dd>{formatINR(productDiscount > 0 ? mrpTotal : subtotal)}</dd>
             </div>
             {productDiscount > 0 ? (
               <div className="flex justify-between text-success">
