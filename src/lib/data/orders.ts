@@ -452,8 +452,18 @@ async function buildSummary(bounds: {
   );
   const operatingProfit = grossProfit - shipping - gatewayFees - codFees;
 
-  const pct = (n: number) => (orders.length ? Math.round((n / orders.length) * 1000) / 10 : 0);
-  const refundRate = pct(orders.filter((o) => o.status === "Refunded").length);
+  // Rates are over orders that reached the customer (delivered / returned /
+  // refunded / replacement) or had money refunded — not every order in the
+  // window. Pending + cancelled orders shouldn't dilute a quality signal toward
+  // zero. A refund counts when money moved (refundStatus) or the order is marked
+  // Refunded, so a prepaid cancel-with-refund isn't invisible.
+  const refundedMoney = (o: (typeof orders)[number]) =>
+    o.status === "Refunded" || o.refundStatus === "Initiated" || o.refundStatus === "Completed";
+  const reachedBase = orders.filter(
+    (o) => ["Delivered", "Returned", "Refunded", "Replacement"].includes(o.status) || refundedMoney(o),
+  ).length;
+  const pct = (n: number) => (reachedBase ? Math.round((n / reachedBase) * 1000) / 10 : 0);
+  const refundRate = pct(orders.filter(refundedMoney).length);
   const returnRate = pct(orders.filter((o) => o.status === "Returned").length);
 
   return {
@@ -522,9 +532,10 @@ export async function getFinanceTrend(days = 30): Promise<FinanceTrendPoint[]> {
     d.setDate(now.getDate() - i);
     buckets.set(key(d), { date: key(d), label: label(d), revenue: 0, profit: 0, refunds: 0 });
   }
-  const since = new Date(now);
-  since.setDate(now.getDate() - (days - 1));
-  since.setHours(0, 0, 0, 0);
+  // IST midnight of the earliest day, so the fetch window lines up with the
+  // IST-keyed buckets (a server-local midnight is ~5.5h off on a UTC host and
+  // silently truncated the earliest day's revenue/profit).
+  const since = istDayStart(new Date(now.getTime() - (days - 1) * 24 * 60 * 60 * 1000));
 
   const [rows, costRows] = await Promise.all([
     prisma.order.findMany({ where: { createdAt: { gte: since } } }),
@@ -538,7 +549,7 @@ export async function getFinanceTrend(days = 30): Promise<FinanceTrendPoint[]> {
     if (!b) continue;
     if (o.status === "Refunded") {
       b.refunds += o.total;
-    } else if (!["Cancelled", "Returned"].includes(o.status)) {
+    } else if (!NON_REVENUE.includes(o.status)) {
       b.revenue += o.total;
       const cogs = o.items.reduce((n, it) => n + (costById.get(it.id) ?? 0) * it.qty, 0);
       b.profit += o.total - cogs;

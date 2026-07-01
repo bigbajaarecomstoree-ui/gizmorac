@@ -83,8 +83,17 @@ export interface RefundStats {
 }
 
 export function refundStats(orders: Order[]): RefundStats {
-  const total = orders.length;
-  const refunded = orders.filter((o) => o.status === "Refunded").length;
+  // Count a refund when money actually moved (refundStatus) or the order is
+  // marked Refunded — so a prepaid cancel-with-refund (status stays "Cancelled")
+  // isn't invisible. Rate is over orders that reached the customer, not every
+  // order ever placed, which would dilute it toward zero.
+  const wasRefunded = (o: Order) =>
+    o.status === "Refunded" || o.refundStatus === "Initiated" || o.refundStatus === "Completed";
+  const reached = orders.filter(
+    (o) => ["Delivered", "Returned", "Refunded", "Replacement"].includes(o.status) || wasRefunded(o),
+  );
+  const refunded = orders.filter(wasRefunded).length;
+  const total = reached.length;
   const rate = total ? Math.round((refunded / total) * 100) : 0;
   return { refunded, total, rate };
 }

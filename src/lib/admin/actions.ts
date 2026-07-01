@@ -26,7 +26,7 @@ import {
   estimateOrderFreight,
 } from "@/lib/shiprocket";
 import { refundOrderPayment, cancelOrderEverywhere } from "@/lib/data/order-fulfillment";
-import { getOrderById } from "@/lib/data/orders";
+import { getOrderById, ORDER_STATUSES } from "@/lib/data/orders";
 import { recordShipmentUpdate } from "@/lib/data/shipments";
 import { logEvent } from "@/lib/data/logs";
 import { limitByIp } from "@/lib/rate-limit";
@@ -776,6 +776,21 @@ export async function updateOrderStatus(formData: FormData): Promise<OrderStatus
   await assertAdmin();
   const id = str(formData, "id");
   const status = str(formData, "status");
+
+  // Validate the target, and guard against re-touching a terminal order. Once an
+  // order is Cancelled / Returned / Refunded its money + stock are already
+  // settled, so re-running the refund / cancel / replacement side-effects below
+  // would double-act (double refund, double restock). A no-op transition is a
+  // benign double-submit — succeed without repeating the side-effects.
+  if (!(ORDER_STATUSES as string[]).includes(status)) {
+    return { ok: false, error: "Unknown order status." };
+  }
+  const current = await prisma.order.findUnique({ where: { id }, select: { status: true } });
+  if (!current) return { ok: false, error: "Order not found." };
+  if (current.status === status) return { ok: true, note: "No change." };
+  if (["Cancelled", "Returned", "Refunded"].includes(current.status)) {
+    return { ok: false, error: `This order is already ${current.status} and can't be changed.` };
+  }
 
   // Refunds move real money, so fire the refund BEFORE flipping the label: a
   // gateway failure must not leave an order marked "Refunded" with nothing sent.
