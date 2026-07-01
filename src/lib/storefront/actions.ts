@@ -14,6 +14,7 @@ import { initiatePayment, getPhonePeConfig } from "@/lib/phonepe";
 import { checkServiceability } from "@/lib/shiprocket";
 import { getProductsBySlugs } from "@/lib/data/queries";
 import { cancelOrderEverywhere } from "@/lib/data/order-fulfillment";
+import { revalidateAdminOrderViews } from "@/lib/data/revalidate";
 import {
   canCancelOrder,
   cancelWindowOpen,
@@ -491,10 +492,7 @@ export async function placeOrder(
   });
 
   revalidatePath("/account");
-  revalidatePath("/admin");
-  revalidatePath("/admin/orders");
-  revalidatePath("/admin/reports");
-  revalidatePath("/admin/inventory");
+  revalidateAdminOrderViews();
   return {
     ok: true,
     orderNumber,
@@ -908,7 +906,7 @@ export async function cancelMyOrder(
 
   revalidatePath("/account");
   revalidatePath(`/order/${order.orderNumber}`);
-  revalidatePath("/admin/orders");
+  revalidateAdminOrderViews();
   return { ok: true, message: res.note };
 }
 

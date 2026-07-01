@@ -11,6 +11,7 @@ import { isAuthenticated } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logEvent } from "@/lib/data/logs";
 import { applyInventoryTxn } from "@/lib/postorder/inventory";
+import { revalidateAdminOrderViews } from "@/lib/data/revalidate";
 import { COD_PINCODE_MODES } from "@/lib/data/cod-pincode";
 
 export interface CodOpResult {
@@ -24,9 +25,8 @@ async function guard() {
 }
 
 function done(orderId: string) {
+  revalidateAdminOrderViews();
   revalidatePath(`/admin/orders/${orderId}`);
-  revalidatePath("/admin/cod");
-  revalidatePath("/admin/orders");
 }
 
 /** Audit row + event log carrying the before/after values (spec: observability). */

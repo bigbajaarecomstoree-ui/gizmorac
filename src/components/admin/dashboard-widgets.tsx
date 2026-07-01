@@ -127,7 +127,7 @@ export function BestSellerCard({ best }: { best: BestSeller | null }) {
         <div className="mt-3">
           <div className="line-clamp-2 text-base font-bold leading-snug">{short(best.name)}</div>
           <div className="readout mt-1 text-lg font-bold text-accent">{formatINR(best.revenue)}</div>
-          <div className="tech-label mt-0.5">{best.units} sold</div>
+          <div className="tech-label mt-0.5">{best.units} sold · all-time</div>
         </div>
       ) : (
         <p className="mt-3 text-sm text-muted">No sales yet.</p>
@@ -181,9 +181,11 @@ export function StoreHealthCard({
 }) {
   const rows = [
     {
-      label: "Revenue (MoM)",
+      // With no prior month to compare against (new store / first month), show
+      // this month's actual revenue instead of a bare "—".
+      label: trend.pct === null ? "Revenue (this month)" : "Revenue (MoM)",
       value:
-        trend.pct === null ? "—" : `${trend.pct >= 0 ? "+" : ""}${trend.pct}%`,
+        trend.pct === null ? formatINR(trend.thisMonth) : `${trend.pct >= 0 ? "+" : ""}${trend.pct}%`,
       good: trend.pct === null ? null : trend.pct >= 0,
       icon: trend.pct !== null && trend.pct < 0 ? ArrowDownRight : ArrowUpRight,
     },
@@ -198,7 +200,7 @@ export function StoreHealthCard({
       good: pending === 0,
     },
     {
-      label: "Refund rate",
+      label: "Refund rate (all-time)",
       value: `${refunds.rate}%`,
       good: refunds.rate <= 10,
     },

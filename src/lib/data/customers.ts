@@ -96,7 +96,7 @@ export async function getCustomersWithStats(): Promise<CustomerWithStats[]> {
     if (!NON_REVENUE.includes(o.status)) cur.spent += o.total;
     if (o.status === "Cancelled") cur.cancels += 1;
     if (o.status === "Returned" || o.status === "Refunded") cur.returns += 1;
-    if (o.paymentMethod !== "PhonePe") cur.codOrders += 1;
+    if (o.paymentMethod !== "PhonePe" && !NON_REVENUE.includes(o.status)) cur.codOrders += 1;
     const ts = o.createdAt.getTime();
     if (ts >= cur.latestAt) {
       cur.latestAt = ts;

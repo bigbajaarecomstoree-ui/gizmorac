@@ -26,9 +26,14 @@ export async function getCodStats(): Promise<CodStats> {
     prisma.order.count({ where: cod }),
     prisma.order.count({ where: { ...cod, status: "Delivered" } }),
     prisma.order.count({ where: { ...cod, rtoStatus: { notIn: NOT_RTO } } }),
-    // Advance actually collected = advance on orders where it cleared.
+    // Advance actually collected = advance on orders where it cleared and was
+    // NOT later refunded (a pre-dispatch cancel refunds the advance).
     prisma.order.aggregate({
-      where: { ...cod, paymentStatus: { in: ["PartiallyPaid", "Paid"] } },
+      where: {
+        ...cod,
+        paymentStatus: { in: ["PartiallyPaid", "Paid"] },
+        refundStatus: { notIn: ["Initiated", "Completed"] },
+      },
       _sum: { codAdvancePaise: true },
     }),
     // Outstanding = balance still to collect on delivery (not yet collected, live orders).

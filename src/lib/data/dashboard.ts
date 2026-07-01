@@ -1,6 +1,7 @@
 import type { Order } from "@/lib/types";
 import { prisma } from "@/lib/prisma";
 import { NON_REVENUE } from "./revenue";
+import { isHighRiskCustomer } from "./customers";
 
 /** Best-selling product by revenue across fulfilled orders. */
 export interface BestSeller {
@@ -45,8 +46,14 @@ export function customerSegments(orders: Order[]): CustomerSegments {
     if (list.length > 1) repeat++;
     const cancels = list.filter((o) => o.status === "Cancelled").length;
     const returns = list.filter((o) => o.status === "Returned" || o.status === "Refunded").length;
-    const returnRate = list.length ? (returns / list.length) * 100 : 0;
-    if (cancels >= 3 || returnRate >= 40) highRisk++;
+    const codOrders = list.filter(
+      (o) => o.paymentMethod !== "PhonePe" && !NON_REVENUE.includes(o.status),
+    ).length;
+    // One shared definition of "high risk" (same as the Customers page) so a
+    // customer is never risky on one screen and safe on another.
+    if (isHighRiskCustomer({ orderCount: list.length, totalSpent: 0, cancels, returns, codOrders })) {
+      highRisk++;
+    }
   }
   return { repeat, highRisk };
 }

@@ -207,8 +207,10 @@ function buildSeries(
 }
 
 export async function getDashboardChart(): Promise<DashboardChart> {
-  // 25 months covers the widest range (last 12 months) plus its prior-year window.
-  const since = new Date(Date.now() - 25 * 31 * DAY);
+  // 26 months covers the widest range (last 12 months) plus its full prior-year
+  // window (YoY reaches back ~23 months) with a clean margin so the earliest YoY
+  // bucket is never truncated.
+  const since = new Date(Date.now() - 26 * 31 * DAY);
   const rows = await prisma.order.findMany({
     where: { createdAt: { gte: since } },
     select: { createdAt: true, total: true, status: true },

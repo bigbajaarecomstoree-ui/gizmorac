@@ -27,6 +27,7 @@ import {
 } from "@/lib/shiprocket";
 import { refundOrderPayment, cancelOrderEverywhere } from "@/lib/data/order-fulfillment";
 import { getOrderById, ORDER_STATUSES } from "@/lib/data/orders";
+import { revalidateAdminOrderViews } from "@/lib/data/revalidate";
 import { recordShipmentUpdate } from "@/lib/data/shipments";
 import { logEvent } from "@/lib/data/logs";
 import { limitByIp } from "@/lib/rate-limit";
@@ -884,10 +885,8 @@ export async function updateOrderStatus(formData: FormData): Promise<OrderStatus
     });
   }
 
-  revalidatePath("/admin/orders");
+  revalidateAdminOrderViews();
   revalidatePath(`/admin/orders/${id}`);
-  revalidatePath("/admin");
-  revalidatePath("/admin/reports");
   revalidatePath(`/order/${updated.orderNumber}`);
   revalidatePath("/account");
 
