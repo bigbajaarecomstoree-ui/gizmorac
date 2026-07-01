@@ -1,7 +1,6 @@
 import type { Order } from "@/lib/types";
 import { prisma } from "@/lib/prisma";
-
-const NON_REVENUE = ["Cancelled", "Returned", "Refunded"];
+import { NON_REVENUE } from "./revenue";
 
 /** Best-selling product by revenue across fulfilled orders. */
 export interface BestSeller {

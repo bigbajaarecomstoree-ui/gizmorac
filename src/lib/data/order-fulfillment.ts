@@ -4,6 +4,7 @@
 import { prisma } from "@/lib/prisma";
 import { initiateRefund } from "@/lib/phonepe";
 import { cancelShiprocketOrder } from "@/lib/shiprocket";
+import { applyInventoryTxn } from "@/lib/postorder/inventory";
 
 export interface RefundOutcome {
   ok: boolean;
@@ -30,6 +31,19 @@ export async function refundOrderPayment(orderId: string): Promise<RefundOutcome
   }
   if (order.total <= 0) return { ok: true, moved: false, amount: 0 };
 
+  // Atomic claim — only the caller that flips refundStatus "" → "Processing"
+  // owns the refund, so an admin double-click, an admin cancel racing a customer
+  // cancel, or a retried request can never fire two refunds for the same money.
+  // Mirrors refundCodAdvance's CAS; prepaid orders start with refundStatus "".
+  const claim = await prisma.order.updateMany({
+    where: { id: order.id, paymentMethod: "PhonePe", paymentStatus: "Paid", refundStatus: "" },
+    data: { refundStatus: "Processing" },
+  });
+  if (claim.count === 0) {
+    // Another caller already claimed/sent it — move no money.
+    return { ok: true, moved: false, amount: order.refundAmount || order.total };
+  }
+
   const merchantRefundId = `RF-${order.orderNumber}-${Date.now().toString(36)}`;
   const res = await initiateRefund({
     merchantRefundId,
@@ -37,6 +51,11 @@ export async function refundOrderPayment(orderId: string): Promise<RefundOutcome
     amountPaise: order.total * 100,
   });
   if (!res.ok) {
+    // Release the claim so the cancel/refund can be retried without losing it.
+    await prisma.order.updateMany({
+      where: { id: order.id, refundStatus: "Processing" },
+      data: { refundStatus: "" },
+    });
     return { ok: false, moved: false, amount: order.total, error: res.error };
   }
   await prisma.order.update({
@@ -164,8 +183,36 @@ export async function cancelOrderEverywhere(orderId: string): Promise<CancelOutc
     }
   }
 
-  // 3) Mark the order cancelled.
-  await prisma.order.update({ where: { id: orderId }, data: { status: "Cancelled" } });
+  // 3) Mark the order cancelled — CAS so the restock below runs exactly once and
+  // never for an order already terminally settled elsewhere (e.g. an RTO set it
+  // to "Returned" and already restocked via its own ledger key).
+  const cancelled = await prisma.order.updateMany({
+    where: { id: orderId, status: { notIn: ["Cancelled", "Returned", "Refunded"] } },
+    data: { status: "Cancelled" },
+  });
+
+  // 4) Restore stock through the authoritative ledger. The idempotency key is the
+  // SAME one releaseOrder uses, so an unpaid order that was already released and
+  // is then cancelled can never be double-restocked.
+  if (cancelled.count > 0) {
+    let items: { id: string; qty: number }[] = [];
+    try {
+      items = JSON.parse(order.items);
+    } catch {
+      items = [];
+    }
+    for (const it of items) {
+      if (!it?.id || !it?.qty) continue;
+      await applyInventoryTxn({
+        productId: it.id,
+        delta: it.qty,
+        type: "CANCEL_RESTOCK",
+        orderId: order.id,
+        reason: "Order cancelled",
+        idempotencyKey: `${order.id}-cancel-${it.id}`,
+      });
+    }
+  }
 
   // At most one of the two refunds actually moved money (prepaid full vs. COD
   // booking advance), so report whichever did.

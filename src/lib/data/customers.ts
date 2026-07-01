@@ -1,8 +1,7 @@
 import type { Customer as CustomerRow } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { Customer, CustomerWithStats } from "@/lib/types";
-
-const NON_REVENUE = ["Cancelled", "Returned", "Refunded"];
+import { NON_REVENUE } from "./revenue";
 
 // --- shared customer classification (same rules on list + detail) ---
 const VIP_SPEND = 10000;

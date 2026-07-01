@@ -1,6 +1,7 @@
 import type { Order as OrderRow, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import type { Order, OrderItem, OrderStatus } from "@/lib/types";
+import { NON_REVENUE, REVENUE_STATUSES } from "./revenue";
 
 export const ORDER_STATUSES: OrderStatus[] = [
   "Pending",
@@ -274,8 +275,6 @@ export interface AdminStats {
   customerCount: number;
 }
 
-const REVENUE_STATUSES = { notIn: ["Cancelled", "Returned", "Refunded"] };
-
 export async function getAdminStats(): Promise<AdminStats> {
   const [
     productCount,
@@ -368,9 +367,7 @@ async function buildSummary(bounds: {
   const rows = await prisma.order.findMany({ where });
   const orders = rows.map(toOrder);
 
-  const counted = orders.filter(
-    (o) => !["Cancelled", "Returned", "Refunded"].includes(o.status),
-  );
+  const counted = orders.filter((o) => !NON_REVENUE.includes(o.status));
   const revenue = counted.reduce((s, o) => s + o.total, 0);
   const units = counted.reduce(
     (s, o) => s + o.items.reduce((n, i) => n + i.qty, 0),
@@ -559,7 +556,6 @@ const WEEKDAYS = [
   "Friday",
   "Saturday",
 ];
-const NON_REVENUE = ["Cancelled", "Returned", "Refunded"];
 
 /** Total fulfilled units sold for a product (parsed from order line items). */
 export async function getUnitsSoldForProduct(productId: string): Promise<number> {

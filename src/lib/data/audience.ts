@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { NON_REVENUE } from "./revenue";
 
 export type AudienceSegment =
   | "subscribers"
@@ -8,7 +9,6 @@ export type AudienceSegment =
   | "highvalue"
   | "recent30";
 
-const NON_REVENUE = ["Cancelled", "Returned", "Refunded"];
 const SPENT_THRESHOLD = 5000;
 const HIGH_VALUE = 10000;
 const RECENT_MS = 30 * 24 * 60 * 60 * 1000;

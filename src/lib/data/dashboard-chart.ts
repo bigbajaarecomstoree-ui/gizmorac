@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { NON_REVENUE } from "./revenue";
 
 // Sales chart for the admin dashboard. One server query builds every
 // (metric × range) series up-front so the client can toggle instantly.
@@ -10,7 +11,6 @@ const MONTHS = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
-const NON_REVENUE = ["Cancelled", "Returned", "Refunded"];
 
 export type ChartMetric = "revenue" | "orders";
 export type ChartRange = "7d" | "30d" | "week" | "month" | "12m" | "ytd";
