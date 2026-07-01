@@ -206,7 +206,7 @@ export function CartView({
               </p>
               <div className="mt-2.5 h-2 overflow-hidden rounded-full bg-surface-2 ring-1 ring-border">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-accent to-highlight transition-[width] duration-700"
+                  className="h-full rounded-full bg-success transition-[width] duration-700"
                   style={{ width: `${freeShipPct}%` }}
                 />
               </div>
