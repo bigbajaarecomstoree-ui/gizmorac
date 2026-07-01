@@ -6,6 +6,7 @@ import {
   type RGB,
 } from "pdf-lib";
 import type { Order } from "@/lib/types";
+import { shortTitle } from "@/lib/format";
 import { DEFAULT_BUSINESS, type InvoiceBusiness } from "./business";
 
 // A4 in points.
@@ -294,7 +295,7 @@ export async function buildInvoicePdf(
     sumTotal += lineIncl;
 
     const nameLines = fitLines(
-      hsn ? `${it.name}  (HSN: ${hsn})` : it.name,
+      hsn ? `${shortTitle(it.name, 60)}  (HSN: ${hsn})` : shortTitle(it.name, 60),
       reg,
       7.5,
       descW,

@@ -5,7 +5,7 @@ import { getOrderById, ORDER_STATUSES } from "@/lib/data/orders";
 import { getOrderActivity } from "@/lib/data/logs";
 import { getShiprocketConfig } from "@/lib/shiprocket";
 import { prisma } from "@/lib/prisma";
-import { formatINR } from "@/lib/format";
+import { formatINR, shortTitle } from "@/lib/format";
 import { OrderStatusBadge } from "@/components/admin/order-status-badge";
 import { OrderStatusForm } from "@/components/admin/order-status-form";
 import { OrderOperations } from "@/components/admin/order-operations";
@@ -188,9 +188,10 @@ export default async function OrderDetailPage({ params }: { params: Params }) {
                       <Link
                         href={`/product/${it.slug}`}
                         target="_blank"
+                        title={it.name}
                         className="line-clamp-2 text-sm font-medium hover:text-accent-bright"
                       >
-                        {it.name}
+                        {shortTitle(it.name)}
                       </Link>
                       <div className="text-xs text-muted">
                         {formatINR(it.price)} × {it.qty}

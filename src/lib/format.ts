@@ -30,6 +30,9 @@ export function shortTitle(name: string, maxChars = 46): string {
   if (s.length > maxChars) {
     s = s.slice(0, maxChars - 1).replace(/\s+\S*$/, "").trim() + "…";
   }
+  // Trim a dangling connector/symbol left by truncation (e.g. "…for Car &").
+  s = s.replace(/\s*[&/+,–—-]+\s*$/g, "").trim();
+  s = s.replace(/\s+(for|with|and|to|in|of|by|the|a|an)$/i, "").trim();
   return s || name;
 }
 

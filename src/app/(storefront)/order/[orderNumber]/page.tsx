@@ -8,7 +8,7 @@ import { getReviewsForOrder } from "@/lib/data/customer-reviews";
 import { getRewardForOrder } from "@/lib/data/rewards";
 import { getTicketForOrder } from "@/lib/data/tickets";
 import { getCurrentCustomer } from "@/lib/customer-auth";
-import { formatINR, deliveryWindow } from "@/lib/format";
+import { formatINR, deliveryWindow, shortTitle } from "@/lib/format";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { OrderStatusBadge } from "@/components/admin/order-status-badge";
 import { OrderTracker } from "@/components/order/order-tracker";
@@ -380,8 +380,8 @@ export default async function OrderPage({ params }: { params: Params }) {
             {order.items.map((it) => (
               <div key={it.id} className="flex items-center justify-between gap-4 px-5 py-3">
                 <div className="min-w-0">
-                  <Link href={`/product/${it.slug}`} className="text-sm font-medium hover:text-accent-bright">
-                    {it.name}
+                  <Link href={`/product/${it.slug}`} title={it.name} className="text-sm font-medium hover:text-accent-bright">
+                    {shortTitle(it.name)}
                   </Link>
                   <div className="text-xs text-muted">
                     {formatINR(it.price)} × {it.qty}
