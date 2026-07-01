@@ -69,7 +69,7 @@ export function StickyBuyBar({
         <div className="min-w-0 flex-1">
           <p className="truncate text-xs font-medium text-muted">{shortTitle(name)}</p>
           <div className="flex items-baseline gap-2">
-            <span className="readout text-base font-bold leading-tight">{formatINR(price)}</span>
+            <span className="readout text-foreground text-base font-bold leading-tight">{formatINR(price)}</span>
             {off > 0 ? (
               <>
                 <span className="hidden text-xs text-faint line-through sm:inline">

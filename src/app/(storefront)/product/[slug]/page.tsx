@@ -170,7 +170,7 @@ export default async function ProductPage({ params }: { params: Params }) {
           <ProductAssurance warrantyMonths={product.warrantyMonths} />
 
           <div className="mt-5 border-y border-border py-5">
-            <Price product={product} size="lg" />
+            <Price product={product} size="lg" tone="ink" />
             {off > 0 ? (
               <p className="mt-1.5 text-sm text-success">
                 You save {formatINR(savings(product))} · inclusive of all taxes
