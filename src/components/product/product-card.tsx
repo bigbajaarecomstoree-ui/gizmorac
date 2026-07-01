@@ -18,7 +18,7 @@ export function ProductCard({ product }: { product: Product }) {
   const lowStock = product.stock > 0 && product.stock <= 10;
 
   return (
-    <article className="group relative flex flex-col overflow-hidden rounded-xl border border-border bg-surface transition-all duration-300 hover:-translate-y-1 hover:border-border-bright hover:shadow-[0_20px_40px_-20px_rgba(0,0,0,0.28)]">
+    <article className="group relative flex h-full flex-col overflow-hidden rounded-xl border border-border bg-surface transition-all duration-300 hover:-translate-y-1 hover:border-border-bright hover:shadow-[0_20px_40px_-20px_rgba(0,0,0,0.28)]">
       <div className="relative aspect-square overflow-hidden">
         <div className="h-full w-full transition-transform duration-500 group-hover:scale-[1.04]">
           {product.image ? (

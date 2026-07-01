@@ -3,6 +3,7 @@ import Image from "next/image";
 import { ArrowUpRight } from "lucide-react";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { ProductArt } from "@/components/product/product-art";
+import { Stagger, StaggerItem } from "@/components/motion/motion-primitives";
 import { getVisibleCategories, getCategoryCounts } from "@/lib/data/queries";
 
 export async function CategoryGrid() {
@@ -20,14 +21,14 @@ export async function CategoryGrid() {
         href="/shop"
         hrefLabel="All products"
       />
-      <div className="mt-10 grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-3">
+      <Stagger className="mt-10 grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-3">
         {categories.map((c) => {
           const n = counts[c.slug] ?? 0;
           return (
+            <StaggerItem key={c.slug} className="h-full">
             <Link
-              key={c.slug}
               href={`/shop?category=${c.slug}`}
-              className="group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-all duration-300 hover:-translate-y-1 hover:border-accent/40 hover:shadow-[0_20px_44px_-20px_rgba(109,40,217,0.45)]"
+              className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-all duration-300 hover:-translate-y-1 hover:border-accent/40 hover:shadow-[0_20px_44px_-20px_rgba(109,40,217,0.45)]"
             >
               {/* image */}
               <div className="relative aspect-[16/10] overflow-hidden bg-surface-2">
@@ -66,9 +67,10 @@ export async function CategoryGrid() {
                 <p className="mt-1 line-clamp-1 text-sm text-muted">{c.tagline}</p>
               </div>
             </Link>
+            </StaggerItem>
           );
         })}
-      </div>
+      </Stagger>
     </section>
   );
 }

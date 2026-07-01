@@ -1,5 +1,6 @@
 import { BadgeCheck, Truck, Headset, ShieldCheck } from "lucide-react";
 import { SectionHeading } from "@/components/ui/section-heading";
+import { Stagger, StaggerItem } from "@/components/motion/motion-primitives";
 
 const REASONS = [
   {
@@ -32,20 +33,19 @@ export function WhyChoose() {
         title="Built on trust, shipped with care"
         description="The little things that make buying gadgets from us feel effortless."
       />
-      <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <Stagger className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {REASONS.map((r) => (
-          <div
-            key={r.title}
-            className="group rounded-xl border border-border bg-surface p-6 transition-colors hover:border-border-bright"
-          >
-            <span className="grid h-11 w-11 place-items-center rounded-lg border border-border bg-surface-2 text-accent transition-colors duration-300 group-hover:border-accent/40">
-              <r.icon size={20} className="transition-transform duration-300 ease-out group-hover:rotate-6 group-hover:scale-110" />
-            </span>
-            <h3 className="mt-4 text-base font-semibold">{r.title}</h3>
-            <p className="mt-2 text-sm leading-relaxed text-muted">{r.body}</p>
-          </div>
+          <StaggerItem key={r.title} className="h-full">
+            <div className="group h-full rounded-xl border border-border bg-surface p-6 transition-colors hover:border-border-bright">
+              <span className="grid h-11 w-11 place-items-center rounded-lg border border-border bg-surface-2 text-accent transition-colors duration-300 group-hover:border-accent/40">
+                <r.icon size={20} className="transition-transform duration-300 ease-out group-hover:rotate-6 group-hover:scale-110" />
+              </span>
+              <h3 className="mt-4 text-base font-semibold">{r.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-muted">{r.body}</p>
+            </div>
+          </StaggerItem>
         ))}
-      </div>
+      </Stagger>
     </section>
   );
 }

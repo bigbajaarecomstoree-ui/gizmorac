@@ -12,7 +12,7 @@ export async function BestSellers() {
         description="The gadgets our customers reach for again and again."
         href="/shop?sort=popular"
       />
-      <ProductGrid products={products} className="mt-10" />
+      <ProductGrid products={products} className="mt-10" animate />
     </section>
   );
 }

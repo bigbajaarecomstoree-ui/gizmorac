@@ -9,6 +9,7 @@ import { Reviews } from "@/components/home/reviews";
 import { FaqAccordion } from "@/components/home/faq";
 import { Newsletter } from "@/components/home/newsletter";
 import { LandingPopup } from "@/components/promo/landing-popup";
+import { Reveal } from "@/components/motion/motion-primitives";
 import { getSiteFaqs } from "@/lib/data/queries";
 import { getSettings } from "@/lib/data/settings";
 import { SITE } from "@/lib/constants";
@@ -39,19 +40,21 @@ export default async function HomePage() {
         dangerouslySetInnerHTML={{ __html: jsonLd(orgSchema) }}
       />
       <Hero />
-      <MarketplaceStrip />
+      <Reveal><MarketplaceStrip /></Reveal>
       <WhyChoose />
       <CategoryGrid />
       <BestSellers />
-      <DealOfTheDay />
+      <Reveal><DealOfTheDay /></Reveal>
       <FeaturedProducts />
-      <Reviews />
-      <FaqAccordion
-        items={faqs}
-        description="Everything you need to know about ordering, shipping and support."
-        withSchema
-      />
-      <Newsletter />
+      <Reveal><Reviews /></Reveal>
+      <Reveal>
+        <FaqAccordion
+          items={faqs}
+          description="Everything you need to know about ordering, shipping and support."
+          withSchema
+        />
+      </Reveal>
+      <Reveal><Newsletter /></Reveal>
       {showLandingPopup ? (
         <LandingPopup
           title={settings.landingPopupTitle}

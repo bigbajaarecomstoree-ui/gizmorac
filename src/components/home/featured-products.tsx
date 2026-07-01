@@ -14,7 +14,7 @@ export async function FeaturedProducts() {
           description="A curated edit of gadgets worth a closer look."
           href="/shop"
         />
-        <ProductGrid products={products} className="mt-10" />
+        <ProductGrid products={products} className="mt-10" animate />
       </div>
     </section>
   );
