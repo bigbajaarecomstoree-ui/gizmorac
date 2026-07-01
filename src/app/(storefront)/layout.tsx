@@ -6,6 +6,7 @@ import { WhatsAppButton } from "@/components/layout/whatsapp-button";
 import { CompareTray } from "@/components/product/compare-tray";
 import { PromoPopups } from "@/components/promo/promo-popups";
 import { Analytics } from "@/components/analytics/analytics";
+import { PresencePinger } from "@/components/analytics/presence-pinger";
 import { getCurrentCustomer } from "@/lib/customer-auth";
 import { getSettings, whatsappLink } from "@/lib/data/settings";
 import { getVisibleCategories, getReviews, getProductsBySlugs } from "@/lib/data/queries";
@@ -83,6 +84,7 @@ export default async function StorefrontLayout({
         <CompareTray />
         <ReviewSpotlight items={spotlight} />
         <Analytics />
+        <PresencePinger />
         <PromoPopups
           browse={{
             enabled: settings.browseOfferEnabled,

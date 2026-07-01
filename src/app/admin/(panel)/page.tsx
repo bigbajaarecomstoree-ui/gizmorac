@@ -29,6 +29,7 @@ import { formatINR } from "@/lib/format";
 import { OrderStatusBadge } from "@/components/admin/order-status-badge";
 import { SalesChart } from "@/components/admin/sales-chart";
 import { DashboardCreateMenu } from "@/components/admin/dashboard-create-menu";
+import { LiveVisitorsCard } from "@/components/admin/live-visitors";
 import {
   LowStockWidget,
   RecentMovementsWidget,
@@ -83,7 +84,11 @@ export default async function AdminDashboard() {
         <DashboardCreateMenu />
       </div>
 
-      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="mt-6">
+        <LiveVisitorsCard />
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {cards.map((c) => (
           <Link
             key={c.label}

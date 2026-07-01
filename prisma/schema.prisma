@@ -986,3 +986,15 @@ model AdminUser {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 }
+
+// Anonymous live-presence heartbeat. One row per active browser tab, keyed by a
+// random client-generated token (no cookie, no IP, no PII). Rows are upserted on
+// each ping and pruned once stale; the admin "online now" count is the number of
+// rows seen within the active window.
+model LiveVisitor {
+  id       String   @id
+  path     String   @default("")
+  lastSeen DateTime @default(now())
+
+  @@index([lastSeen])
+}

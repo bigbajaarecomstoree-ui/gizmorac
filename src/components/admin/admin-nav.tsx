@@ -22,6 +22,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { logoutAction } from "@/lib/admin/actions";
+import { LiveVisitorsBadge } from "@/components/admin/live-visitors";
 import { cn } from "@/lib/utils";
 
 // Operations-first ordering: daily-ops at the top, catalog below, utilities last.
@@ -58,6 +59,8 @@ export function AdminNav() {
           Admin
         </span>
       </Link>
+
+      <LiveVisitorsBadge />
 
       <nav className="flex gap-1 overflow-x-auto md:flex-col md:overflow-visible">
         {NAV.map((item) => {
