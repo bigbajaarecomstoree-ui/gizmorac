@@ -310,8 +310,9 @@ export default async function FinancePage({
         orders placed; less returns &amp; refunds = Net Sales. Gross Profit = Net
         Sales − Cost of Goods Sold, before operating expenses (outbound shipping,
         ads, payment/COD fees, salaries). COGS uses each product&apos;s cost
-        price. Returns/replacements are deducted via the Returned/Refunded
-        statuses on the order.
+        price and includes the cost of any free replacement units shipped in the
+        period. Returns/refunds are deducted via the Returned/Refunded statuses
+        on the order.
       </p>
     </div>
   );

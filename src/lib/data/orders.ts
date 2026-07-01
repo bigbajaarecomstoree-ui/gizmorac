@@ -325,8 +325,10 @@ export interface ReportSummary {
   cancelled: number;
   returned: number;
   refunded: number;
-  /** Cost of goods sold for counted orders (Σ unit cost × qty). */
+  /** Cost of goods sold = counted orders' goods + free replacement units shipped. */
   cogs: number;
+  /** Cost of free replacement units shipped in the period (part of COGS). */
+  replacementCogs: number;
   /** Gross Profit = Net Sales − COGS (before operating expenses). */
   grossProfit: number;
   /** Gross margin %, on net sales. */
@@ -406,11 +408,35 @@ async function buildSummary(bounds: {
     select: { id: true, cost: true },
   });
   const costById = new Map(costRows.map((p) => [p.id, p.cost]));
-  const cogs = counted.reduce(
+  const goodsCogs = counted.reduce(
     (s, o) =>
       s + o.items.reduce((n, i) => n + (costById.get(i.id) ?? 0) * i.qty, 0),
     0,
   );
+  // Free replacement units shipped in the period are real goods cost the
+  // original order's line items don't capture (the order books one unit's
+  // revenue + cost, but a second unit physically ships on a replacement). Book
+  // that cost from the authoritative inventory ledger — attributed to the period
+  // it shipped in — so profit isn't overstated.
+  const replTxns = await prisma.inventoryTransaction.findMany({
+    where: {
+      type: "REPLACEMENT_DISPATCH",
+      ...(bounds.gte || bounds.lt
+        ? {
+            createdAt: {
+              ...(bounds.gte ? { gte: bounds.gte } : {}),
+              ...(bounds.lt ? { lt: bounds.lt } : {}),
+            },
+          }
+        : {}),
+    },
+    select: { productId: true, delta: true },
+  });
+  const replacementCogs = replTxns.reduce(
+    (s, t) => s + Math.abs(t.delta) * (costById.get(t.productId) ?? 0),
+    0,
+  );
+  const cogs = goodsCogs + replacementCogs;
   const grossProfit = revenue - cogs;
   const margin = revenue > 0 ? Math.round((grossProfit / revenue) * 1000) / 10 : 0;
 
@@ -480,6 +506,7 @@ async function buildSummary(bounds: {
     returned,
     refunded,
     cogs,
+    replacementCogs,
     grossProfit,
     margin,
     refundRate,
@@ -555,6 +582,19 @@ export async function getFinanceTrend(days = 30): Promise<FinanceTrendPoint[]> {
       b.profit += o.total - cogs;
     }
   }
+
+  // Book the cost of free replacement units against the day they shipped, so the
+  // profit line matches the finance summary (which does the same).
+  const replTxns = await prisma.inventoryTransaction.findMany({
+    where: { type: "REPLACEMENT_DISPATCH", createdAt: { gte: since } },
+    select: { productId: true, delta: true, createdAt: true },
+  });
+  for (const t of replTxns) {
+    const b = buckets.get(key(t.createdAt));
+    if (!b) continue;
+    b.profit -= Math.abs(t.delta) * (costById.get(t.productId) ?? 0);
+  }
+
   return [...buckets.values()];
 }
 
