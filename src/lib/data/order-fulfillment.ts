@@ -44,7 +44,10 @@ export async function refundOrderPayment(orderId: string): Promise<RefundOutcome
     return { ok: true, moved: false, amount: order.refundAmount || order.total };
   }
 
-  const merchantRefundId = `RF-${order.orderNumber}-${Date.now().toString(36)}`;
+  // Stable (not time-based) so PhonePe's own idempotency treats a retry as the
+  // SAME refund — a second line of defense behind the refundStatus CAS above.
+  // The legacy path does exactly one full refund per order, so the id is unique.
+  const merchantRefundId = `RF-${order.orderNumber}`;
   const res = await initiateRefund({
     merchantRefundId,
     merchantOrderId: order.orderNumber,
@@ -114,7 +117,8 @@ export async function refundCodAdvance(orderId: string): Promise<RefundOutcome> 
     return { ok: true, moved: false, amount: order.refundAmount || advanceRupees };
   }
 
-  const merchantRefundId = `RF-${order.orderNumber}-ADV-${Date.now().toString(36)}`;
+  // Stable id for the one COD-advance refund per order (see note above).
+  const merchantRefundId = `RF-${order.orderNumber}-ADV`;
   const res = await initiateRefund({
     merchantRefundId,
     merchantOrderId: order.orderNumber,

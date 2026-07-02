@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { recordShipmentUpdate } from "@/lib/data/shipments";
+import { safeEqual } from "@/lib/secure-compare";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -13,7 +14,7 @@ export async function POST(req: NextRequest) {
   if (!expected) {
     return Response.json({ ok: false, error: "webhook not configured" }, { status: 503 });
   }
-  if ((req.headers.get("x-api-key") ?? "") !== expected) {
+  if (!safeEqual(req.headers.get("x-api-key") ?? "", expected)) {
     return Response.json({ ok: false }, { status: 401 });
   }
 

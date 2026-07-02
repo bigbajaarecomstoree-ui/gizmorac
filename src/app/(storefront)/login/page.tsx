@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getCurrentCustomer } from "@/lib/customer-auth";
 import { AuthScreen } from "@/components/account/auth-screen";
+import { safeInternalPath } from "@/lib/sanitize";
 
 export const metadata: Metadata = {
   title: "Log in",
@@ -15,7 +16,7 @@ export default async function LoginPage({
   searchParams: Promise<{ next?: string }>;
 }) {
   const { next } = await searchParams;
-  const safe = next && next.startsWith("/") && !next.startsWith("//") ? next : "";
+  const safe = safeInternalPath(next, "");
   if (await getCurrentCustomer()) redirect(safe || "/account");
   return <AuthScreen mode="login" next={safe} />;
 }

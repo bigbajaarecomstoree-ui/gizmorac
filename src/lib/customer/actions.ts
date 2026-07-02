@@ -11,6 +11,7 @@ import {
 } from "@/lib/customer-auth";
 import { logEvent } from "@/lib/data/logs";
 import { limitByIp } from "@/lib/rate-limit";
+import { safeInternalPath } from "@/lib/sanitize";
 
 export interface AuthState {
   error?: string;
@@ -29,8 +30,7 @@ function field(fd: FormData, key: string): string {
  * allowed (guards against open-redirect via the `next` param); else /account.
  */
 function safeNext(fd: FormData): string {
-  const n = (fd.get("next") ?? "").toString();
-  return n.startsWith("/") && !n.startsWith("//") ? n : "/account";
+  return safeInternalPath((fd.get("next") ?? "").toString(), "/account");
 }
 
 export async function signupAction(
