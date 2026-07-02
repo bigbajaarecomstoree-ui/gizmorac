@@ -7,6 +7,7 @@ import {
 } from "@/lib/data/queries";
 import { buttonVariants } from "@/components/ui/button";
 import { CategoryReorderList } from "@/components/admin/category-reorder-list";
+import { AdminSubnav } from "@/components/admin/admin-subnav";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,7 @@ export default async function CategoriesPage() {
 
   return (
     <div className="mx-auto max-w-5xl">
+      <AdminSubnav tabs={[{ label: "Products", href: "/admin/products" }, { label: "Categories", href: "/admin/categories" }]} />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">

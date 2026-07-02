@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ScrollText, AlertTriangle, Info, TriangleAlert, Search } from "lucide-react";
 import { getLogs, type LogLevel, type LogActor } from "@/lib/data/logs";
+import { AdminSubnav } from "@/components/admin/admin-subnav";
 
 export const dynamic = "force-dynamic";
 
@@ -73,6 +74,7 @@ export default async function LogsPage({ searchParams }: { searchParams: SearchP
 
   return (
     <div className="mx-auto max-w-5xl">
+      <AdminSubnav tabs={[{ label: "Settings", href: "/admin/settings" }, { label: "Logs", href: "/admin/logs" }]} />
       <div className="flex items-center gap-2">
         <ScrollText size={22} className="text-accent" />
         <h1 className="text-2xl font-bold tracking-tight">Logs</h1>

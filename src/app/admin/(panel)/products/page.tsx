@@ -4,6 +4,7 @@ import { getAllProducts, getCategories } from "@/lib/data/queries";
 import { buttonVariants } from "@/components/ui/button";
 import { ProductImportExport } from "@/components/admin/product-import-export";
 import { ProductsTable } from "@/components/admin/products-table";
+import { AdminSubnav } from "@/components/admin/admin-subnav";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,7 @@ export default async function AdminProductsPage() {
 
   return (
     <div className="mx-auto max-w-5xl">
+      <AdminSubnav tabs={[{ label: "Products", href: "/admin/products" }, { label: "Categories", href: "/admin/categories" }]} />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Products</h1>

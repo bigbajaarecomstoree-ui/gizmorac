@@ -14,6 +14,7 @@ import { getAudienceCounts } from "@/lib/data/audience";
 import { SubscriberActions } from "@/components/admin/subscriber-actions";
 import { SubscriberList } from "@/components/admin/subscriber-list";
 import { SubscriberGrowthChart } from "@/components/admin/subscriber-growth-chart";
+import { AdminSubnav } from "@/components/admin/admin-subnav";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +60,7 @@ export default async function AdminSubscribersPage() {
 
   return (
     <div className="mx-auto max-w-4xl">
+      <AdminSubnav tabs={[{ label: "Promotions", href: "/admin/promotions" }, { label: "Subscribers", href: "/admin/subscribers" }]} />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">

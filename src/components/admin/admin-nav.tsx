@@ -6,17 +6,14 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Package,
-  Tags,
   Boxes,
   Receipt,
   Users,
-  Ticket,
   LifeBuoy,
-  Mail,
   BarChart3,
   Wallet,
   HandCoins,
-  ScrollText,
+  Megaphone,
   Settings,
   Store,
   LogOut,
@@ -25,28 +22,51 @@ import { logoutAction } from "@/lib/admin/actions";
 import { LiveVisitorsBadge } from "@/components/admin/live-visitors";
 import { cn } from "@/lib/utils";
 
-// Operations-first ordering: daily-ops at the top, catalog below, utilities last.
-const NAV = [
+// Frequency-first ordering (council-reviewed): the daily jobs — orders, COD
+// verification, stock, tickets — live in the top five slots; weekly money +
+// occasional catalog/marketing below. Sibling pages are grouped under one
+// entry via `match` + an in-page tab bar (AdminSubnav) so no route moves:
+// Products also owns /admin/categories, Marketing = promotions + subscribers,
+// and Settings (pinned below) owns /admin/logs. Rule for future items: no new
+// top-level entry unless it is a new DAILY job — otherwise it joins a group.
+type NavItem = {
+  label: string;
+  href: string;
+  icon: typeof LayoutDashboard;
+  exact?: boolean;
+  match?: string[];
+};
+
+const NAV: NavItem[] = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard, exact: true },
-  { label: "Orders", href: "/admin/orders", icon: Receipt, exact: false },
-  { label: "Inventory", href: "/admin/inventory", icon: Boxes, exact: false },
-  { label: "Customers", href: "/admin/customers", icon: Users, exact: false },
-  { label: "Finance", href: "/admin/finance", icon: Wallet, exact: false },
-  { label: "COD & RTO", href: "/admin/cod", icon: HandCoins, exact: false },
-  { label: "Reports", href: "/admin/reports", icon: BarChart3, exact: false },
-  { label: "Products", href: "/admin/products", icon: Package, exact: false },
-  { label: "Categories", href: "/admin/categories", icon: Tags, exact: false },
-  { label: "Support", href: "/admin/support", icon: LifeBuoy, exact: false },
-  { label: "Subscribers", href: "/admin/subscribers", icon: Mail, exact: false },
-  { label: "Promotions", href: "/admin/promotions", icon: Ticket, exact: false },
-  { label: "Logs", href: "/admin/logs", icon: ScrollText, exact: false },
+  { label: "Orders", href: "/admin/orders", icon: Receipt },
+  { label: "COD & RTO", href: "/admin/cod", icon: HandCoins },
+  { label: "Inventory", href: "/admin/inventory", icon: Boxes },
+  { label: "Support", href: "/admin/support", icon: LifeBuoy },
+  { label: "Customers", href: "/admin/customers", icon: Users },
+  { label: "Finance", href: "/admin/finance", icon: Wallet },
+  { label: "Reports", href: "/admin/reports", icon: BarChart3 },
+  {
+    label: "Products",
+    href: "/admin/products",
+    icon: Package,
+    match: ["/admin/products", "/admin/categories"],
+  },
+  {
+    label: "Marketing",
+    href: "/admin/promotions",
+    icon: Megaphone,
+    match: ["/admin/promotions", "/admin/subscribers"],
+  },
 ];
 
 export function AdminNav() {
   const pathname = usePathname();
 
-  const isActive = (href: string, exact: boolean) =>
-    exact ? pathname === href : pathname.startsWith(href);
+  const isActive = (item: Pick<NavItem, "href" | "exact" | "match">) =>
+    item.exact
+      ? pathname === item.href
+      : (item.match ?? [item.href]).some((m) => pathname.startsWith(m));
 
   return (
     <div className="flex h-full flex-col gap-1 p-4">
@@ -62,9 +82,12 @@ export function AdminNav() {
 
       <LiveVisitorsBadge />
 
-      <nav className="flex gap-1 overflow-x-auto md:flex-col md:overflow-visible">
+      {/* min-h-0 lets this flex child shrink below its content height so the
+          list scrolls inside the h-screen sidebar instead of clipping the
+          pinned utilities (View store / Settings / Log out) on short screens. */}
+      <nav className="flex gap-1 overflow-x-auto md:min-h-0 md:flex-1 md:flex-col md:overflow-y-auto md:overflow-x-hidden">
         {NAV.map((item) => {
-          const active = isActive(item.href, item.exact);
+          const active = isActive(item);
           return (
             <Link
               key={item.href}
@@ -96,7 +119,7 @@ export function AdminNav() {
           href="/admin/settings"
           className={cn(
             "flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-            isActive("/admin/settings", false)
+            isActive({ href: "/admin/settings", match: ["/admin/settings", "/admin/logs"] })
               ? "bg-accent-soft text-accent-bright"
               : "text-muted hover:bg-surface-2 hover:text-foreground",
           )}

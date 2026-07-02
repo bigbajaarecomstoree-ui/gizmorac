@@ -4,6 +4,7 @@ import { getCoupons, describeCoupon } from "@/lib/data/coupons";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { DeleteCouponButton } from "@/components/admin/delete-coupon-button";
+import { AdminSubnav } from "@/components/admin/admin-subnav";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,7 @@ export default async function PromotionsPage() {
 
   return (
     <div className="mx-auto max-w-5xl">
+      <AdminSubnav tabs={[{ label: "Promotions", href: "/admin/promotions" }, { label: "Subscribers", href: "/admin/subscribers" }]} />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
