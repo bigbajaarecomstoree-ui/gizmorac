@@ -378,7 +378,9 @@ export function CheckoutView({
       acceptedTerms: accepted,
       items: lines.map((l) => ({ id: l.product.id, qty: l.qty })),
     };
-    const finishCod = (trackUrl: string) => {
+    // Leave checkout for the order's tokenised tracking page: clear the local
+    // cart/offer/coupon (the order now owns them) and navigate.
+    const goToOrder = (trackUrl: string) => {
       clearCart();
       clearOffer();
       try {
@@ -405,10 +407,15 @@ export function CheckoutView({
           } catch {}
           window.location.href = pay.redirectUrl; // hand off to PhonePe
         } else {
-          setError(`${pay.error} Your order ${res.orderNumber} is saved as pending.`);
+          // The order ALREADY exists here (stock held, coupon consumed).
+          // Staying on checkout with a re-enabled submit button would mint a
+          // duplicate order + double stock decrement on the next click — so
+          // hand over to the order page, whose pending-payment banner owns
+          // the "Complete payment" retry for exactly this state.
+          goToOrder(trackUrl);
         }
       } else {
-        finishCod(trackUrl);
+        goToOrder(trackUrl);
       }
     });
   }

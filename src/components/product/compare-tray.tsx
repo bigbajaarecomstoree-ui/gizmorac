@@ -54,12 +54,15 @@ export function CompareTray() {
   // the tray too would stack two full-width bars (it stays on desktop, where
   // that bar is hidden).
   const onCheckoutFlow = pathname === "/cart" || pathname.startsWith("/checkout");
+  // On PDPs the sticky buy bar (z-60, bottom-0, all breakpoints) slides in on
+  // scroll and would cover the tray — lift the tray clear of it there.
+  const onProduct = pathname.startsWith("/product/");
 
   return (
     <div
-      className={`fixed inset-x-0 bottom-4 z-40 justify-center px-4 print:hidden ${
-        onCheckoutFlow ? "hidden lg:flex" : "flex"
-      }`}
+      className={`fixed inset-x-0 z-40 justify-center px-4 print:hidden ${
+        onProduct ? "bottom-24" : "bottom-4"
+      } ${onCheckoutFlow ? "hidden lg:flex" : "flex"}`}
     >
       <div className="flex max-w-full items-center gap-3 rounded-2xl border border-border-bright bg-elevated/95 p-2.5 pl-3.5 shadow-xl backdrop-blur">
         <span className="hidden items-center gap-1.5 text-sm font-semibold sm:flex">
