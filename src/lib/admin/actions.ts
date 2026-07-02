@@ -30,17 +30,9 @@ import { getOrderById, ORDER_STATUSES } from "@/lib/data/orders";
 import { revalidateAdminOrderViews } from "@/lib/data/revalidate";
 import { recordShipmentUpdate } from "@/lib/data/shipments";
 import { logEvent } from "@/lib/data/logs";
-import { limitByIp } from "@/lib/rate-limit";
-import { headers } from "next/headers";
+import { limitByIp, clientIp } from "@/lib/rate-limit";
+import { adminPasswordWeak } from "@/lib/auth";
 
-async function clientIp(): Promise<string> {
-  try {
-    const h = await headers();
-    return (h.get("x-forwarded-for")?.split(",")[0] ?? h.get("x-real-ip") ?? "").trim();
-  } catch {
-    return "";
-  }
-}
 import {
   addTicketMessage,
   setTicketStatus,
@@ -179,12 +171,34 @@ function revalidateStorefront(slug?: string) {
 
 // --- auth ---
 
+// Global brute-force ceiling for the single shared admin credential. Per-IP
+// limits alone can't protect one account (attackers rotate IPs), so we also cap
+// TOTAL failed attempts across everyone in a short rolling window. Generous
+// enough that owner typos never trip it; a sustained attack does.
+const ADMIN_FAIL_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
+const ADMIN_FAIL_MAX = 25;
+
 export async function loginAction(
   _prev: { error?: string } | undefined,
   formData: FormData,
 ): Promise<{ error?: string }> {
-  const blocked = await limitByIp("admin-login", 8, 60);
+  // Per-IP throttle (now keyed on a platform-trusted IP; fail closed on a cache
+  // error so a blip can't open the gate for an auth endpoint).
+  const blocked = await limitByIp("admin-login", 8, 60, { failClosed: true });
   if (blocked) return { error: blocked };
+
+  // IP-independent global cap — count recent failed admin logins and stop once
+  // the window is saturated (self-heals as old failures age out).
+  const since = new Date(Date.now() - ADMIN_FAIL_WINDOW_MS);
+  const recentFails = await prisma.eventLog.count({
+    where: { action: "admin.login.failed", createdAt: { gte: since } },
+  });
+  if (recentFails >= ADMIN_FAIL_MAX) {
+    return {
+      error: "Too many failed sign-in attempts. Please try again in a few minutes.",
+    };
+  }
+
   const password = (formData.get("password") ?? "").toString();
   const ip = await clientIp();
   if (!checkPassword(password)) {
@@ -198,6 +212,16 @@ export async function loginAction(
     return { error: "Incorrect password. Please try again." };
   }
   await setSessionCookie();
+  // Non-blocking advisory: nudge the owner to strengthen a weak ADMIN_PASSWORD.
+  if (adminPasswordWeak()) {
+    await logEvent({
+      level: "warn",
+      actor: "system",
+      action: "admin.password.weak",
+      message:
+        "ADMIN_PASSWORD looks weak (short / low variety / dictionary token) — set a long, unique password.",
+    });
+  }
   await logEvent({
     level: "info",
     actor: "admin",

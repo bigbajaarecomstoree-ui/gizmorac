@@ -24,3 +24,26 @@ export function cleanStrings<T extends object>(obj: T): T {
   }
   return out as T;
 }
+
+/**
+ * Sanitize a `?next=` / post-auth redirect target to a SAME-ORIGIN path.
+ * Parsed with the real URL resolver (the one the browser uses), so tricks that
+ * defeat naive `startsWith("/")` checks — protocol-relative `//evil.com`,
+ * backslash `/\evil.com` (browsers normalize `\`→`/`), embedded credentials,
+ * CRLF — all resolve off our dummy origin and get rejected. Returns the
+ * fallback ("" by default) when the input isn't a safe internal path.
+ */
+export function safeInternalPath(
+  next: string | undefined | null,
+  fallback = "",
+): string {
+  const n = (next ?? "").trim();
+  if (!n.startsWith("/")) return fallback;
+  try {
+    const u = new URL(n, "http://internal.invalid");
+    if (u.origin !== "http://internal.invalid") return fallback;
+    return u.pathname + u.search + u.hash;
+  } catch {
+    return fallback;
+  }
+}

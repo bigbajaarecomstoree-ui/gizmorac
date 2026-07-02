@@ -8,7 +8,9 @@ export const REWARD_MAX_DISCOUNT = 500; // cap on the % discount, in ₹
 export const REWARD_VALID_DAYS = 45;
 
 function rewardCode(): string {
-  return `GZ-AGAIN-${randomBytes(3).toString("hex").toUpperCase()}`;
+  // 64-bit random suffix: a reward code must not be brute-forceable (defense in
+  // depth alongside the owner-binding check in validateAndPriceCoupon).
+  return `GZ-AGAIN-${randomBytes(8).toString("hex").toUpperCase()}`;
 }
 
 export interface RewardCoupon {

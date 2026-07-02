@@ -50,3 +50,22 @@ export function checkPassword(input: string): boolean {
   }
   return diff === 0;
 }
+
+/**
+ * Heuristic weak-password check for the single shared admin credential — used
+ * only to log a non-blocking advisory (never to reject the owner's login).
+ * Deliberately generic: it must NOT reference the real password, which would
+ * leak it into source. Flags anything short, low-variety, or containing an
+ * obvious dictionary token.
+ */
+export function adminPasswordWeak(): boolean {
+  const p = process.env.ADMIN_PASSWORD ?? "";
+  if (p.length < 12) return true;
+  const classes = [/[a-z]/, /[A-Z]/, /[0-9]/, /[^A-Za-z0-9]/].filter((re) =>
+    re.test(p),
+  ).length;
+  if (classes < 3) return true;
+  const common = ["password", "admin", "welcome", "letmein", "changeme", "qwerty", "123456"];
+  const low = p.toLowerCase();
+  return common.some((c) => low.includes(c));
+}

@@ -103,19 +103,35 @@ export interface CouponResult {
   error?: string;
 }
 
-/** Validate a code against the cart and return the computed discount. */
+/** Validate a code against the cart and return the computed discount.
+ *  `opts.customerId` is the currently signed-in customer (null for guests) —
+ *  required to redeem an account-bound reward coupon. */
 export async function validateAndPriceCoupon(
   code: string,
   items: CartLineInput[],
+  opts: { customerId?: string | null } = {},
 ): Promise<CouponResult> {
   const clean = code.trim().toUpperCase();
   if (!clean) return { ok: false, error: "Enter a coupon code" };
 
-  const coupon = await getCouponByCode(clean);
-  if (!coupon || !coupon.active) {
+  const row = await prisma.coupon.findUnique({ where: { code: clean } });
+  if (!row || !row.active) {
     return { ok: false, error: "Invalid or inactive coupon code" };
   }
 
+  // Reward (loyalty) coupons are bound to the account that earned them: only
+  // that signed-in customer may redeem them. Without this, any holder of a
+  // `GZ-AGAIN-…` code (shared, leaked, or brute-forced) could burn someone
+  // else's reward — validation was previously by code alone.
+  if (row.kind === "reward" && (!opts.customerId || row.customerId !== opts.customerId)) {
+    return {
+      ok: false,
+      error:
+        "This reward coupon belongs to a different account. Sign in with the account that earned it.",
+    };
+  }
+
+  const coupon = toCoupon(row);
   const now = new Date();
   if (coupon.startsAt && new Date(coupon.startsAt) > now) {
     return { ok: false, error: "This coupon isn't active yet" };

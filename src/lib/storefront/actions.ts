@@ -123,9 +123,11 @@ export async function applyCoupon(
   if (blocked) return { ok: false, error: blocked };
   const lines = await resolveLines(refs);
   if (lines.length === 0) return { ok: false, error: "Your cart is empty" };
+  const buyer = await getCurrentCustomer();
   return validateAndPriceCoupon(
     code,
     lines.map((l) => ({ price: l.price, qty: l.qty })),
+    { customerId: buyer?.id ?? null },
   );
 }
 
@@ -213,9 +215,13 @@ export async function placeOrder(
   let discount = 0;
   let appliedCode: string | null = null;
   if (payload.couponCode?.trim()) {
+    // Reward coupons are account-bound — pass the signed-in customer so a
+    // guest / another account can't redeem someone else's loyalty reward.
+    const buyer = await getCurrentCustomer();
     const result = await validateAndPriceCoupon(
       payload.couponCode,
       lines.map((l) => ({ price: l.price, qty: l.qty })),
+      { customerId: buyer?.id ?? null },
     );
     if (result.ok && result.discount) {
       discount = result.discount;
@@ -308,7 +314,9 @@ export async function placeOrder(
     return { ok: false, error: "Could not place order, please try again." };
   }
   // Unguessable token for the public guest tracking link (32-bit, hex).
-  const trackingToken = randomBytes(4).toString("hex").toUpperCase();
+  // 128-bit tracking token: guessing it (or an order number) to reach a guest
+  // order's PII must be computationally infeasible, not a ~32-bit brute force.
+  const trackingToken = randomBytes(16).toString("hex").toUpperCase();
 
   // Post-order v2: per-line money in paise, with order discount/shipping
   // prorated across lines (last/largest bucket absorbs the rounding remainder).
@@ -614,7 +622,12 @@ export async function startPhonePePayment(
   const origin = host
     ? `${proto}://${host}`
     : (process.env.NEXT_PUBLIC_SITE_URL ?? "");
-  const redirectUrl = `${origin}/api/payments/phonepe/callback?order=${encodeURIComponent(orderNumber)}`;
+  // Round-trip the caller's already-proven tracking token so the callback can
+  // re-attach it for a returning GUEST (no session) WITHOUT the callback ever
+  // handing a token out based on order number alone (that was a token oracle).
+  const redirectUrl =
+    `${origin}/api/payments/phonepe/callback?order=${encodeURIComponent(orderNumber)}` +
+    (token ? `&t=${encodeURIComponent(token)}` : "");
 
   // For a COD-advance order charge only the booking advance; otherwise the full total.
   const amountPaise = order.codAdvancePaise > 0 ? order.codAdvancePaise : order.total * 100;

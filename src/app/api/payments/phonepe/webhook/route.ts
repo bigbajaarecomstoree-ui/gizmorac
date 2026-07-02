@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { reconcilePhonePeOrder, reconcileRefund } from "@/lib/data/payments";
+import { safeEqual } from "@/lib/secure-compare";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -16,7 +17,7 @@ export async function POST(req: NextRequest) {
   if (!expected) {
     return Response.json({ ok: false, error: "webhook not configured" }, { status: 503 });
   }
-  if ((req.headers.get("authorization") ?? "") !== expected) {
+  if (!safeEqual(req.headers.get("authorization") ?? "", expected)) {
     return Response.json({ ok: false }, { status: 401 });
   }
 
