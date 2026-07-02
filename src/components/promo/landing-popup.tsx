@@ -20,6 +20,8 @@ export function LandingPopup({
 }) {
   const [open, setOpen] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
+  const panelRef = React.useRef<HTMLDivElement>(null);
+  const closeRef = React.useRef<HTMLButtonElement>(null);
 
   React.useEffect(() => {
     let seen = false;
@@ -44,6 +46,35 @@ export function LandingPopup({
     return () => document.removeEventListener("keydown", onKey);
   }, [open]);
 
+  // Dialog focus management: move focus in on open, trap Tab inside the
+  // panel, and restore focus to the previously-focused element on close.
+  React.useEffect(() => {
+    if (!open) return;
+    const prev = document.activeElement as HTMLElement | null;
+    closeRef.current?.focus();
+    const trapTab = (e: KeyboardEvent) => {
+      if (e.key !== "Tab" || !panelRef.current) return;
+      const focusables = panelRef.current.querySelectorAll<HTMLElement>(
+        'button, [href], input, [tabindex]:not([tabindex="-1"])',
+      );
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", trapTab);
+    return () => {
+      document.removeEventListener("keydown", trapTab);
+      prev?.focus?.();
+    };
+  }, [open]);
+
   if (!open) return null;
 
   function copy() {
@@ -62,10 +93,12 @@ export function LandingPopup({
       onClick={() => setOpen(false)}
     >
       <div
+        ref={panelRef}
         className="animate-rise relative w-full max-w-md overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <button
+          ref={closeRef}
           type="button"
           onClick={() => setOpen(false)}
           aria-label="Close"

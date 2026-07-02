@@ -11,6 +11,9 @@ export function WhatsAppButton({ href }: { href?: string }) {
   // On cart/checkout the mobile sticky checkout bar lives at the bottom, so hide
   // this floating button on mobile there to avoid two stacked CTAs (keep it on desktop).
   const onCheckoutFlow = pathname === "/cart" || pathname.startsWith("/checkout");
+  // The PDP's sticky buy bar is full-width at every breakpoint, so the float
+  // would sit on top of it once the bar slides in — hide it there entirely.
+  if (pathname.startsWith("/product/")) return null;
   // Use a button (not an <a href>) so the wa.me URL isn't revealed in the
   // browser status bar on hover. Opens WhatsApp in a new tab on click.
   return (

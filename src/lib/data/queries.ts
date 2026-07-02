@@ -70,9 +70,13 @@ function toProduct(r: ProductRow): Product {
   };
 }
 
+/** Parse a JSON column that must hold an array. Valid-but-non-array JSON
+ * (a corrupted row storing `null`, a number, an object…) falls back to []
+ * so the UI never calls .map() on a non-array and 500s the page. */
 function safeParse<T = unknown>(json: string): T {
   try {
-    return JSON.parse(json) as T;
+    const v = JSON.parse(json);
+    return (Array.isArray(v) ? v : []) as unknown as T;
   } catch {
     return [] as unknown as T;
   }

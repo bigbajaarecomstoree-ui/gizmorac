@@ -97,6 +97,16 @@ export function CartView({
     [products],
   );
 
+  // Prune ghost lines: ids whose product no longer exists (hard-deleted) would
+  // otherwise linger in localStorage and inflate the header cart count forever.
+  // `products` is the full catalogue (incl. drafts), so unresolved = deleted.
+  React.useEffect(() => {
+    if (!mounted) return;
+    cart
+      .filter((l) => !map.has(l.id))
+      .forEach((l) => removeFromCart(l.id));
+  }, [mounted, cart, map, removeFromCart]);
+
   const lines = cart
     .map((l) => ({ product: map.get(l.id), qty: l.qty }))
     .filter((l): l is { product: Product; qty: number } => Boolean(l.product));
@@ -150,13 +160,14 @@ export function CartView({
   const afterDiscount = Math.max(0, subtotal - couponDiscount - instantOff);
   const shipping = afterDiscount >= freeShippingThreshold ? 0 : shippingFee;
   const total = afterDiscount + shipping;
-  // GST already included in the tax-inclusive prices shown.
+  // GST already included in the tax-inclusive prices shown — scaled by the
+  // discount ratio so it reflects the tax inside the amount actually charged.
   const gstIncl = Math.round(
     lines.reduce((s, l) => {
       const rate = l.product.gstRate || 18;
       const inc = l.product.price * l.qty;
       return s + (inc - inc / (1 + rate / 100));
-    }, 0),
+    }, 0) * (subtotal > 0 ? afterDiscount / subtotal : 0),
   );
   const savings = productDiscount + couponDiscount + instantOff;
   const freeShipGap = Math.max(0, freeShippingThreshold - afterDiscount);
@@ -287,8 +298,9 @@ export function CartView({
                         <button
                           type="button"
                           onClick={() => setQty(product.id, qty - 1)}
+                          disabled={qty <= 1}
                           aria-label="Decrease quantity"
-                          className="grid h-8 w-8 place-items-center text-muted transition-transform hover:text-foreground active:scale-90 cursor-pointer"
+                          className="grid h-8 w-8 place-items-center text-muted transition-transform hover:text-foreground active:scale-90 cursor-pointer disabled:cursor-default disabled:opacity-40 disabled:hover:text-muted"
                         >
                           <Minus size={14} />
                         </button>

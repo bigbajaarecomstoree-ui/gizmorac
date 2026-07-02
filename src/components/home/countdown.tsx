@@ -6,8 +6,19 @@ function pad(n: number) {
   return n.toString().padStart(2, "0");
 }
 
+const DAY_MS = 86_400_000;
+
+/** Daily-deal window: once the passed target expires (page left open past
+ * midnight, or served slightly stale), roll it forward in whole days so the
+ * timer counts to the NEXT midnight instead of parking at 00:00:00. */
+function effectiveTarget(target: number) {
+  let t = target;
+  while (t <= Date.now()) t += DAY_MS;
+  return t;
+}
+
 function remaining(target: number) {
-  const diff = Math.max(0, target - Date.now());
+  const diff = Math.max(0, effectiveTarget(target) - Date.now());
   const totalSeconds = Math.floor(diff / 1000);
   return {
     h: Math.floor(totalSeconds / 3600),

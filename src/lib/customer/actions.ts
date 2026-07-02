@@ -130,15 +130,24 @@ export async function updateProfileAction(
   const fullName = field(formData, "fullName");
   if (!fullName) return { error: "Please enter your full name." };
 
+  // Optional fields, but when provided they must be well-formed — same rules
+  // as the address book (PHONE_RE / PIN_RE below).
+  const phone = field(formData, "phone").replace(/\s+/g, "");
+  if (phone && !PHONE_RE.test(phone))
+    return { error: "Enter a valid 10-digit phone number." };
+  const pincode = field(formData, "pincode");
+  if (pincode && !PIN_RE.test(pincode))
+    return { error: "Enter a valid 6-digit pincode." };
+
   await prisma.customer.update({
     where: { id: current.id },
     data: {
       fullName,
-      phone: field(formData, "phone"),
+      phone,
       address: field(formData, "address"),
       city: field(formData, "city"),
       state: field(formData, "state"),
-      pincode: field(formData, "pincode"),
+      pincode,
     },
   });
   revalidatePath("/account");
@@ -245,29 +254,46 @@ export async function saveAddress(input: AddressInput): Promise<AddressResult> {
   if (parsed.error || !parsed.data) return { ok: false, error: parsed.error };
 
   const count = await prisma.address.count({ where: { customerId: customer.id } });
-  // First address is automatically the default.
-  const makeDefault = Boolean(input.isDefault) || count === 0;
 
   let savedId: string;
+  let isNowDefault: boolean;
   if (input.id) {
     const existing = await prisma.address.findUnique({ where: { id: input.id } });
     if (!existing || existing.customerId !== customer.id) {
       return { ok: false, error: "Address not found." };
     }
+    // Honour the checkbox both ways: unchecking the current default demotes
+    // it (the newest other address is promoted below). The only address a
+    // customer has always stays default.
+    isNowDefault = Boolean(input.isDefault) || count <= 1;
     await prisma.address.update({
       where: { id: input.id },
-      data: { ...parsed.data, ...(makeDefault ? { isDefault: true } : {}) },
+      data: { ...parsed.data, isDefault: isNowDefault },
     });
     savedId = input.id;
+    if (existing.isDefault && !isNowDefault) {
+      const next = await prisma.address.findFirst({
+        where: { customerId: customer.id, id: { not: savedId } },
+        orderBy: { createdAt: "desc" },
+      });
+      if (next) {
+        await prisma.address.update({
+          where: { id: next.id },
+          data: { isDefault: true },
+        });
+      }
+    }
   } else {
+    // First address is automatically the default.
+    isNowDefault = Boolean(input.isDefault) || count === 0;
     const created = await prisma.address.create({
-      data: { ...parsed.data, customerId: customer.id, isDefault: makeDefault },
+      data: { ...parsed.data, customerId: customer.id, isDefault: isNowDefault },
     });
     savedId = created.id;
   }
 
   // Only one default at a time.
-  if (makeDefault) {
+  if (isNowDefault) {
     await prisma.address.updateMany({
       where: { customerId: customer.id, id: { not: savedId } },
       data: { isDefault: false },
