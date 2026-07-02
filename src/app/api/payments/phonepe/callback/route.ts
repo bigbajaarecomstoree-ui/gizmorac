@@ -11,6 +11,7 @@ export const runtime = "nodejs";
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const orderNumber = url.searchParams.get("order") ?? "";
+  const providedToken = url.searchParams.get("t") ?? "";
 
   if (orderNumber) {
     await reconcilePhonePeOrder(orderNumber);
@@ -18,7 +19,15 @@ export async function GET(req: NextRequest) {
       where: { orderNumber },
       select: { trackingToken: true },
     });
-    const suffix = o?.trackingToken ? `-${o.trackingToken}` : "";
+    // Only re-attach the tracking token when the caller already presented it
+    // (the payment start put it on the redirect URL). Never emit it based on
+    // the order number alone — otherwise anyone could enumerate order numbers
+    // here and harvest tokens (→ full PII on the order page). A logged-in owner
+    // needs no token; the order page authorizes them by session.
+    const suffix =
+      o?.trackingToken && providedToken === o.trackingToken
+        ? `-${o.trackingToken}`
+        : "";
     return Response.redirect(new URL(`/order/${orderNumber}${suffix}`, url.origin), 303);
   }
   return Response.redirect(new URL("/", url.origin), 303);
