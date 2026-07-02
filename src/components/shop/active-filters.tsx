@@ -6,12 +6,21 @@ import { formatINR } from "@/lib/format";
 
 type Chip = { label: string; remove: RawParams };
 
-/** Human label for the active price range, however it was set. */
+/** Human label for the active price range, however it was set. Checks
+ * presence (not truthiness) so a legitimate min/max of 0 still labels. */
 function priceLabel(min?: number, max?: number): string | null {
-  if (min && max) return `${formatINR(min)} – ${formatINR(max)}`;
-  if (max) return `Under ${formatINR(max)}`;
-  if (min) return `Above ${formatINR(min)}`;
+  if (min !== undefined && max !== undefined)
+    return `${formatINR(min)} – ${formatINR(max)}`;
+  if (max !== undefined) return `Under ${formatINR(max)}`;
+  if (min !== undefined) return `Above ${formatINR(min)}`;
   return null;
+}
+
+/** URL param → finite number, or undefined (drops "", "abc", NaN). */
+function toNum(raw?: string): number | undefined {
+  if (raw === undefined || raw === "") return undefined;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : undefined;
 }
 
 /**
@@ -38,10 +47,7 @@ export function ActiveFilters({
     chips.push({ label: name, remove: { category: undefined } });
   }
 
-  const price = priceLabel(
-    params.minPrice ? Number(params.minPrice) : undefined,
-    params.maxPrice ? Number(params.maxPrice) : undefined,
-  );
+  const price = priceLabel(toNum(params.minPrice), toNum(params.maxPrice));
   if (price) {
     chips.push({ label: price, remove: { minPrice: undefined, maxPrice: undefined } });
   }

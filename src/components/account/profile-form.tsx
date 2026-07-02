@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { Check, Loader2 } from "lucide-react";
 import { updateProfileAction, type AuthState } from "@/lib/customer/actions";
 import type { Customer } from "@/lib/types";
@@ -32,11 +32,18 @@ export function ProfileForm({ customer }: { customer: Customer }) {
     AuthState | undefined,
     FormData
   >(updateProfileAction, undefined);
+  // Editing any field hides the "Saved" tick until the next successful save —
+  // otherwise it would keep implying the new edits are already saved.
+  const [dirty, setDirty] = useState(false);
 
-  const saved = state !== undefined && !state.error;
+  useEffect(() => {
+    if (state !== undefined) setDirty(false);
+  }, [state]);
+
+  const saved = state !== undefined && !state.error && !dirty;
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form action={formAction} onChange={() => setDirty(true)} className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Full name" name="fullName" defaultValue={customer.fullName} required />
         <Field label="Phone" name="phone" defaultValue={customer.phone} placeholder="10-digit mobile" />

@@ -107,7 +107,9 @@ export default async function ProductPage({ params }: { params: Params }) {
   };
 
   return (
-    <div className="shell py-8">
+    // pb-24: reserve room for the fixed sticky buy bar so it never overlays
+    // the last content/footer at max scroll (the cart page does the same).
+    <div className="shell pb-24 pt-8">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLd(productSchema) }}
@@ -137,7 +139,10 @@ export default async function ProductPage({ params }: { params: Params }) {
 
       <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,420px)_1fr] lg:gap-12">
         <div className="relative mx-auto w-full max-w-[420px]">
+          {/* key: remount on product change so the active slide/zoom state
+              doesn't leak across client-side navigation between PDPs. */}
           <ProductGallery
+            key={product.slug}
             art={product.art}
             name={product.name}
             images={product.images}

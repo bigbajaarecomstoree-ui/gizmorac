@@ -34,6 +34,22 @@ function one(v: string | string[] | undefined): string | undefined {
   return Array.isArray(v) ? v[0] : v;
 }
 
+/** URL param → finite number, else undefined. `Number("abc")` is NaN yet
+ * passes a `typeof === "number"` guard — letting it into a Prisma WHERE
+ * 500s the page instead of degrading. */
+function toNum(raw?: string): number | undefined {
+  if (!raw) return undefined;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+/** URL param → positive integer page; anything invalid falls back to 1
+ * (the `??` clamp downstream doesn't catch NaN). */
+function toPage(raw?: string): number {
+  const n = Number(raw);
+  return Number.isFinite(n) && n >= 1 ? Math.floor(n) : 1;
+}
+
 function toRaw(sp: Record<string, string | string[] | undefined>): RawParams {
   const out: RawParams = {};
   for (const k of ["category", "sort", "minPrice", "maxPrice", "minRating", "minDiscount", "availability", "q", "page"]) {
@@ -71,24 +87,30 @@ export default async function ShopPage({
   const query: ShopQuery = {
     category: raw.category as CategorySlug | undefined,
     sort,
-    minPrice: raw.minPrice ? Number(raw.minPrice) : undefined,
-    maxPrice: raw.maxPrice ? Number(raw.maxPrice) : undefined,
-    minRating: raw.minRating ? Number(raw.minRating) : undefined,
-    minDiscount: raw.minDiscount ? Number(raw.minDiscount) : undefined,
+    minPrice: toNum(raw.minPrice),
+    maxPrice: toNum(raw.maxPrice),
+    minRating: toNum(raw.minRating),
+    minDiscount: toNum(raw.minDiscount),
     availability:
       raw.availability === "in" || raw.availability === "out"
         ? raw.availability
         : undefined,
     q: raw.q,
-    page: raw.page ? Number(raw.page) : 1,
+    page: toPage(raw.page),
   };
 
   const [categories, counts, result, priceBounds] = await Promise.all([
     getVisibleCategories(),
-    // Catalog counts per category. The sidebar is category navigation: clicking a
-    // category browses it (dropping any active search), so these counts match the
-    // products that category will actually show.
-    getCategoryCounts(),
+    // Faceted counts: a category click preserves price/discount/availability
+    // filters (only q + page are dropped), so the sidebar numbers must apply
+    // those same filters to match what the click will actually show.
+    getCategoryCounts({
+      minPrice: query.minPrice,
+      maxPrice: query.maxPrice,
+      minRating: query.minRating,
+      minDiscount: query.minDiscount,
+      availability: query.availability,
+    }),
     queryProducts(query),
     getPriceBounds(),
   ]);

@@ -60,11 +60,19 @@ export function SiteHeader({
       {announcement ? (
         <div className="bg-accent text-on-accent">
           {announcementScroll ? (
-            <div className="h-8 overflow-hidden">
-              <div className="animate-marquee inline-block whitespace-nowrap pl-[100%] leading-8 will-change-transform">
-                <span className="tech-label !text-on-accent">{announcement}</span>
+            <>
+              {/* Reduced-motion collapses the marquee animation to a single
+                  instant run, parking the text off-screen — show the static
+                  centered variant for those users instead. */}
+              <div className="h-8 overflow-hidden motion-reduce:hidden">
+                <div className="animate-marquee inline-block whitespace-nowrap pl-[100%] leading-8 will-change-transform">
+                  <span className="tech-label !text-on-accent">{announcement}</span>
+                </div>
               </div>
-            </div>
+              <div className="shell hidden h-8 items-center justify-center motion-reduce:flex">
+                <p className="tech-label !text-on-accent truncate text-center">{announcement}</p>
+              </div>
+            </>
           ) : (
             <div className="shell flex h-8 items-center justify-center">
               <p className="tech-label !text-on-accent truncate text-center">{announcement}</p>

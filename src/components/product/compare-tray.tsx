@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { Scale, X } from "lucide-react";
 import type { Product } from "@/lib/types";
 import { useStore } from "@/components/store/store-provider";
@@ -15,7 +16,9 @@ import { shortTitle } from "@/lib/format";
  * the side-by-side page. Mounted globally so the selection follows the shopper.
  */
 export function CompareTray() {
-  const { compare, compareCount, toggleCompare, clearCompare, mounted } = useStore();
+  const { compare, compareCount, toggleCompare, clearCompare, pruneCompare, mounted } =
+    useStore();
+  const pathname = usePathname();
   const [products, setProducts] = React.useState<Product[]>([]);
   // Hide shopper chrome when the owner is previewing a product from the admin
   // panel ("View on store" opens the page with ?preview=1).
@@ -32,17 +35,35 @@ export function CompareTray() {
     }
     let active = true;
     getRecentlyViewedProducts(compare).then((list) => {
-      if (active) setProducts(list);
+      if (!active) return;
+      setProducts(list);
+      // Queued slugs that no longer resolve (deactivated/deleted products)
+      // are pruned so the count matches what /compare will actually render.
+      if (list.length < compare.length) {
+        pruneCompare(list.map((p) => p.slug));
+      }
     });
     return () => {
       active = false;
     };
-  }, [compare]);
+  }, [compare, pruneCompare]);
 
   if (!mounted || preview || compareCount === 0) return null;
 
+  // The cart/checkout mobile sticky bar owns the bottom edge there — showing
+  // the tray too would stack two full-width bars (it stays on desktop, where
+  // that bar is hidden).
+  const onCheckoutFlow = pathname === "/cart" || pathname.startsWith("/checkout");
+  // On PDPs the sticky buy bar (z-60, bottom-0, all breakpoints) slides in on
+  // scroll and would cover the tray — lift the tray clear of it there.
+  const onProduct = pathname.startsWith("/product/");
+
   return (
-    <div className="fixed inset-x-0 bottom-4 z-40 flex justify-center px-4 print:hidden">
+    <div
+      className={`fixed inset-x-0 z-40 justify-center px-4 print:hidden ${
+        onProduct ? "bottom-24" : "bottom-4"
+      } ${onCheckoutFlow ? "hidden lg:flex" : "flex"}`}
+    >
       <div className="flex max-w-full items-center gap-3 rounded-2xl border border-border-bright bg-elevated/95 p-2.5 pl-3.5 shadow-xl backdrop-blur">
         <span className="hidden items-center gap-1.5 text-sm font-semibold sm:flex">
           <Scale size={16} className="text-accent" /> Compare

@@ -13,12 +13,28 @@ import { useEffect } from "react";
  */
 export function ContentGuard() {
   useEffect(() => {
-    const blockContextMenu = (e: MouseEvent) => e.preventDefault();
+    // Never interfere inside form fields — right-click paste/spellcheck in the
+    // search box, newsletter and checkout inputs must keep working.
+    const isEditable = (t: EventTarget | null) => {
+      const el = t as HTMLElement | null;
+      if (!el || !el.tagName) return false;
+      return (
+        el.tagName === "INPUT" ||
+        el.tagName === "TEXTAREA" ||
+        el.tagName === "SELECT" ||
+        el.isContentEditable
+      );
+    };
+    const blockContextMenu = (e: MouseEvent) => {
+      if (isEditable(e.target)) return;
+      e.preventDefault();
+    };
     const blockMediaDrag = (e: DragEvent) => {
       const t = e.target as HTMLElement | null;
       if (t && (t.tagName === "IMG" || t.tagName === "VIDEO")) e.preventDefault();
     };
     const blockSaveKeys = (e: KeyboardEvent) => {
+      if (isEditable(e.target)) return;
       const k = e.key.toLowerCase();
       // Ctrl/Cmd+S (save page) and Ctrl/Cmd+U (view source).
       if ((e.ctrlKey || e.metaKey) && (k === "s" || k === "u")) e.preventDefault();

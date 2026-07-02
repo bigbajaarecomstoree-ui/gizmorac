@@ -41,6 +41,8 @@ interface StoreState {
   toggleCompare: (slug: string, name?: string, category?: string) => void;
   isInCompare: (slug: string) => boolean;
   clearCompare: () => void;
+  /** Silently drop queued slugs that no longer resolve to a live product. */
+  pruneCompare: (validSlugs: string[]) => void;
   claimOffer: (kind: ClaimedOffer["kind"], amount: number) => void;
   clearOffer: () => void;
   toast: (message: string, icon?: Toast["icon"]) => void;
@@ -217,6 +219,22 @@ export function StoreProvider({
     setCompareCategory(null);
   }, []);
 
+  // Deactivated/hard-deleted products can linger in the persisted queue; the
+  // tray prunes them once it knows which slugs actually resolve, so the badge
+  // count and the "Compare (n)" CTA never disagree with the compare page.
+  const pruneCompare = React.useCallback((validSlugs: string[]) => {
+    setCompare((prev) => {
+      const next = prev.filter((s) => validSlugs.includes(s));
+      return next.length === prev.length ? prev : next;
+    });
+  }, []);
+
+  // Invariant: an emptied queue (any path — toggle, clear, prune) drops the
+  // shared category lock.
+  React.useEffect(() => {
+    if (mounted && compare.length === 0) setCompareCategory(null);
+  }, [compare, mounted]);
+
   const claimOffer = React.useCallback(
     (kind: ClaimedOffer["kind"], amount: number) => {
       setOffer({ kind, amount });
@@ -246,6 +264,7 @@ export function StoreProvider({
     toggleCompare,
     isInCompare,
     clearCompare,
+    pruneCompare,
     claimOffer,
     clearOffer,
     toast,

@@ -20,17 +20,25 @@ export function Pagination({
       className="mt-10 flex items-center justify-center gap-1.5"
       aria-label="Pagination"
     >
-      <Link
-        href={buildShopUrl(params, { page: page > 2 ? String(page - 1) : undefined })}
-        aria-disabled={page === 1}
-        className={cn(
-          "grid h-9 w-9 place-items-center rounded-lg border border-border text-muted transition-colors hover:border-border-bright hover:text-foreground",
-          page === 1 && "pointer-events-none opacity-40",
-        )}
-        aria-label="Previous page"
-      >
-        <ChevronLeft size={16} />
-      </Link>
+      {/* At the boundary render a truly inert element — an aria-disabled link
+          with a real href is still keyboard-focusable and activatable. */}
+      {page === 1 ? (
+        <span
+          aria-disabled="true"
+          aria-label="Previous page"
+          className="grid h-9 w-9 place-items-center rounded-lg border border-border text-muted opacity-40"
+        >
+          <ChevronLeft size={16} />
+        </span>
+      ) : (
+        <Link
+          href={buildShopUrl(params, { page: page > 2 ? String(page - 1) : undefined })}
+          className="grid h-9 w-9 place-items-center rounded-lg border border-border text-muted transition-colors hover:border-border-bright hover:text-foreground"
+          aria-label="Previous page"
+        >
+          <ChevronLeft size={16} />
+        </Link>
+      )}
 
       {pages.map((p) => (
         <Link
@@ -48,17 +56,23 @@ export function Pagination({
         </Link>
       ))}
 
-      <Link
-        href={buildShopUrl(params, { page: String(page + 1) })}
-        aria-disabled={page === pageCount}
-        className={cn(
-          "grid h-9 w-9 place-items-center rounded-lg border border-border text-muted transition-colors hover:border-border-bright hover:text-foreground",
-          page === pageCount && "pointer-events-none opacity-40",
-        )}
-        aria-label="Next page"
-      >
-        <ChevronRight size={16} />
-      </Link>
+      {page === pageCount ? (
+        <span
+          aria-disabled="true"
+          aria-label="Next page"
+          className="grid h-9 w-9 place-items-center rounded-lg border border-border text-muted opacity-40"
+        >
+          <ChevronRight size={16} />
+        </span>
+      ) : (
+        <Link
+          href={buildShopUrl(params, { page: String(page + 1) })}
+          className="grid h-9 w-9 place-items-center rounded-lg border border-border text-muted transition-colors hover:border-border-bright hover:text-foreground"
+          aria-label="Next page"
+        >
+          <ChevronRight size={16} />
+        </Link>
+      )}
     </nav>
   );
 }

@@ -29,6 +29,7 @@ export function ProductTabs({
   reviewCount: number;
 }) {
   const [tab, setTab] = React.useState<Tab>("Description");
+  const tabRefs = React.useRef<(HTMLButtonElement | null)[]>([]);
 
   // Only show tabs that actually have content (Description + Reviews always).
   const tabs: Tab[] = ["Description"];
@@ -38,6 +39,21 @@ export function ProductTabs({
   if (faqs.length) tabs.push("FAQs");
   tabs.push("Reviews");
 
+  // WAI-ARIA tabs pattern: the tablist is one roving tab stop; Arrow/Home/End
+  // move focus (selection follows focus) instead of Tabbing through every tab.
+  function onTabKeyDown(e: React.KeyboardEvent<HTMLButtonElement>, i: number) {
+    const last = tabs.length - 1;
+    let next: number | null = null;
+    if (e.key === "ArrowRight") next = i === last ? 0 : i + 1;
+    else if (e.key === "ArrowLeft") next = i === 0 ? last : i - 1;
+    else if (e.key === "Home") next = 0;
+    else if (e.key === "End") next = last;
+    if (next === null) return;
+    e.preventDefault();
+    setTab(tabs[next]);
+    tabRefs.current[next]?.focus();
+  }
+
   return (
     <div>
       <div
@@ -45,13 +61,18 @@ export function ProductTabs({
         aria-label="Product details"
         className="flex gap-1 overflow-x-auto border-b border-border [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
-        {tabs.map((t) => (
+        {tabs.map((t, i) => (
           <button
             key={t}
+            ref={(el) => {
+              tabRefs.current[i] = el;
+            }}
             role="tab"
             id={`tab-${t}`}
             aria-selected={tab === t}
             aria-controls={`panel-${t}`}
+            tabIndex={tab === t ? 0 : -1}
+            onKeyDown={(e) => onTabKeyDown(e, i)}
             onClick={() => setTab(t)}
             className={cn(
               "relative whitespace-nowrap px-4 py-3 text-sm font-medium transition-colors cursor-pointer",

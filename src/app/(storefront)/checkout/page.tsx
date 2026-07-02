@@ -4,6 +4,7 @@ import { getCurrentCustomer } from "@/lib/customer-auth";
 import { getAddressesForCustomer } from "@/lib/data/addresses";
 import { getSettings } from "@/lib/data/settings";
 import { getPhonePeConfig } from "@/lib/phonepe";
+import { paymentsProductionSafe } from "@/lib/env-check";
 import { CheckoutView } from "@/components/checkout/checkout-view";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 
@@ -43,6 +44,11 @@ export default async function CheckoutPage() {
           shippingFee={settings.shippingFee}
           codEnabled={settings.codEnabled}
           phonepeEnabled={phonepe.configured}
+          // Mirror placeOrder's ppReady gate exactly: the server only takes a
+          // COD advance when the gateway is production-safe, so the consent UI
+          // and "Pay ₹X now" must key off the same condition (a sandbox
+          // gateway on prod would otherwise show an advance that never runs).
+          codAdvanceReady={phonepe.configured && paymentsProductionSafe(phonepe.env)}
           codAdvance={{
             codAdvanceEnabled: settings.codAdvanceEnabled,
             codAdvanceType: settings.codAdvanceType,

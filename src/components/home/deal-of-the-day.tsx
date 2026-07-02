@@ -29,10 +29,13 @@ import { Badge } from "@/components/ui/badge";
 import { Tilt } from "@/components/ui/tilt";
 import { Countdown } from "./countdown";
 
+/** End of the current day IN IST (the store's clock) — not the server's
+ * timezone, which on a UTC host would end the "day" at 5:29am IST. */
 function endOfTodayMs() {
-  const d = new Date();
-  d.setHours(23, 59, 59, 999);
-  return d.getTime();
+  const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000; // UTC+5:30, no DST
+  const ist = new Date(Date.now() + IST_OFFSET_MS);
+  ist.setUTCHours(23, 59, 59, 999);
+  return ist.getTime() - IST_OFFSET_MS;
 }
 
 export async function DealOfTheDay() {

@@ -42,6 +42,8 @@ export function PromoPopups({
   const pathname = usePathname();
   const { cartCount, offer, claimOffer, mounted } = useStore();
   const [active, setActive] = React.useState<Kind | null>(null);
+  const panelRef = React.useRef<HTMLDivElement>(null);
+  const closeRef = React.useRef<HTMLButtonElement>(null);
 
   const isUnder = (list: string[]) =>
     list.some((p) => pathname === p || pathname.startsWith(`${p}/`));
@@ -80,6 +82,40 @@ export function PromoPopups({
     return () => clearTimeout(t);
   }, [mounted, cart.enabled, cart.amount, cart.delaySec, cartCount]);
 
+  // Dialog behaviour (mirrors LandingPopup): Escape closes; focus moves into
+  // the panel on open, Tab is trapped inside it, and focus is restored to the
+  // previously-focused element on close.
+  React.useEffect(() => {
+    if (!active) return;
+    const prev = document.activeElement as HTMLElement | null;
+    closeRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setActive(null);
+        return;
+      }
+      if (e.key !== "Tab" || !panelRef.current) return;
+      const focusables = panelRef.current.querySelectorAll<HTMLElement>(
+        'button, [href], input, [tabindex]:not([tabindex="-1"])',
+      );
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      prev?.focus?.();
+    };
+  }, [active]);
+
   const activeSuppressed = active === "browse" ? browseSuppressed : cartSuppressed;
   if (!active || activeSuppressed) return null;
 
@@ -100,10 +136,12 @@ export function PromoPopups({
       onClick={() => setActive(null)}
     >
       <div
+        ref={panelRef}
         className="animate-rise relative w-full max-w-sm overflow-hidden rounded-[1.5rem] bg-surface shadow-2xl ring-1 ring-black/5"
         onClick={(e) => e.stopPropagation()}
       >
         <button
+          ref={closeRef}
           type="button"
           onClick={() => setActive(null)}
           aria-label="Close"

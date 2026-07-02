@@ -60,12 +60,10 @@ export default function RootLayout({
     >
       <body className="min-h-full">
         <EmojiGuard />
-        {/* Track input modality so focus rings show for keyboard users only. */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){var d=document.documentElement;function m(){d.setAttribute('data-input','mouse')}function k(e){if(e.key==='Tab'||e.key==='Enter'||e.key===' '||e.key.indexOf('Arrow')===0){d.setAttribute('data-input','keyboard')}}window.addEventListener('mousedown',m,true);window.addEventListener('pointerdown',m,true);window.addEventListener('touchstart',m,true);window.addEventListener('keydown',k,true);})();`,
-          }}
-        />
+        {/* Focus rings rely on native :focus-visible — the browser already
+            shows them for keyboard interaction only, with no JS override
+            (a homegrown modality tracker previously suppressed rings for
+            keyboard users who had last clicked — WCAG 2.4.7). */}
         {children}
       </body>
     </html>

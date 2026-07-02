@@ -97,6 +97,16 @@ export function CartView({
     [products],
   );
 
+  // Prune ghost lines: ids whose product no longer exists (hard-deleted) would
+  // otherwise linger in localStorage and inflate the header cart count forever.
+  // `products` is the full catalogue (incl. drafts), so unresolved = deleted.
+  React.useEffect(() => {
+    if (!mounted) return;
+    cart
+      .filter((l) => !map.has(l.id))
+      .forEach((l) => removeFromCart(l.id));
+  }, [mounted, cart, map, removeFromCart]);
+
   const lines = cart
     .map((l) => ({ product: map.get(l.id), qty: l.qty }))
     .filter((l): l is { product: Product; qty: number } => Boolean(l.product));
@@ -106,6 +116,36 @@ export function CartView({
     .filter((p) => !inCart.has(p.id) && p.stock > 0)
     .sort((a, b) => b.reviewCount - a.reviewCount)
     .slice(0, 4);
+
+  // Re-validate the applied coupon whenever the lines change: the discount is
+  // a server-computed rupee value for one specific cart, so qty edits/removals
+  // would otherwise keep showing the stale amount (and a min-order coupon
+  // could stay applied below its threshold). Checkout re-validates the same
+  // way — this keeps the cart's numbers honest before that.
+  const lineKey = lines.map((l) => `${l.product.id}:${l.qty}`).join(",");
+  React.useEffect(() => {
+    if (!coupon || lines.length === 0) return;
+    let stale = false;
+    const refs = lines.map((l) => ({ id: l.product.id, qty: l.qty }));
+    applyCoupon(coupon.code, refs).then((res) => {
+      if (stale) return;
+      if (res.ok && res.discount) {
+        setCoupon({ code: res.code ?? coupon.code, off: res.discount });
+      } else {
+        setCoupon(null);
+        setCouponError(res.error ?? "This coupon no longer applies to your cart");
+        try {
+          localStorage.removeItem(COUPON_STORAGE_KEY);
+        } catch {}
+      }
+    });
+    return () => {
+      stale = true;
+    };
+    // Keyed on the line contents only — re-running on `coupon` identity would
+    // double-validate right after submitCoupon already validated this cart.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lineKey]);
 
   if (!mounted) {
     return <div className="py-20 text-center text-sm text-muted">Loading your cart…</div>;
@@ -150,13 +190,14 @@ export function CartView({
   const afterDiscount = Math.max(0, subtotal - couponDiscount - instantOff);
   const shipping = afterDiscount >= freeShippingThreshold ? 0 : shippingFee;
   const total = afterDiscount + shipping;
-  // GST already included in the tax-inclusive prices shown.
+  // GST already included in the tax-inclusive prices shown — scaled by the
+  // discount ratio so it reflects the tax inside the amount actually charged.
   const gstIncl = Math.round(
     lines.reduce((s, l) => {
       const rate = l.product.gstRate || 18;
       const inc = l.product.price * l.qty;
       return s + (inc - inc / (1 + rate / 100));
-    }, 0),
+    }, 0) * (subtotal > 0 ? afterDiscount / subtotal : 0),
   );
   const savings = productDiscount + couponDiscount + instantOff;
   const freeShipGap = Math.max(0, freeShippingThreshold - afterDiscount);
@@ -222,6 +263,8 @@ export function CartView({
             {lines.map(({ product, qty }) => {
               const off = discountPercent(product);
               const lowStock = product.stock > 0 && product.stock <= 10;
+              // Same cap as the PDP stepper: never past stock or MAX_QTY.
+              const maxQty = Math.max(1, Math.min(MAX_QTY, product.stock));
               return (
                 <div key={product.id} className="flex gap-4 p-4">
                   <Link
@@ -287,17 +330,19 @@ export function CartView({
                         <button
                           type="button"
                           onClick={() => setQty(product.id, qty - 1)}
+                          disabled={qty <= 1}
                           aria-label="Decrease quantity"
-                          className="grid h-8 w-8 place-items-center text-muted transition-transform hover:text-foreground active:scale-90 cursor-pointer"
+                          className="grid h-8 w-8 place-items-center text-muted transition-transform hover:text-foreground active:scale-90 cursor-pointer disabled:cursor-default disabled:opacity-40 disabled:hover:text-muted"
                         >
                           <Minus size={14} />
                         </button>
                         <span className="w-8 text-center font-mono text-sm tabular-nums">{qty}</span>
                         <button
                           type="button"
-                          onClick={() => setQty(product.id, Math.min(qty + 1, MAX_QTY))}
+                          onClick={() => setQty(product.id, Math.min(qty + 1, maxQty))}
+                          disabled={qty >= maxQty}
                           aria-label="Increase quantity"
-                          className="grid h-8 w-8 place-items-center text-muted transition-transform hover:text-foreground active:scale-90 cursor-pointer"
+                          className="grid h-8 w-8 place-items-center text-muted transition-transform hover:text-foreground active:scale-90 cursor-pointer disabled:cursor-default disabled:opacity-40 disabled:hover:text-muted"
                         >
                           <Plus size={14} />
                         </button>

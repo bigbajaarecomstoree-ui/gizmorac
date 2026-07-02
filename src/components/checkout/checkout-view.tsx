@@ -40,6 +40,7 @@ export function CheckoutView({
   shippingFee = 79,
   codEnabled = true,
   phonepeEnabled = false,
+  codAdvanceReady = false,
   codAdvance = COD_ADVANCE_OFF,
 }: {
   products: Product[];
@@ -49,6 +50,9 @@ export function CheckoutView({
   shippingFee?: number;
   codEnabled?: boolean;
   phonepeEnabled?: boolean;
+  /** Server-computed: gateway configured AND production-safe — the exact
+   * condition under which placeOrder will actually take a COD advance. */
+  codAdvanceReady?: boolean;
   codAdvance?: CodAdvanceConfig;
 }) {
   const router = useRouter();
@@ -219,7 +223,13 @@ export function CheckoutView({
       ? { ...codAdvance, codAdvanceEnabled: true, codAdvanceType: "FIXED", codAdvanceAmount: pinCod.advanceOverride }
       : codAdvance;
   const cod = computeCodAdvance(effCodConfig, total);
-  const codAdvanceActive = payMethod === "COD" && phonepeEnabled && cod.enabled;
+  // Gate on the server's real readiness (configured + production-safe), not
+  // just "configured" — otherwise a sandbox gateway on prod shows the advance
+  // panel + consent while placeOrder quietly places a standard COD order.
+  const codAdvanceActive = payMethod === "COD" && codAdvanceReady && cod.enabled;
+  // Shipping unresolved (no pincode yet / still checking) → any figure that
+  // folds it in would mislead; show placeholders instead of a lower total.
+  const shippingPending = !freeShip && shipping === null;
 
   // GST is included in the displayed (tax-inclusive) prices; show how much.
   const gstIncl = Math.round(
@@ -368,7 +378,9 @@ export function CheckoutView({
       acceptedTerms: accepted,
       items: lines.map((l) => ({ id: l.product.id, qty: l.qty })),
     };
-    const finishCod = (trackUrl: string) => {
+    // Leave checkout for the order's tokenised tracking page: clear the local
+    // cart/offer/coupon (the order now owns them) and navigate.
+    const goToOrder = (trackUrl: string) => {
       clearCart();
       clearOffer();
       try {
@@ -395,10 +407,15 @@ export function CheckoutView({
           } catch {}
           window.location.href = pay.redirectUrl; // hand off to PhonePe
         } else {
-          setError(`${pay.error} Your order ${res.orderNumber} is saved as pending.`);
+          // The order ALREADY exists here (stock held, coupon consumed).
+          // Staying on checkout with a re-enabled submit button would mint a
+          // duplicate order + double stock decrement on the next click — so
+          // hand over to the order page, whose pending-payment banner owns
+          // the "Complete payment" retry for exactly this state.
+          goToOrder(trackUrl);
         }
       } else {
-        finishCod(trackUrl);
+        goToOrder(trackUrl);
       }
     });
   }
@@ -645,9 +662,11 @@ export function CheckoutView({
                     The remaining amount is collected upon delivery.
                   </p>
                   <dl className="mt-3 space-y-1.5 text-sm">
+                    {/* Totals that fold shipping in stay dashes until the
+                        pincode resolves (the booking amount itself is known). */}
                     <div className="flex justify-between">
                       <dt className="text-muted">Order total</dt>
-                      <dd>{formatINR(total)}</dd>
+                      <dd>{shippingPending ? "—" : formatINR(total)}</dd>
                     </div>
                     <div className="flex justify-between font-medium">
                       <dt className="text-accent">Pay now</dt>
@@ -655,7 +674,7 @@ export function CheckoutView({
                     </div>
                     <div className="flex justify-between">
                       <dt className="text-muted">Pay on delivery</dt>
-                      <dd className="font-medium">{formatINR(cod.remaining)}</dd>
+                      <dd className="font-medium">{shippingPending ? "—" : formatINR(cod.remaining)}</dd>
                     </div>
                   </dl>
                   <label className="mt-3 flex cursor-pointer items-start gap-2 border-t border-accent/20 pt-3">
@@ -804,7 +823,15 @@ export function CheckoutView({
             </div>
             <div className="flex justify-between border-t border-border pt-3 text-base font-semibold">
               <dt>Total</dt>
-              <dd className="readout">{formatINR(total)}</dd>
+              <dd className="readout">
+                {shippingPending ? (
+                  <span className="text-sm font-medium text-faint">
+                    {pinValid ? "—" : "Enter pincode"}
+                  </span>
+                ) : (
+                  formatINR(total)
+                )}
+              </dd>
             </div>
             {codAdvanceActive ? (
               <>
@@ -866,11 +893,13 @@ export function CheckoutView({
                 ? payMethod === "PhonePe" || codAdvanceActive
                   ? "Redirecting to PhonePe…"
                   : "Placing order…"
-                : codAdvanceActive
-                  ? `Pay ${formatINR(cod.advance)} now`
-                  : payMethod === "PhonePe"
-                    ? `Pay ${formatINR(total)}`
-                    : `Place order · ${formatINR(total)}`}
+                : shippingPending
+                  ? "Enter pincode to see total"
+                  : codAdvanceActive
+                    ? `Pay ${formatINR(cod.advance)} now`
+                    : payMethod === "PhonePe"
+                      ? `Pay ${formatINR(total)}`
+                      : `Place order · ${formatINR(total)}`}
           </Button>
           <p className="mt-3 text-center text-xs text-faint">
             By placing this order you agree to our{" "}

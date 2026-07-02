@@ -213,12 +213,10 @@
   }
 }
 
-/* Show focus rings for keyboard navigation only — suppress the outline after a
-   mouse/touch interaction. Unlayered so it overrides Tailwind's focus-visible
-   utilities. Keyboard users keep full focus indicators. */
-html[data-input="mouse"] :focus-visible {
-  outline: none !important;
-}
+/* Focus rings: native :focus-visible only (see the base rule above). The old
+   html[data-input="mouse"] override suppressed rings for keyboard users whose
+   last interaction was a click (WCAG 2.4.7) — the browser heuristic already
+   limits rings to keyboard interaction, so no override is needed. */
 
 /* Mask sensitive key inputs as dots WITHOUT type="password" (which invites
    browser password managers to autofill/overwrite the field). Toggled off to

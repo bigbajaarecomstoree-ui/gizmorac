@@ -153,13 +153,20 @@ export function Select({
     <div ref={wrapRef} className={cn("relative inline-block", className)}>
       {name ? <input type="hidden" name={name} value={current} /> : null}
 
+      {/* ARIA select-only combobox: DOM focus stays here, so the active option
+          must be announced from THIS element via aria-activedescendant — on
+          the (never-focused) listbox screen readers say nothing while
+          arrowing. */}
       <button
         ref={triggerRef}
         type="button"
         id={id}
         disabled={disabled}
+        role="combobox"
         aria-haspopup="listbox"
         aria-expanded={open}
+        aria-controls={`${baseId}-listbox`}
+        aria-activedescendant={open ? `${baseId}-opt-${highlight}` : undefined}
         aria-label={ariaLabel}
         onClick={onTriggerClick}
         onKeyDown={onKeyDown}
@@ -183,8 +190,8 @@ export function Select({
 
       {open ? (
         <ul
+          id={`${baseId}-listbox`}
           role="listbox"
-          aria-activedescendant={`${baseId}-opt-${highlight}`}
           className={cn(
             "animate-pop absolute z-50 mt-2 max-h-72 min-w-full overflow-auto rounded-xl border border-border bg-elevated py-1 shadow-xl",
             align === "end" ? "right-0" : "left-0",

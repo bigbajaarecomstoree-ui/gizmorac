@@ -9,11 +9,17 @@ type Result =
   | { ok: true; eta: string; cod: boolean; arriveBy: string }
   | { ok: false; message: string };
 
-/** Human arrival date N days out, e.g. "Sat, 5 Jul". */
+/** Human arrival date N days out, e.g. "Sat, 5 Jul" — pinned to IST so it
+ * always agrees with the adjacent `deliveryWindow` range (also IST). */
 function arrivalDate(daysFromNow: number): string {
   const d = new Date();
   d.setDate(d.getDate() + daysFromNow);
-  return d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
+  return d.toLocaleDateString("en-IN", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    timeZone: "Asia/Kolkata",
+  });
 }
 
 export function PincodeChecker() {

@@ -81,7 +81,18 @@ export default async function AccountPage() {
 
   // Overview figures.
   const firstName = customer.fullName.trim().split(/\s+/)[0] || "there";
-  const totalSpent = orders.filter((o) => !TERMINAL.includes(o.status)).reduce((s, o) => s + o.total, 0);
+  // "Total spent" counts money that actually moved: delivered/replacement
+  // orders (COD collected, prepaid fulfilled) plus paid-online orders still in
+  // transit — never unpaid Pending/Confirmed COD, never reversed orders.
+  const totalSpent = orders
+    .filter(
+      (o) =>
+        !TERMINAL.includes(o.status) &&
+        (o.status === "Delivered" ||
+          o.status === "Replacement" ||
+          o.paymentStatus === "Paid"),
+    )
+    .reduce((s, o) => s + o.total, 0);
   const deliveredCount = orders.filter((o) => o.status === "Delivered").length;
   const returnedCount = orders.filter((o) => o.status === "Returned").length;
   const cancelledCount = orders.filter((o) => o.status === "Cancelled").length;

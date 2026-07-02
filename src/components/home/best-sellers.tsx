@@ -4,6 +4,9 @@ import { getBestSellers } from "@/lib/data/queries";
 
 export async function BestSellers() {
   const products = await getBestSellers(4);
+  // No flagged best-sellers → skip the whole section rather than rendering an
+  // orphaned heading over an empty grid (mirrors FeaturedProducts).
+  if (products.length === 0) return null;
   return (
     <section className="shell py-8 sm:py-12">
       <SectionHeading
