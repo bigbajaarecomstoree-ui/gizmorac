@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { randomBytes } from "node:crypto";
 import { isAuthenticated } from "@/lib/auth";
 import { saveUpload, deleteUpload, sniffMime } from "@/lib/storage";
+import { limitByIp } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -25,6 +26,9 @@ export async function POST(request: NextRequest) {
   if (!(await isAuthenticated())) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
+  // Owner-only endpoint, but still bound accidental/runaway upload loops.
+  const burst = await limitByIp("admin-upload", 60, 60);
+  if (burst) return Response.json({ error: burst }, { status: 429 });
 
   let form: FormData;
   try {

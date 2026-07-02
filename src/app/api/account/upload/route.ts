@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { randomBytes } from "node:crypto";
 import { getCurrentCustomer } from "@/lib/customer-auth";
 import { saveUpload, sniffMime } from "@/lib/storage";
+import { limitByIp, rateLimit } from "@/lib/rate-limit";
 
 // Customer-authenticated upload for support-ticket photo/video proof.
 export const dynamic = "force-dynamic";
@@ -24,6 +25,19 @@ export async function POST(request: NextRequest) {
   const customer = await getCurrentCustomer();
   if (!customer) {
     return Response.json({ error: "Please log in." }, { status: 401 });
+  }
+
+  // A logged-in account (cheap to create) could otherwise loop 20MB uploads to
+  // run up Blob storage/egress cost — bound it with a per-IP burst limit plus a
+  // per-customer daily ceiling (no schema; Upstash counters).
+  const burst = await limitByIp("upload", 10, 60);
+  if (burst) return Response.json({ error: burst }, { status: 429 });
+  const daily = await rateLimit(`upload-day:${customer.id}`, 40, 86400);
+  if (!daily.allowed) {
+    return Response.json(
+      { error: "Daily upload limit reached. Please try again tomorrow." },
+      { status: 429 },
+    );
   }
 
   let form: FormData;
