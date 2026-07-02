@@ -85,10 +85,16 @@ export default async function ShopPage({
 
   const [categories, counts, result, priceBounds] = await Promise.all([
     getVisibleCategories(),
-    // Catalog counts per category. The sidebar is category navigation: clicking a
-    // category browses it (dropping any active search), so these counts match the
-    // products that category will actually show.
-    getCategoryCounts(),
+    // Faceted counts: a category click preserves price/discount/availability
+    // filters (only q + page are dropped), so the sidebar numbers must apply
+    // those same filters to match what the click will actually show.
+    getCategoryCounts({
+      minPrice: query.minPrice,
+      maxPrice: query.maxPrice,
+      minRating: query.minRating,
+      minDiscount: query.minDiscount,
+      availability: query.availability,
+    }),
     queryProducts(query),
     getPriceBounds(),
   ]);

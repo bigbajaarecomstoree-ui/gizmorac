@@ -60,14 +60,27 @@ export function ProductGallery({
   const hasMedia = slides.length > 0;
   const [active, setActive] = React.useState(0);
   const [zoom, setZoom] = React.useState(false);
+  const zoomTriggerRef = React.useRef<HTMLButtonElement>(null);
+  const zoomCloseRef = React.useRef<HTMLButtonElement>(null);
 
+  // Zoom dialog: Escape closes; focus moves to Close on open and back to the
+  // trigger on close; Tab is held on the dialog's only control instead of
+  // reaching the obscured page behind the overlay.
   React.useEffect(() => {
     if (!zoom) return;
+    zoomCloseRef.current?.focus();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setZoom(false);
+      if (e.key === "Tab") {
+        e.preventDefault();
+        zoomCloseRef.current?.focus();
+      }
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      zoomTriggerRef.current?.focus();
+    };
   }, [zoom]);
 
   // --- Fallback: original illustration gallery ---
@@ -129,6 +142,7 @@ export function ProductGallery({
             className="object-contain"
           />
           <button
+            ref={zoomTriggerRef}
             type="button"
             onClick={() => setZoom(true)}
             aria-label="Zoom image"
@@ -187,10 +201,12 @@ export function ProductGallery({
       <div
         role="dialog"
         aria-modal="true"
+        aria-label={name ? `${name} — zoomed image` : "Zoomed product image"}
         onClick={() => setZoom(false)}
         className="fixed inset-0 z-[90] flex items-center justify-center bg-black/90 p-4 print:hidden"
       >
         <button
+          ref={zoomCloseRef}
           type="button"
           onClick={() => setZoom(false)}
           aria-label="Close zoom"

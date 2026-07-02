@@ -107,7 +107,9 @@ export default async function ProductPage({ params }: { params: Params }) {
   };
 
   return (
-    <div className="shell py-8">
+    // pb-24: reserve room for the fixed sticky buy bar so it never overlays
+    // the last content/footer at max scroll (the cart page does the same).
+    <div className="shell pb-24 pt-8">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLd(productSchema) }}

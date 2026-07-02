@@ -26,20 +26,28 @@ export function ProductPurchase({
   const max = Math.max(1, Math.min(stock, MAX_QTY));
   const outOfStock = stock <= 0;
 
-  function trackAdd() {
+  // This client component is reused across PDP navigations, so qty would
+  // otherwise carry over (and can exceed the next product's stock).
+  React.useEffect(() => {
+    setQty(1);
+  }, [id]);
+
+  function trackAdd(q: number) {
     track("add_to_cart", {
       currency: "INR",
-      value: price * qty,
-      items: [{ item_id: id, item_name: name, price, quantity: qty }],
+      value: price * q,
+      items: [{ item_id: id, item_name: name, price, quantity: q }],
     });
   }
   function add() {
-    addToCart(id, qty, name);
-    trackAdd();
+    const q = Math.min(qty, max); // never add more than stock/MAX_QTY
+    addToCart(id, q, name);
+    trackAdd(q);
   }
   function buyNow() {
-    addToCart(id, qty, name);
-    trackAdd();
+    const q = Math.min(qty, max);
+    addToCart(id, q, name);
+    trackAdd(q);
     // Buy Now requires an account: guests log in first, then land on checkout.
     router.push(loggedIn ? "/checkout" : "/login?next=/checkout");
   }

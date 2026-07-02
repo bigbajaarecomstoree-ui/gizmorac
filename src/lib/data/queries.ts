@@ -203,7 +203,10 @@ export async function getCategoryById(id: string): Promise<Category | null> {
  * Called with no args it returns global catalog counts (home / admin).
  */
 export async function getCategoryCounts(
-  filters?: Pick<ShopQuery, "q" | "minPrice" | "maxPrice" | "minRating" | "availability">,
+  filters?: Pick<
+    ShopQuery,
+    "q" | "minPrice" | "maxPrice" | "minRating" | "availability" | "minDiscount"
+  >,
 ): Promise<Record<CategorySlug, number>> {
   const counts: Record<string, number> = {};
   const where: Prisma.ProductWhereInput = { active: true };
@@ -222,6 +225,21 @@ export async function getCategoryCounts(
   if (typeof filters?.minRating === "number") where.rating = { gte: filters.minRating };
   if (filters?.availability === "in") where.stock = { gt: 0 };
   else if (filters?.availability === "out") where.stock = { lte: 0 };
+
+  // Discount is derived (MRP vs price) so it can't live in the SQL WHERE —
+  // count in-memory with the exact rule queryProducts filters by.
+  if (typeof filters?.minDiscount === "number" && filters.minDiscount > 0) {
+    const rows = await prisma.product.findMany({
+      where,
+      select: { category: true, price: true, mrp: true },
+    });
+    for (const r of rows) {
+      if (discountPercent(r) >= filters.minDiscount) {
+        counts[r.category] = (counts[r.category] ?? 0) + 1;
+      }
+    }
+    return counts;
+  }
 
   const grouped = await prisma.product.groupBy({
     by: ["category"],
