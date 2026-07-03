@@ -131,7 +131,7 @@ export function CompareView() {
           ))}
         </div>
 
-        <Row label="Price" head render={(p) => <Price product={p} size="sm" tone="ink" />} />
+        <Row label="Price" head render={(p) => <Price product={p} size="sm" />} />
         <Row label="Rating" head render={(p) => <RatingStars rating={p.rating} count={p.reviewCount} />} />
         <Row label="Brand" render={(p) => p.brand} />
         <Row label="Warranty" render={(p) => warrantyLabel(p.warrantyMonths)} />

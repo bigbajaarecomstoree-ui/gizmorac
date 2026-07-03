@@ -34,8 +34,3 @@ export function wouldExceedCeiling(
   if (newRefundPaise <= 0) return true;
   return sumCountedRefunds(existing) + newRefundPaise > amountPaidPaise;
 }
-
-/** Remaining refundable headroom in paise (never negative). */
-export function refundableRemaining(amountPaidPaise: number, existing: RefundLike[]): number {
-  return Math.max(0, amountPaidPaise - sumCountedRefunds(existing));
-}

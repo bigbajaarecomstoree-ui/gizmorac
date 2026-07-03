@@ -10,12 +10,9 @@ import { cn } from "@/lib/utils";
 export function Tilt({
   children,
   className,
-  max = 7,
 }: {
   children: React.ReactNode;
   className?: string;
-  /** Maximum tilt in degrees on each axis. */
-  max?: number;
 }) {
   const ref = React.useRef<HTMLDivElement>(null);
   const reduced = React.useRef(false);
@@ -30,7 +27,7 @@ export function Tilt({
     const r = el.getBoundingClientRect();
     const px = (e.clientX - r.left) / r.width - 0.5;
     const py = (e.clientY - r.top) / r.height - 0.5;
-    el.style.transform = `perspective(900px) rotateX(${(-py * max).toFixed(2)}deg) rotateY(${(px * max).toFixed(2)}deg)`;
+    el.style.transform = `perspective(900px) rotateX(${(-py * 7).toFixed(2)}deg) rotateY(${(px * 7).toFixed(2)}deg)`;
   }
 
   function reset() {

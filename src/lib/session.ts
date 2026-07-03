@@ -7,7 +7,7 @@ import { SignJWT, jwtVerify } from "jose";
 // runtime in production (throws) instead of silently signing with a known
 // default — which would make admin-token forgery trivial. Dev/test keep a
 // default for DX. Lazy (not module-level) so it never crashes the build.
-function getSecret(): Uint8Array {
+export function getSecret(): Uint8Array {
   const raw = process.env.JWT_SECRET;
   if (raw && raw.length >= 16) return new TextEncoder().encode(raw);
   if (process.env.NODE_ENV === "production") {
@@ -38,17 +38,6 @@ export async function verifyToken(token?: string): Promise<boolean> {
   } catch {
     return false;
   }
-}
-
-/** Constant-time-ish comparison against the configured admin password. */
-export function checkPassword(input: string): boolean {
-  const expected = process.env.ADMIN_PASSWORD ?? "";
-  if (!expected || input.length !== expected.length) return false;
-  let diff = 0;
-  for (let i = 0; i < input.length; i++) {
-    diff |= input.charCodeAt(i) ^ expected.charCodeAt(i);
-  }
-  return diff === 0;
 }
 
 /**

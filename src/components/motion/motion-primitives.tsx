@@ -1,44 +1,68 @@
 "use client";
 
 /**
- * Small framer-motion toolkit for the storefront. Each primitive is
- * reduced-motion aware (renders a plain <div> when the user prefers reduced
- * motion) and animates on scroll-into-view, so server components can wrap their
- * server-rendered children without becoming client components themselves.
+ * Small scroll-reveal toolkit for the storefront. Each primitive fades and
+ * slides its children up the first time it scrolls into view, using plain CSS
+ * transitions, so server components can wrap their server-rendered children
+ * without becoming client components themselves. Reduced-motion users get the
+ * content rendered visible immediately (`motion-reduce` variants).
  */
-import { motion, useReducedMotion, type Variants } from "framer-motion";
-import type { ReactNode } from "react";
+import {
+  Children,
+  cloneElement,
+  isValidElement,
+  useEffect,
+  useRef,
+  useState,
+  type ReactElement,
+  type ReactNode,
+} from "react";
+import { cn } from "@/lib/utils";
 
-const EASE: [number, number, number, number] = [0.16, 1, 0.3, 1];
+const HIDDEN = "opacity-0 translate-y-6";
+const SHOWN = "opacity-100 translate-y-0";
+const TRANSITION =
+  "transition-[opacity,translate] ease-[cubic-bezier(0.16,1,0.3,1)] " +
+  "motion-reduce:transition-none motion-reduce:opacity-100 motion-reduce:translate-y-0";
+
+/** Flips to true (once) when the element scrolls into view. */
+function useInView(threshold: number) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setShown(true);
+          io.disconnect();
+        }
+      },
+      { threshold },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [threshold]);
+  return { ref, shown };
+}
 
 /** Fade + slide-up a block when it scrolls into view. */
 export function Reveal({
   children,
   className,
-  y = 24,
-  delay = 0,
-  amount = 0.2,
-  once = true,
 }: {
   children: ReactNode;
   className?: string;
-  y?: number;
-  delay?: number;
-  amount?: number;
-  once?: boolean;
 }) {
-  const reduce = useReducedMotion();
-  if (reduce) return <div className={className}>{children}</div>;
+  const { ref, shown } = useInView(0.2);
   return (
-    <motion.div
-      className={className}
-      initial={{ opacity: 0, y }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once, amount }}
-      transition={{ duration: 0.6, ease: EASE, delay }}
+    <div
+      ref={ref}
+      className={cn(TRANSITION, "duration-[600ms]", shown ? SHOWN : HIDDEN, className)}
     >
       {children}
-    </motion.div>
+    </div>
   );
 }
 
@@ -46,56 +70,41 @@ export function Reveal({
 export function Stagger({
   children,
   className,
-  stagger = 0.08,
-  delay = 0.05,
-  amount = 0.15,
-  once = true,
 }: {
   children: ReactNode;
   className?: string;
-  stagger?: number;
-  delay?: number;
-  amount?: number;
-  once?: boolean;
 }) {
-  const reduce = useReducedMotion();
-  if (reduce) return <div className={className}>{children}</div>;
-  const variants: Variants = {
-    hidden: {},
-    show: { transition: { staggerChildren: stagger, delayChildren: delay } },
-  };
+  const { ref, shown } = useInView(0.15);
   return (
-    <motion.div
-      className={className}
-      variants={variants}
-      initial="hidden"
-      whileInView="show"
-      viewport={{ once, amount }}
-    >
-      {children}
-    </motion.div>
+    <div ref={ref} className={className}>
+      {Children.map(children, (child, i) =>
+        isValidElement(child)
+          ? cloneElement(child as ReactElement<StaggerItemProps>, {
+              shown,
+              delayMs: 50 + i * 80,
+            })
+          : child,
+      )}
+    </div>
   );
 }
 
-/** A single item inside <Stagger>. Must be a direct child for the cascade. */
-export function StaggerItem({
-  children,
-  className,
-  y = 24,
-}: {
+type StaggerItemProps = {
   children: ReactNode;
   className?: string;
-  y?: number;
-}) {
-  const reduce = useReducedMotion();
-  if (reduce) return <div className={className}>{children}</div>;
-  const variants: Variants = {
-    hidden: { opacity: 0, y },
-    show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: EASE } },
-  };
+  /** Injected by <Stagger>. */
+  shown?: boolean;
+  delayMs?: number;
+};
+
+/** A single item inside <Stagger>. Must be a direct child for the cascade. */
+export function StaggerItem({ children, className, shown, delayMs = 0 }: StaggerItemProps) {
   return (
-    <motion.div className={className} variants={variants}>
+    <div
+      className={cn(TRANSITION, "duration-500", shown ? SHOWN : HIDDEN, className)}
+      style={{ transitionDelay: `${delayMs}ms` }}
+    >
       {children}
-    </motion.div>
+    </div>
   );
 }

@@ -2,48 +2,16 @@
 
 import * as React from "react";
 import Image from "next/image";
-import { useFormStatus } from "react-dom";
 import { ImagePlus, Loader2, X } from "lucide-react";
 import type { Category } from "@/lib/types";
-import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
+import { Field, SubmitButton, inputCls } from "@/components/admin/form-bits";
 
 const ART_OPTIONS = [
   "printer", "inflator", "knee-massager", "eye-massager", "bp-monitor",
   "oximeter", "keyboard", "usb-hub", "charger", "vacuum", "mount",
   "webcam", "mouse", "stand", "neck-massager",
 ];
-
-const inputCls =
-  "h-11 w-full rounded-lg border border-border bg-background px-3 text-sm placeholder:text-faint focus:border-accent focus:outline-none";
-
-function Field({
-  label,
-  hint,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="block">
-      <span className="mb-1.5 block text-sm font-medium">{label}</span>
-      {children}
-      {hint ? <span className="mt-1 block text-xs text-faint">{hint}</span> : null}
-    </label>
-  );
-}
-
-function SubmitButton({ label }: { label: string }) {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" size="lg" disabled={pending}>
-      {pending ? <Loader2 size={16} className="animate-spin" /> : null}
-      {pending ? "Saving…" : label}
-    </Button>
-  );
-}
 
 export function CategoryForm({
   action,

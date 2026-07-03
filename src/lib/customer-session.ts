@@ -1,23 +1,10 @@
 import { SignJWT, jwtVerify } from "jose";
 import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
+import { getSecret } from "@/lib/session";
 
 // Pure customer-session helpers: JWT signing/verification + password hashing.
 // No `next/headers` import, so this is safe to use from any server context.
 // (Do NOT import this from the edge proxy — node:crypto is Node-runtime only.)
-
-// Fail closed in production if the shared secret is missing/weak (see the same
-// guard in session.ts) — a default key here would let anyone forge a customer
-// token for any account. Lazy so it never crashes the build.
-function getSecret(): Uint8Array {
-  const raw = process.env.JWT_SECRET;
-  if (raw && raw.length >= 16) return new TextEncoder().encode(raw);
-  if (process.env.NODE_ENV === "production") {
-    throw new Error(
-      "JWT_SECRET is missing or too short — refusing to sign/verify sessions in production.",
-    );
-  }
-  return new TextEncoder().encode(raw ?? "insecure-dev-secret-change-me");
-}
 
 export const CUSTOMER_COOKIE = "gz_customer";
 export const CUSTOMER_MAX_AGE = 60 * 60 * 24 * 30; // 30 days

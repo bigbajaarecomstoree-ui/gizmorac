@@ -15,12 +15,7 @@ const MONTHS = [
 export type ChartMetric = "revenue" | "orders";
 export type ChartRange = "7d" | "30d" | "week" | "month" | "12m" | "ytd";
 
-export const CHART_METRICS: { value: ChartMetric; label: string }[] = [
-  { value: "revenue", label: "Revenue" },
-  { value: "orders", label: "Orders" },
-];
-
-export const CHART_RANGES: { value: ChartRange; label: string }[] = [
+const CHART_RANGES: { value: ChartRange; label: string }[] = [
   { value: "7d", label: "Last 7 days" },
   { value: "30d", label: "Last 30 days" },
   { value: "week", label: "This week" },

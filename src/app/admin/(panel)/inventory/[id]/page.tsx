@@ -17,7 +17,8 @@ import {
   getVelocity,
 } from "@/lib/data/inventory";
 import { formatINR } from "@/lib/format";
-import { SupplierEditor, InventoryNoteEditor } from "@/components/admin/inventory-meta";
+import { EditorCard } from "@/components/admin/editor-card";
+import { saveInventoryNote, saveSupplier } from "@/lib/admin/actions";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -158,8 +159,27 @@ export default async function InventoryDetailPage({ params }: { params: Params }
       ) : null}
 
       <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <SupplierEditor productId={product.id} initial={product.supplier} />
-        <InventoryNoteEditor productId={product.id} initial={product.inventoryNote} />
+        <EditorCard
+          icon="truck"
+          title="Supplier"
+          hint="Where you reorder this product from."
+          placeholder="e.g. ABC Electronics"
+          saveLabel="Save"
+          id={product.id}
+          initial={product.supplier}
+          action={saveSupplier}
+        />
+        <EditorCard
+          icon="note"
+          title="Inventory notes"
+          hint="Private to staff — reorder reminders, supplier delays…"
+          placeholder="e.g. Supplier delayed · next shipment Monday"
+          saveLabel="Save note"
+          rows={3}
+          id={product.id}
+          initial={product.inventoryNote}
+          action={saveInventoryNote}
+        />
       </div>
 
       {/* movement history */}

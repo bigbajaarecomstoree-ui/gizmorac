@@ -112,12 +112,3 @@ export async function getOrderActivity(orderNumber: string): Promise<OrderEvent[
     message: r.message,
   }));
 }
-
-/** Counts by level over the recent window — small header summary for the UI. */
-export async function getLogCounts(): Promise<{ errors: number; total: number }> {
-  const [errors, total] = await Promise.all([
-    prisma.eventLog.count({ where: { level: "error" } }),
-    prisma.eventLog.count(),
-  ]);
-  return { errors, total };
-}

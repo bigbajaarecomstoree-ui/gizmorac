@@ -5,16 +5,10 @@ import { jsonLd } from "@/lib/json-ld";
 
 export function FaqAccordion({
   items,
-  eyebrow = "Questions",
-  title = "Frequently asked questions",
   description,
-  withSchema = false,
 }: {
   items: FaqItem[];
-  eyebrow?: string;
-  title?: string;
   description?: string;
-  withSchema?: boolean;
 }) {
   const schema = {
     "@context": "https://schema.org",
@@ -28,13 +22,15 @@ export function FaqAccordion({
 
   return (
     <section id="faq" className="shell scroll-mt-24 py-8 sm:py-12">
-      {withSchema ? (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: jsonLd(schema) }}
-        />
-      ) : null}
-      <SectionHeading eyebrow={eyebrow} title={title} description={description} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLd(schema) }}
+      />
+      <SectionHeading
+        eyebrow="Questions"
+        title="Frequently asked questions"
+        description={description}
+      />
       <div className="mx-auto mt-10 max-w-3xl divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface">
         {items.map((f) => (
           <details key={f.q} className="group">

@@ -1,7 +1,7 @@
-// Refund engine (spec §8/§9/§11). Idempotent creation, hard over-refund guard,
-// gateway processing with retry → MANUAL_REVIEW, webhook application with
-// never-downgrade, and reconciliation of stuck refunds. All money in paise;
-// PhonePe is called paise-native (NO ×100 — that lived only in the legacy path).
+// Refund engine (spec §8/§9). Idempotent creation, hard over-refund guard,
+// gateway processing with retry → MANUAL_REVIEW, and webhook application with
+// never-downgrade. All money in paise; PhonePe is called paise-native
+// (NO ×100 — that lived only in the legacy path).
 //
 // NOTE: built and unit-tested via its pure cores (money/refund-math/webhook-
 // rules). NOT yet wired into the live webhook routes — that happens at the
@@ -9,7 +9,7 @@
 
 import { Prisma, type RefundStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { initiateRefund, getRefundStatus } from "@/lib/phonepe";
+import { initiateRefund } from "@/lib/phonepe";
 import { transitionEntity, type Actor } from "./transition-engine";
 import { wouldExceedCeiling } from "./refund-math";
 import { decideRefundWebhook } from "./webhook-rules";
@@ -192,29 +192,4 @@ export async function applyRefundWebhook(input: {
     await failRefund(refund.id, "gateway reported FAILED");
   }
   return { applied: true, reason: decision.reason };
-}
-
-/** Re-query the gateway for refunds stuck in PROCESSING beyond a threshold (spec §11). */
-export async function reconcileStuckRefunds(thresholdMinutes = 30): Promise<{ checked: number; settled: number }> {
-  const cutoff = new Date(Date.now() - thresholdMinutes * 60_000);
-  const stuck = await prisma.refund.findMany({
-    where: { status: "PROCESSING", updatedAt: { lt: cutoff }, refundReference: { not: "" } },
-  });
-  let settled = 0;
-  for (const r of stuck) {
-    const { state } = await getRefundStatus(r.refundReference);
-    if (state === "Completed") {
-      await applyRefundWebhook({
-        provider: "phonepe-reconcile",
-        eventId: `reconcile-${r.id}-${Date.now()}`,
-        merchantRefundId: r.refundReference,
-        incoming: "REFUNDED",
-      });
-      settled++;
-    } else if (state === "Failed") {
-      await failRefund(r.id, "reconcile: gateway FAILED");
-      settled++;
-    }
-  }
-  return { checked: stuck.length, settled };
 }

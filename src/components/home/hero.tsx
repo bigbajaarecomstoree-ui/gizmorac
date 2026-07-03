@@ -281,7 +281,7 @@ export async function Hero() {
               <p className="line-clamp-2 text-xs font-medium text-muted">
                 {shortTitle(hero.name)}
               </p>
-              <Price product={hero} size="sm" tone="ink" className="mt-1 justify-center" />
+              <Price product={hero} size="sm" className="mt-1 justify-center" />
             </Link>
           ) : null}
         </div>

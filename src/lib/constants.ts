@@ -9,11 +9,6 @@ export const SITE = {
   url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://gizmorac.com",
 };
 
-export const WHATSAPP_NUMBER = "919999999999"; // placeholder
-export const WHATSAPP_LINK = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
-  "Hi GIZMORAC, I have a question about your products.",
-)}`;
-
 export const TRUST_STATS = {
   customers: "10,000+",
   rating: "4.7",

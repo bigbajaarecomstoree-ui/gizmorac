@@ -1,7 +1,5 @@
 import Link from "next/link";
 import {
-  ChevronRight,
-  ChevronLeft,
   IndianRupee,
   Receipt,
   Clock,
@@ -19,6 +17,7 @@ import {
 import { formatINR } from "@/lib/format";
 import { OrderFilters, OrdersPageSize } from "@/components/admin/order-filters";
 import { OrdersList } from "@/components/admin/orders-list";
+import { PageLink } from "@/components/admin/page-link";
 import type { Order, OrderStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
@@ -253,36 +252,5 @@ export default async function AdminOrdersPage({
         ) : null}
       </div>
     </div>
-  );
-}
-
-function PageLink({
-  href,
-  disabled,
-  dir,
-}: {
-  href: string;
-  disabled: boolean;
-  dir: "prev" | "next";
-}) {
-  const label = dir === "prev" ? "Previous" : "Next";
-  const icon = dir === "prev" ? <ChevronLeft size={16} /> : <ChevronRight size={16} />;
-  const cls =
-    "inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium transition-colors";
-  if (disabled) {
-    return (
-      <span className={cn(cls, "cursor-not-allowed text-faint opacity-50")} aria-disabled>
-        {dir === "prev" ? icon : null}
-        {label}
-        {dir === "next" ? icon : null}
-      </span>
-    );
-  }
-  return (
-    <Link href={href} className={cn(cls, "text-foreground hover:border-accent hover:text-accent")}>
-      {dir === "prev" ? icon : null}
-      {label}
-      {dir === "next" ? icon : null}
-    </Link>
   );
 }

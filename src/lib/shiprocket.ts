@@ -203,15 +203,6 @@ export async function shiprocketLogin(
   }
 }
 
-/** Verify credentials without persisting anything (used by the Connect button). */
-export async function verifyShiprocket(input: {
-  email: string;
-  password: string;
-}): Promise<{ ok: boolean; error?: string }> {
-  const res = await shiprocketLogin(input.email, input.password);
-  return { ok: res.ok, error: res.error };
-}
-
 /**
  * Get a valid auth token, reusing the DB-cached one until it nears expiry,
  * else logging in fresh and caching it (Shiprocket tokens live ~10 days).

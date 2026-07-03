@@ -17,8 +17,3 @@ export const NON_REVENUE: string[] = ["Cancelled", "Returned", "Refunded"];
 
 /** Prisma filter: `where: { status: REVENUE_STATUSES }` → realized-revenue orders only. */
 export const REVENUE_STATUSES = { notIn: NON_REVENUE };
-
-/** True when a status represents realized revenue (not cancelled/returned/refunded). */
-export function isRevenue(status: string): boolean {
-  return !NON_REVENUE.includes(status);
-}

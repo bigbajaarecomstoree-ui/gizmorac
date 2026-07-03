@@ -3,7 +3,6 @@ import Image from "next/image";
 import { ShieldCheck, Truck, RotateCcw, Headset, MapPin, Phone, Mail } from "lucide-react";
 import type { Category } from "@/lib/types";
 import { policies } from "@/lib/data/policies";
-import { WHATSAPP_LINK } from "@/lib/constants";
 import { FooterNewsletter } from "./footer-newsletter";
 
 const TRUST = [
@@ -52,7 +51,7 @@ function XIcon({ size = 16, className }: IconProps) {
 }
 
 export function SiteFooter({
-  whatsappHref = WHATSAPP_LINK,
+  whatsappHref,
   categories = [],
   instagramUrl,
   facebookUrl,
@@ -63,7 +62,7 @@ export function SiteFooter({
   supportPhone,
   supportEmail,
 }: {
-  whatsappHref?: string;
+  whatsappHref: string;
   categories?: Category[];
   instagramUrl?: string;
   facebookUrl?: string;
@@ -73,7 +72,7 @@ export function SiteFooter({
   companyAddress?: string;
   supportPhone?: string;
   supportEmail?: string;
-} = {}) {
+}) {
   const company = legalName?.trim() || FALLBACK_COMPANY;
   const address = companyAddress?.trim() || "";
   const phone = supportPhone?.trim() || FALLBACK_PHONE;

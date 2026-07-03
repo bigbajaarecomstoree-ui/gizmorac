@@ -6,7 +6,7 @@ import {
   SESSION_MAX_AGE,
 } from "@/lib/session";
 
-export { checkPassword, adminPasswordWeak } from "@/lib/session";
+export { adminPasswordWeak } from "@/lib/session";
 
 // Cookie-store helpers — server actions / server components only.
 

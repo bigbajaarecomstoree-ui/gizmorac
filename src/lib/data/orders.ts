@@ -224,16 +224,6 @@ export async function getOrderByNumber(
   return row ? toOrder(row) : null;
 }
 
-export async function getOrdersByCustomerId(
-  customerId: string,
-): Promise<Order[]> {
-  const rows = await prisma.order.findMany({
-    where: { customerId },
-    orderBy: { createdAt: "desc" },
-  });
-  return rows.map(toOrder);
-}
-
 /**
  * A customer's orders, matched by their account id OR email — so orders placed
  * as a guest with the same email (before sign-up) still appear in their history.
@@ -249,21 +239,6 @@ export async function getOrdersForCustomer(
     orderBy: { createdAt: "desc" },
   });
   return rows.map(toOrder);
-}
-
-/** The payment method the customer used most recently, to pre-select at checkout. */
-export async function getLastPaymentMethod(
-  customerId: string,
-  email: string,
-): Promise<"PhonePe" | "COD" | ""> {
-  const last = await prisma.order.findFirst({
-    where: { OR: [{ customerId }, { email: email.toLowerCase() }] },
-    orderBy: { createdAt: "desc" },
-    select: { paymentMethod: true },
-  });
-  return last?.paymentMethod === "PhonePe" || last?.paymentMethod === "COD"
-    ? last.paymentMethod
-    : "";
 }
 
 export interface AdminStats {

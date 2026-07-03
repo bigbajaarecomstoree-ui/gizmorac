@@ -1,12 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { ChevronDown, ArrowUp, ArrowDown } from "lucide-react";
+import { ArrowUp, ArrowDown } from "lucide-react";
 import type {
   ChartMetric,
   ChartRange,
   DashboardChart,
 } from "@/lib/data/dashboard-chart";
+import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
 const METRICS: { value: ChartMetric; label: string }[] = [
@@ -36,14 +37,15 @@ function round(x: number, dp: number) {
   return Math.round(x * f) / f;
 }
 /** Compact Indian money: 412600 -> "4.126L", 40000 -> "40k". */
-function compactINR(n: number, dp = 3): string {
+function compactINR(n: number, fmt: Intl.NumberFormat): string {
   const a = Math.abs(n);
-  if (a >= 1e7) return `${round(n / 1e7, dp)}Cr`;
-  if (a >= 1e5) return `${round(n / 1e5, dp)}L`;
-  if (a >= 1e3) return `${round(n / 1e3, dp)}k`;
-  return String(Math.round(n));
+  if (a < 1e3) return String(Math.round(n));
+  // en-IN compact says "40T"/"40K" for thousands — keep the familiar lowercase "k".
+  return a < 1e5 ? `${fmt.format(n / 1e3)}k` : fmt.format(n);
 }
 const enIN = new Intl.NumberFormat("en-IN");
+const compact1 = new Intl.NumberFormat("en-IN", { notation: "compact", maximumFractionDigits: 1 });
+const compact3 = new Intl.NumberFormat("en-IN", { notation: "compact", maximumFractionDigits: 3 });
 
 // --- y-axis "nice" scale ------------------------------------------------
 function niceScale(rawMax: number, integer: boolean): { max: number; ticks: number[] } {
@@ -65,68 +67,8 @@ function niceScale(rawMax: number, integer: boolean): { max: number; ticks: numb
   return { max, ticks };
 }
 
-function Dropdown<T extends string>({
-  value,
-  options,
-  onChange,
-  align = "left",
-}: {
-  value: T;
-  options: { value: T; label: string }[];
-  onChange: (v: T) => void;
-  align?: "left" | "right";
-}) {
-  const [open, setOpen] = React.useState(false);
-  const ref = React.useRef<HTMLDivElement>(null);
-  React.useEffect(() => {
-    function onDoc(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, []);
-  const current = options.find((o) => o.value === value);
-  return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-semibold transition-colors hover:bg-surface-2 cursor-pointer"
-      >
-        {current?.label}
-        <ChevronDown
-          size={16}
-          className={cn("text-faint transition-transform", open && "rotate-180")}
-        />
-      </button>
-      {open ? (
-        <div
-          className={cn(
-            "absolute z-20 mt-1 min-w-[12rem] rounded-xl border border-border bg-surface p-1 shadow-lg",
-            align === "right" ? "right-0" : "left-0",
-          )}
-        >
-          {options.map((o) => (
-            <button
-              key={o.value}
-              type="button"
-              onClick={() => {
-                onChange(o.value);
-                setOpen(false);
-              }}
-              className={cn(
-                "block w-full rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-surface-2 cursor-pointer",
-                o.value === value ? "font-semibold text-accent-bright" : "text-foreground",
-              )}
-            >
-              {o.label}
-            </button>
-          ))}
-        </div>
-      ) : null}
-    </div>
-  );
-}
+const TRIGGER_CLS =
+  "h-auto w-auto gap-1.5 border-0 bg-transparent px-2.5 py-1.5 font-semibold hover:bg-surface-2 cursor-pointer";
 
 function Delta({ cur, prev, label }: { cur: number; prev: number | null; label: string }) {
   if (prev == null || prev <= 0) {
@@ -165,13 +107,13 @@ export function SalesChart({ data }: { data: DashboardChart }) {
   const { max, ticks } = niceScale(rawMax, !isMoney);
 
   const fmtFull = (n: number) => (isMoney ? `₹${enIN.format(n)}` : `${enIN.format(n)}`);
-  const fmtAxis = (n: number) => (isMoney ? compactINR(n, 1) : enIN.format(n));
+  const fmtAxis = (n: number) => (isMoney ? compactINR(n, compact1) : enIN.format(n));
 
   // Headline: full ₹ for everyday amounts; compact "X.XXL INR" once it hits lakhs.
   const moneyCompact = series.total >= 1e5;
   const headline = isMoney
     ? moneyCompact
-      ? compactINR(series.total, 3)
+      ? compactINR(series.total, compact3)
       : `₹${enIN.format(series.total)}`
     : enIN.format(series.total);
   const headlineSuffix = isMoney
@@ -190,8 +132,18 @@ export function SalesChart({ data }: { data: DashboardChart }) {
     <div className="rounded-xl border border-border bg-surface p-5">
       {/* controls */}
       <div className="-ml-2.5 flex flex-wrap items-center gap-2">
-        <Dropdown value={metric} options={METRICS} onChange={setMetric} />
-        <Dropdown value={range} options={RANGES} onChange={setRange} align="left" />
+        <Select
+          value={metric}
+          options={METRICS}
+          onChange={(v) => setMetric(v as ChartMetric)}
+          triggerClassName={TRIGGER_CLS}
+        />
+        <Select
+          value={range}
+          options={RANGES}
+          onChange={(v) => setRange(v as ChartRange)}
+          triggerClassName={TRIGGER_CLS}
+        />
       </div>
 
       {/* headline + deltas — big number on top, comparisons in a fixed 2-up

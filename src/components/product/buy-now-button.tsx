@@ -11,19 +11,13 @@ import { cn } from "@/lib/utils";
 export function BuyNowButton({
   id,
   name,
-  qty = 1,
-  label = "Buy Now",
   className,
-  variant = "primary",
   size = "md",
   iconSize = 16,
 }: {
   id: string;
   name: string;
-  qty?: number;
-  label?: string;
   className?: string;
-  variant?: ButtonProps["variant"];
   size?: ButtonProps["size"];
   iconSize?: number;
 }) {
@@ -32,7 +26,7 @@ export function BuyNowButton({
   const [loading, setLoading] = React.useState(false);
 
   function handle() {
-    addToCart(id, qty, name);
+    addToCart(id, 1, name);
     setLoading(true);
     // Buy Now requires an account: send guests to log in, then on to checkout.
     router.push(loggedIn ? "/checkout" : "/login?next=/checkout");
@@ -40,7 +34,7 @@ export function BuyNowButton({
 
   return (
     <Button
-      variant={variant}
+      variant="primary"
       size={size}
       className={cn(className)}
       onClick={handle}
@@ -48,7 +42,7 @@ export function BuyNowButton({
       aria-label={`Buy ${name} now`}
     >
       {loading ? <Loader2 size={iconSize} className="animate-spin" /> : <Zap size={iconSize} />}
-      {label}
+      Buy Now
     </Button>
   );
 }

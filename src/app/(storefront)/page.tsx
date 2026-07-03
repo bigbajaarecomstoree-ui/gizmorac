@@ -10,13 +10,13 @@ import { FaqAccordion } from "@/components/home/faq";
 import { Newsletter } from "@/components/home/newsletter";
 import { LandingPopup } from "@/components/promo/landing-popup";
 import { Reveal } from "@/components/motion/motion-primitives";
-import { getSiteFaqs } from "@/lib/data/queries";
+import { siteFaqs } from "@/lib/data/faqs";
 import { getSettings } from "@/lib/data/settings";
 import { SITE } from "@/lib/constants";
 import { jsonLd } from "@/lib/json-ld";
 
 export default async function HomePage() {
-  const [faqs, settings] = await Promise.all([getSiteFaqs(), getSettings()]);
+  const settings = await getSettings();
   const showLandingPopup =
     settings.landingPopupEnabled &&
     Boolean(
@@ -49,9 +49,8 @@ export default async function HomePage() {
       <Reveal><Reviews /></Reveal>
       <Reveal>
         <FaqAccordion
-          items={faqs}
+          items={siteFaqs}
           description="Everything you need to know about ordering, shipping and support."
-          withSchema
         />
       </Reveal>
       <Reveal><Newsletter /></Reveal>

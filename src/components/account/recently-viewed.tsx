@@ -8,30 +8,26 @@ import { ProductGrid } from "@/components/product/product-grid";
 
 const KEY = "gz_recently_viewed";
 
-export interface RecentItem {
-  slug: string;
-  name: string;
-  image: string | null;
-  price: number;
-}
-
-function read(): RecentItem[] {
+/** Stored as a plain array of slugs; older entries were full objects. */
+function read(): string[] {
   try {
     const v = JSON.parse(localStorage.getItem(KEY) ?? "[]");
-    return Array.isArray(v) ? v : [];
+    if (!Array.isArray(v)) return [];
+    return v
+      .map((e) => (typeof e === "string" ? e : e?.slug))
+      .filter((s): s is string => typeof s === "string");
   } catch {
     return [];
   }
 }
 
 /** Record a product view in localStorage (rendered on the product page). */
-export function TrackRecentlyViewed({ item }: { item: RecentItem }) {
+export function TrackRecentlyViewed({ slug }: { slug: string }) {
   React.useEffect(() => {
-    const list = read().filter((x) => x.slug !== item.slug);
-    list.unshift(item);
+    const list = read().filter((s) => s !== slug);
+    list.unshift(slug);
     localStorage.setItem(KEY, JSON.stringify(list.slice(0, 12)));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [item.slug]);
+  }, [slug]);
   return null;
 }
 
@@ -42,17 +38,14 @@ export function TrackRecentlyViewed({ item }: { item: RecentItem }) {
 export function RecentlyViewed({
   excludeSlug,
   limit = 6,
-  heading = true,
 }: {
   excludeSlug?: string;
   limit?: number;
-  heading?: boolean;
 }) {
   const [products, setProducts] = React.useState<Product[]>([]);
 
   React.useEffect(() => {
     const slugs = read()
-      .map((x) => x.slug)
       .filter((s) => s !== excludeSlug)
       .slice(0, limit);
     if (slugs.length === 0) {
@@ -71,11 +64,9 @@ export function RecentlyViewed({
   if (products.length === 0) return null;
   return (
     <section>
-      {heading ? (
-        <h2 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
-          <Eye size={20} className="text-accent" /> Recently viewed
-        </h2>
-      ) : null}
+      <h2 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
+        <Eye size={20} className="text-accent" /> Recently viewed
+      </h2>
       <ProductGrid products={products} className="mt-6 lg:grid-cols-4" />
     </section>
   );

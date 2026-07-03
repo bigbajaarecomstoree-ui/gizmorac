@@ -17,7 +17,7 @@ import { discountPercent } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { normalizeSpecs } from "./specs";
 import { reviews } from "./reviews";
-import { siteFaqs } from "./faqs";
+import { REVENUE_STATUSES } from "./revenue";
 
 // Products + orders live in the database (Prisma/SQLite). Categories, reviews
 // and FAQs remain static config. Every accessor returns the same domain types
@@ -255,7 +255,7 @@ export async function getCategoryRevenue(): Promise<Record<string, number>> {
   const [products, orders] = await Promise.all([
     prisma.product.findMany({ select: { id: true, category: true } }),
     prisma.order.findMany({
-      where: { status: { notIn: ["Cancelled", "Returned", "Refunded"] } },
+      where: { status: REVENUE_STATUSES },
       select: { items: true },
     }),
   ]);
@@ -315,10 +315,6 @@ export async function getRelatedProducts(
 
 export async function getReviews(limit = 6): Promise<Review[]> {
   return reviews.slice(0, limit);
-}
-
-export async function getSiteFaqs() {
-  return siteFaqs;
 }
 
 function sortProducts(list: Product[], sort: SortOption): Product[] {

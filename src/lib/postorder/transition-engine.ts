@@ -1,6 +1,6 @@
 // The single transition engine. NOTHING may write a post-order status field
 // directly — every change flows through transitionEntity() (spec §16/§17):
-// validity → role → optimistic lock → audit → side effects → notifications.
+// validity → role → optimistic lock → audit → notifications.
 
 import { prisma } from "@/lib/prisma";
 import { validateTransition } from "./validate";
@@ -59,20 +59,6 @@ const LEGACY_ORDER_LABEL: Record<string, string> = {
   RTO: "Returned",
   CLOSED: "Returned",
 };
-
-// ── Side-effect & notification registries (populated in Phases 5–7) ─────────
-type SideEffect = (ctx: {
-  id: string;
-  orderId: string | null;
-  from: string;
-  to: string;
-  metadata: Record<string, unknown>;
-}) => Promise<void>;
-
-export const SIDE_EFFECTS = new Map<string, SideEffect>();
-export function registerSideEffect(kind: EntityKind, from: string, to: string, fn: SideEffect) {
-  SIDE_EFFECTS.set(`${kind}:${from}->${to}`, fn);
-}
 
 /** Transition → customer notification event (spec §12). Email-first; other channels flagged. */
 export const NOTIFY_EVENTS: Record<string, string> = {
@@ -169,9 +155,9 @@ function lockedUpdate(tx: typeof prisma, kind: EntityKind, id: string, version: 
 
 /**
  * Apply one transition atomically. Validates, optimistically locks on `version`,
- * writes the mandatory audit row, then fires registered side effects and
- * notifications. Returns ok:false (never throws) on an invalid/blocked move;
- * conflict:true when a concurrent update bumped the version.
+ * writes the mandatory audit row, then enqueues notifications. Returns ok:false
+ * (never throws) on an invalid/blocked move; conflict:true when a concurrent
+ * update bumped the version.
  */
 export async function transitionEntity(input: TransitionInput): Promise<TransitionResult> {
   const flags = await loadFlags();
@@ -221,15 +207,8 @@ export async function transitionEntity(input: TransitionInput): Promise<Transiti
     throw e;
   }
 
-  // Post-commit side effects (refund/pickup/replacement/inventory — registered later).
-  const key = `${input.kind}:${ent.state}->${input.to}`;
-  const effect = SIDE_EFFECTS.get(key);
-  if (effect) {
-    await effect({ id: input.id, orderId: ent.orderId, from: ent.state, to: input.to, metadata: input.metadata ?? {} });
-  }
-
   // Notifications (email-first; enqueued, sent by the Phase 7 worker).
-  const event = NOTIFY_EVENTS[key];
+  const event = NOTIFY_EVENTS[`${input.kind}:${ent.state}->${input.to}`];
   if (event && flags.notifEmail && ent.email) {
     await prisma.notificationLog.create({
       data: {

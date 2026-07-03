@@ -9,8 +9,6 @@ import { cn } from "@/lib/utils";
 export function AddToCartButton({
   id,
   name,
-  qty = 1,
-  label = "Add to Cart",
   className,
   variant = "surface",
   size = "md",
@@ -19,8 +17,6 @@ export function AddToCartButton({
 }: {
   id: string;
   name: string;
-  qty?: number;
-  label?: string;
   className?: string;
   variant?: ButtonProps["variant"];
   size?: ButtonProps["size"];
@@ -31,7 +27,7 @@ export function AddToCartButton({
   const [added, setAdded] = React.useState(false);
 
   function handle() {
-    addToCart(id, qty, name);
+    addToCart(id, 1, name);
     setAdded(true);
     setTimeout(() => setAdded(false), 1600);
   }
@@ -50,7 +46,7 @@ export function AddToCartButton({
       ) : (
         <ShoppingCart size={iconSize ?? (iconOnly ? 18 : 16)} />
       )}
-      {iconOnly ? null : added ? "Added" : label}
+      {iconOnly ? null : added ? "Added" : "Add to Cart"}
     </Button>
   );
 }

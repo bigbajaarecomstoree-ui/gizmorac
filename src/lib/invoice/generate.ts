@@ -106,29 +106,6 @@ function fitLines(
   return lines;
 }
 
-/** Wrap a string to the given pixel width for the chosen font/size. */
-function wrapText(
-  s: string,
-  font: PDFFont,
-  size: number,
-  maxWidth: number,
-): string[] {
-  const words = s.split(/\s+/).filter(Boolean);
-  const lines: string[] = [];
-  let cur = "";
-  for (const w of words) {
-    const test = cur ? `${cur} ${w}` : w;
-    if (cur && font.widthOfTextAtSize(test, size) > maxWidth) {
-      lines.push(cur);
-      cur = w;
-    } else {
-      cur = test;
-    }
-  }
-  if (cur) lines.push(cur);
-  return lines.length ? lines : [s];
-}
-
 export async function buildInvoicePdf(
   order: Order,
   tax: TaxInfo,
@@ -190,7 +167,7 @@ export async function buildInvoicePdf(
   ly -= 12;
   const addrMaxW = colR - M - 12;
   for (const raw of BIZ.addressLines) {
-    for (const ln of wrapText(raw, reg, 8.5, addrMaxW)) {
+    for (const ln of fitLines(raw, reg, 8.5, addrMaxW, Infinity)) {
       text(ln, M, ly, { size: 8.5, color: MUTED });
       ly -= 11;
     }

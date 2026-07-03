@@ -7,7 +7,7 @@ import { ImagePlus, X, Loader2 } from "lucide-react";
 const MAX = 6;
 const MAX_BYTES = 20 * 1024 * 1024;
 
-export function isVideoUrl(url: string): boolean {
+function isVideoUrl(url: string): boolean {
   return /\.(mp4|webm|mov)(\?|$)/i.test(url);
 }
 
@@ -22,13 +22,11 @@ export function ProofUploader({
   value,
   onChange,
   name,
-  disabled,
 }: {
   endpoint: string;
   value: string[];
   onChange: (urls: string[]) => void;
   name?: string;
-  disabled?: boolean;
 }) {
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -95,7 +93,7 @@ export function ProofUploader({
           <button
             type="button"
             onClick={() => input.current?.click()}
-            disabled={busy || disabled}
+            disabled={busy}
             className="grid h-16 w-16 place-items-center rounded-lg border border-dashed border-border text-faint transition-colors hover:border-accent hover:text-accent disabled:opacity-50 cursor-pointer"
             aria-label="Add photo or video"
           >

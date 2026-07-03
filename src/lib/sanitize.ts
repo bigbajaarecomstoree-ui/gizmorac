@@ -11,11 +11,6 @@ export function stripEmoji<T>(value: T): T {
   return typeof value === "string" ? (value.replace(EMOJI_RE, "") as T) : value;
 }
 
-/** True when the string contains at least one emoji / pictographic symbol. */
-export function hasEmoji(value: string): boolean {
-  return typeof value === "string" && stripEmoji(value) !== value;
-}
-
 /** Strip emoji from every top-level string field of an object (shallow copy). */
 export function cleanStrings<T extends object>(obj: T): T {
   const out = { ...obj } as Record<string, unknown>;

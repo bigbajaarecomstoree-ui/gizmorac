@@ -11,32 +11,17 @@ import {
   Wallet,
   HandCoins,
 } from "lucide-react";
-import {
-  getReportSummary,
-  getReportSummaryBetween,
-  DATE_RANGES,
-  type DateRange,
-} from "@/lib/data/orders";
+import { getReportSummary, getReportSummaryBetween } from "@/lib/data/orders";
 import { getClosingStock } from "@/lib/data/queries";
 import { formatINR, formatCount } from "@/lib/format";
 import { OrderStatusBadge } from "@/components/admin/order-status-badge";
+import { DateRangeBar, parseDateRange } from "@/components/admin/date-range-bar";
 
 export const dynamic = "force-dynamic";
 
 type SearchParams = Promise<{ range?: string; from?: string; to?: string }>;
 
 const HIGHLIGHT = ["Cancelled", "Returned", "Refunded"];
-const YMD = /^\d{4}-\d{2}-\d{2}$/;
-
-function fmtYMD(ymd?: string): string {
-  if (!ymd || !YMD.test(ymd)) return "";
-  const [y, m, d] = ymd.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
 
 type Kpi = {
   label: string;
@@ -70,28 +55,16 @@ export default async function ReportsPage({
   searchParams: SearchParams;
 }) {
   const sp = await searchParams;
-  const custom = Boolean(sp.from && sp.to && YMD.test(sp.from) && YMD.test(sp.to));
-  const range: DateRange = DATE_RANGES.some((r) => r.value === sp.range)
-    ? (sp.range as DateRange)
-    : "30d";
+  const { custom, range, rangeLabel } = parseDateRange(sp);
 
   const [report, stock] = await Promise.all([
     custom ? getReportSummaryBetween(sp.from, sp.to) : getReportSummary(range),
     getClosingStock(),
   ]);
 
-  const rangeLabel = custom
-    ? `${fmtYMD(sp.from)} – ${fmtYMD(sp.to)}`
-    : (DATE_RANGES.find((r) => r.value === range)?.label ?? "");
-
   const exportHref = custom
     ? `/api/admin/orders/export?from=${sp.from}&to=${sp.to}`
     : `/api/admin/orders/export?range=${range}`;
-
-  // IST "today" so the date pickers can't pick a future day.
-  const todayYMD = new Date().toLocaleDateString("en-CA", {
-    timeZone: "Asia/Kolkata",
-  });
 
   const salesKpis: Kpi[] = [
     { label: "Total Sales", value: formatINR(report.revenue), icon: IndianRupee, accent: true },
@@ -128,75 +101,22 @@ export default async function ReportsPage({
       </p>
 
       {/* Unified controls: date presets + custom range + export, all in one bar */}
-      <div className="mt-5 rounded-xl border border-border bg-surface p-3">
-        {/* row 1: presets + export */}
-        <div className="flex flex-wrap items-center gap-2">
-          {DATE_RANGES.map((r) => (
-            <Link
-              key={r.value}
-              href={`/admin/reports?range=${r.value}`}
-              className={
-                !custom && r.value === range
-                  ? "rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-on-accent"
-                  : "rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-muted transition-colors hover:border-accent hover:text-accent"
-              }
-            >
-              {r.label}
-            </Link>
-          ))}
-          <a
-            href={exportHref}
-            download
-            className="ml-auto inline-flex items-center gap-2 rounded-lg border border-accent px-3 py-1.5 text-sm font-semibold text-accent transition-colors hover:bg-accent hover:text-on-accent"
-          >
-            <Download size={16} /> Export
-          </a>
-        </div>
-
-        {/* row 2: custom range */}
-        <form
-          method="get"
-          action="/admin/reports"
-          className="mt-3 flex flex-wrap items-end gap-2 border-t border-border pt-3"
+      <DateRangeBar
+        basePath="/admin/reports"
+        defaultRange="30d"
+        range={range}
+        custom={custom}
+        from={sp.from}
+        to={sp.to}
+      >
+        <a
+          href={exportHref}
+          download
+          className="ml-auto inline-flex items-center gap-2 rounded-lg border border-accent px-3 py-1.5 text-sm font-semibold text-accent transition-colors hover:bg-accent hover:text-on-accent"
         >
-          <label className="flex flex-col gap-1">
-            <span className="tech-label">From</span>
-            <input
-              type="date"
-              name="from"
-              defaultValue={custom ? sp.from : ""}
-              max={todayYMD}
-              required
-              className="h-9 rounded-lg border border-border bg-background px-2 text-sm focus:border-accent focus:outline-none"
-            />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="tech-label">To</span>
-            <input
-              type="date"
-              name="to"
-              defaultValue={custom ? sp.to : ""}
-              max={todayYMD}
-              required
-              className="h-9 rounded-lg border border-border bg-background px-2 text-sm focus:border-accent focus:outline-none"
-            />
-          </label>
-          <button
-            type="submit"
-            className="h-9 rounded-lg bg-accent px-4 text-sm font-semibold text-on-accent transition-colors hover:bg-accent-hover"
-          >
-            Apply
-          </button>
-          {custom ? (
-            <Link
-              href="/admin/reports?range=30d"
-              className="inline-flex h-9 items-center rounded-lg px-3 text-sm text-muted transition-colors hover:text-foreground"
-            >
-              Reset
-            </Link>
-          ) : null}
-        </form>
-      </div>
+          <Download size={16} /> Export
+        </a>
+      </DateRangeBar>
 
       {/* Sales */}
       <KpiGroup title="Sales" items={salesKpis} />

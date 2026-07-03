@@ -5,17 +5,17 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { stripEmoji } from "@/lib/sanitize";
 import {
-  checkPassword,
   setSessionCookie,
   clearSessionCookie,
   isAuthenticated,
 } from "@/lib/auth";
+import { safeEqual } from "@/lib/secure-compare";
 import { parseCsv } from "@/lib/products-csv";
-import { mapAmazonReportToProducts } from "@/lib/amazon-import";
+import { mapAmazonReportToProducts, slugify } from "@/lib/amazon-import";
 import { issueRepeatCoupon } from "@/lib/data/rewards";
 import { verifyPhonePeKeys, type PhonePeEnv } from "@/lib/phonepe";
 import {
-  verifyShiprocket,
+  shiprocketLogin,
   createShiprocketOrder,
   getTracking,
   fetchPickupPincode,
@@ -81,22 +81,16 @@ function lines(value: string): string[] {
     .map((l) => l.trim())
     .filter(Boolean);
 }
-function slugify(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-function parseSpecs(value: string) {
-  return lines(value).map((l) => {
+function parseSpecs(items: string[]) {
+  return items.map((l) => {
     const i = l.indexOf(":");
     return i === -1
       ? { label: l, value: "" }
       : { label: l.slice(0, i).trim(), value: l.slice(i + 1).trim() };
   });
 }
-function parseFaqs(value: string) {
-  return lines(value).map((l) => {
+function parseFaqs(items: string[]) {
+  return items.map((l) => {
     const [q, ...a] = l.split("::");
     return { q: q.trim(), a: a.join("::").trim() };
   });
@@ -151,8 +145,8 @@ function productDataFromForm(fd: FormData) {
     highlights: JSON.stringify(lines(str(fd, "highlights"))),
     features: JSON.stringify(lines(str(fd, "features"))),
     inTheBox: JSON.stringify(lines(str(fd, "inTheBox"))),
-    specs: JSON.stringify(parseSpecs(str(fd, "specs"))),
-    faqs: JSON.stringify(parseFaqs(str(fd, "faqs"))),
+    specs: JSON.stringify(parseSpecs(lines(str(fd, "specs")))),
+    faqs: JSON.stringify(parseFaqs(lines(str(fd, "faqs")))),
     isBestSeller: bool(fd, "isBestSeller"),
     isFeatured: bool(fd, "isFeatured"),
     isDeal: bool(fd, "isDeal"),
@@ -201,7 +195,7 @@ export async function loginAction(
 
   const password = (formData.get("password") ?? "").toString();
   const ip = await clientIp();
-  if (!checkPassword(password)) {
+  if (!safeEqual(password, process.env.ADMIN_PASSWORD ?? "")) {
     await logEvent({
       level: "warn",
       actor: "admin",
@@ -407,16 +401,8 @@ export async function importProducts(
     }
 
     const image = cell(row, "image") || null;
-    const specs = pipes(cell(row, "specs")).map((l) => {
-      const i = l.indexOf(":");
-      return i === -1
-        ? { label: l, value: "" }
-        : { label: l.slice(0, i).trim(), value: l.slice(i + 1).trim() };
-    });
-    const faqs = pipes(cell(row, "faqs")).map((l) => {
-      const [q, ...a] = l.split("::");
-      return { q: q.trim(), a: a.join("::").trim() };
-    });
+    const specs = parseSpecs(pipes(cell(row, "specs")));
+    const faqs = parseFaqs(pipes(cell(row, "faqs")));
 
     const data = {
       slug,
@@ -1428,7 +1414,7 @@ export async function connectShiprocket(input: {
     return { ok: false, error: "Enter the Shiprocket API email and password." };
   }
 
-  const verified = await verifyShiprocket({ email, password });
+  const verified = await shiprocketLogin(email, password);
   if (!verified.ok) {
     return { ok: false, error: verified.error ?? "Could not verify these credentials." };
   }

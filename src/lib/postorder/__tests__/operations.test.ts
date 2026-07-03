@@ -2,8 +2,6 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { computeRiskLevel } from "../risk";
 import { computeCreditNoteTax } from "../gst";
-import { nextNotificationState } from "../notify-rules";
-import { encryptSecret, decryptSecret, maskSecret } from "../crypto";
 
 test("risk: levels by return rate / disputes / fraud score", () => {
   assert.equal(computeRiskLevel({ orderCount: 10, returnCount: 1, disputeCount: 0, fraudScore: 0 }).level, "NORMAL");
@@ -26,27 +24,4 @@ test("gst credit note: interstate is all IGST and sums exactly", () => {
   assert.equal(t.cgstPaise, 0);
   assert.equal(t.sgstPaise, 0);
   assert.equal(t.taxableValuePaise + t.igstPaise, 159500);
-});
-
-test("notification retry: success / retry-budget / exhausted", () => {
-  assert.deepEqual(nextNotificationState({ sendOk: true, retryCount: 0, maxRetries: 3 }), { state: "SENT", willRetry: false });
-  assert.deepEqual(nextNotificationState({ sendOk: false, retryCount: 0, maxRetries: 3 }), { state: "RETRYING", willRetry: true });
-  assert.deepEqual(nextNotificationState({ sendOk: false, retryCount: 2, maxRetries: 3 }), { state: "FAILED", willRetry: false });
-});
-
-test("DPDP crypto: AES-256-GCM round-trips; tamper fails; mask hides", () => {
-  const key = "unit-test-key-please-ignore";
-  const plain = "user@oksbi";
-  const blob = encryptSecret(plain, key);
-  assert.notEqual(blob, plain);
-  assert.equal(decryptSecret(blob, key), plain);
-  // wrong key fails
-  assert.throws(() => decryptSecret(blob, "wrong-key"));
-  // tampered ciphertext fails the auth tag
-  const parts = blob.split(":");
-  parts[3] = Buffer.from("tampered").toString("base64");
-  assert.throws(() => decryptSecret(parts.join(":"), key));
-  // masking
-  assert.equal(maskSecret("user@oksbi"), "us***@oksbi");
-  assert.equal(maskSecret("123456789012"), "****9012");
 });

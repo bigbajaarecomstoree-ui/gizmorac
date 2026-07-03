@@ -114,9 +114,7 @@ export default async function ProductPage({ params }: { params: Params }) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLd(productSchema) }}
       />
-      <TrackRecentlyViewed
-        item={{ slug: product.slug, name: product.name, image: product.image ?? null, price: product.price }}
-      />
+      <TrackRecentlyViewed slug={product.slug} />
       <TrackEvent
         name="view_item"
         params={{
@@ -152,12 +150,11 @@ export default async function ProductPage({ params }: { params: Params }) {
           />
           {/* Amazon-style: compact share + compare icons on the image corner. */}
           <div className="absolute right-3 top-3 z-10 flex items-center gap-2">
-            <ShareButton title={product.name} iconOnly />
+            <ShareButton title={product.name} />
             <CompareButton
               slug={product.slug}
               name={shortTitle(product.name)}
               category={product.category}
-              variant="icon"
             />
           </div>
         </div>
@@ -175,7 +172,7 @@ export default async function ProductPage({ params }: { params: Params }) {
           <ProductAssurance warrantyMonths={product.warrantyMonths} />
 
           <div className="mt-5 border-y border-border py-5">
-            <Price product={product} size="lg" tone="ink" />
+            <Price product={product} size="lg" />
             {off > 0 ? (
               <p className="mt-1.5 text-sm text-success">
                 You save {formatINR(savings(product))} · inclusive of all taxes

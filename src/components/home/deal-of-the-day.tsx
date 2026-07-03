@@ -158,7 +158,7 @@ export async function DealOfTheDay() {
 
             <div className="mt-4">
               <div className="flex flex-wrap items-center gap-3">
-                <Price product={deal} size="lg" tone="ink" showDiscount={false} />
+                <Price product={deal} size="lg" showDiscount={false} />
                 <Badge variant="accent" size="sm" className="font-semibold">
                   {off}% OFF
                 </Badge>
@@ -209,7 +209,6 @@ export async function DealOfTheDay() {
               <AddToCartButton
                 id={deal.id}
                 name={title}
-                label="Add to Cart"
                 variant="highlight"
                 size="lg"
                 iconSize={20}
@@ -218,8 +217,6 @@ export async function DealOfTheDay() {
               <BuyNowButton
                 id={deal.id}
                 name={title}
-                label="Buy Now"
-                variant="primary"
                 size="lg"
                 iconSize={20}
                 className="w-full gap-2 px-3 text-sm sm:gap-2.5 sm:px-7 sm:text-base [&_svg]:shrink-0"

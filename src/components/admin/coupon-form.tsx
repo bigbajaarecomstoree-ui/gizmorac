@@ -1,44 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { useFormStatus } from "react-dom";
-import { Loader2, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import type { Coupon, CouponType } from "@/lib/types";
 import { COUPON_TYPES } from "@/lib/data/coupons";
 import { deleteCoupon } from "@/lib/admin/actions";
-import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
-
-const inputCls =
-  "h-11 w-full rounded-lg border border-border bg-background px-3 text-sm placeholder:text-faint focus:border-accent focus:outline-none";
-
-function Field({
-  label,
-  hint,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="block">
-      <span className="mb-1.5 block text-sm font-medium">{label}</span>
-      {children}
-      {hint ? <span className="mt-1 block text-xs text-faint">{hint}</span> : null}
-    </label>
-  );
-}
-
-function SubmitButton({ label }: { label: string }) {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" size="lg" disabled={pending}>
-      {pending ? <Loader2 size={16} className="animate-spin" /> : null}
-      {pending ? "Saving…" : label}
-    </Button>
-  );
-}
+import { Field, SubmitButton, inputCls } from "@/components/admin/form-bits";
 
 function isoToDate(iso?: string | null): string {
   return iso ? iso.slice(0, 10) : "";

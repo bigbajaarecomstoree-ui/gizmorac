@@ -8,18 +8,14 @@ const PRICE_SIZE = {
   lg: "text-4xl",
 } as const;
 
-/** Amber LED-readout price with struck MRP and discount tag. */
 export function Price({
   product,
   size = "md",
-  tone = "accent",
   showDiscount = true,
   className,
 }: {
   product: Pick<Product, "price" | "mrp">;
   size?: keyof typeof PRICE_SIZE;
-  /** "accent" = brand-coloured readout (default); "ink" = plain dark price. */
-  tone?: "accent" | "ink";
   /** Show the green "N% off" tag next to the MRP. Default true. */
   showDiscount?: boolean;
   className?: string;
@@ -29,8 +25,7 @@ export function Price({
     <div className={cn("flex flex-wrap items-baseline gap-x-2.5 gap-y-1", className)}>
       <span
         className={cn(
-          "readout font-semibold leading-none",
-          tone === "ink" && "text-foreground",
+          "readout font-semibold leading-none text-foreground",
           PRICE_SIZE[size],
         )}
       >

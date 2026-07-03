@@ -24,37 +24,28 @@ function splitName(full: string): [string, string] {
   return [parts[0] ?? "", parts.slice(1).join(" ")];
 }
 
-const COD_ADVANCE_OFF: CodAdvanceConfig = {
-  codAdvanceEnabled: false,
-  codAdvanceType: "FIXED",
-  codAdvanceAmount: 0,
-  codAdvancePercent: 0,
-  codAdvanceMax: 0,
-  codAdvanceMin: 0,
-};
-
 export function CheckoutView({
   products,
   customer,
-  addresses = [],
-  freeShippingThreshold = 999,
-  shippingFee = 79,
-  codEnabled = true,
-  phonepeEnabled = false,
-  codAdvanceReady = false,
-  codAdvance = COD_ADVANCE_OFF,
+  addresses,
+  freeShippingThreshold,
+  shippingFee,
+  codEnabled,
+  phonepeEnabled,
+  codAdvanceReady,
+  codAdvance,
 }: {
   products: Product[];
   customer: Customer | null;
-  addresses?: Address[];
-  freeShippingThreshold?: number;
-  shippingFee?: number;
-  codEnabled?: boolean;
-  phonepeEnabled?: boolean;
+  addresses: Address[];
+  freeShippingThreshold: number;
+  shippingFee: number;
+  codEnabled: boolean;
+  phonepeEnabled: boolean;
   /** Server-computed: gateway configured AND production-safe — the exact
    * condition under which placeOrder will actually take a COD advance. */
-  codAdvanceReady?: boolean;
-  codAdvance?: CodAdvanceConfig;
+  codAdvanceReady: boolean;
+  codAdvance: CodAdvanceConfig;
 }) {
   const router = useRouter();
   const { cart, clearCart, mounted, offer, clearOffer } = useStore();
@@ -379,14 +370,17 @@ export function CheckoutView({
       acceptedTerms: accepted,
       items: lines.map((l) => ({ id: l.product.id, qty: l.qty })),
     };
-    // Leave checkout for the order's tokenised tracking page: clear the local
-    // cart/offer/coupon (the order now owns them) and navigate.
-    const goToOrder = (trackUrl: string) => {
+    // Clear the local cart/offer/coupon once the order owns them.
+    const clearLocal = () => {
       clearCart();
       clearOffer();
       try {
         localStorage.removeItem(COUPON_STORAGE_KEY);
       } catch {}
+    };
+    // Leave checkout for the order's tokenised tracking page.
+    const goToOrder = (trackUrl: string) => {
+      clearLocal();
       router.push(trackUrl);
     };
     startPlacing(async () => {
@@ -401,11 +395,7 @@ export function CheckoutView({
       if (res.paymentMethod === "PhonePe" || res.requiresAdvance) {
         const pay = await startPhonePePayment(res.orderNumber, res.trackingToken);
         if (pay.ok) {
-          clearCart();
-          clearOffer();
-          try {
-            localStorage.removeItem(COUPON_STORAGE_KEY);
-          } catch {}
+          clearLocal();
           window.location.href = pay.redirectUrl; // hand off to PhonePe
         } else {
           // The order ALREADY exists here (stock held, coupon consumed).

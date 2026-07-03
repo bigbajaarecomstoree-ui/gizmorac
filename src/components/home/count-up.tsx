@@ -30,15 +30,9 @@ function fmt(n: number, decimals: number): string {
   });
 }
 
-export function CountUp({
-  value,
-  className,
-  durationMs = 1400,
-}: {
-  value: string;
-  className?: string;
-  durationMs?: number;
-}) {
+const DURATION_MS = 1400;
+
+export function CountUp({ value, className }: { value: string; className?: string }) {
   // Memoised so its reference is stable across re-renders — otherwise the
   // animation effect below would re-run on every setN tick, cancel its own
   // rAF loop and restart, leaving the counter stuck near 0.
@@ -66,7 +60,7 @@ export function CountUp({
     const animate = () => {
       const t0 = performance.now();
       const step = (now: number) => {
-        const p = Math.min(1, (now - t0) / durationMs);
+        const p = Math.min(1, (now - t0) / DURATION_MS);
         const eased = 1 - Math.pow(1 - p, 3); // easeOutCubic
         setN(p < 1 ? target * eased : target);
         if (p < 1) raf = requestAnimationFrame(step);
@@ -74,7 +68,7 @@ export function CountUp({
       raf = requestAnimationFrame(step);
       // Safety net: rAF is paused in background tabs, so guarantee the final
       // value lands even if the frame loop never runs to completion.
-      fallback = setTimeout(() => setN(target), durationMs + 250);
+      fallback = setTimeout(() => setN(target), DURATION_MS + 250);
     };
 
     const io = new IntersectionObserver(
@@ -96,7 +90,7 @@ export function CountUp({
       cancelAnimationFrame(raf);
       if (fallback) clearTimeout(fallback);
     };
-  }, [parsed, durationMs]);
+  }, [parsed]);
 
   if (!parsed) return <span className={className}>{value}</span>;
 

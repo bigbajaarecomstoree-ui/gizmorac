@@ -20,10 +20,6 @@ export async function getSubscribers(): Promise<Subscriber[]> {
   }));
 }
 
-export async function getSubscriberCount(): Promise<number> {
-  return prisma.subscriber.count();
-}
-
 export interface GrowthPoint {
   date: string;
   label: string;

@@ -75,6 +75,45 @@ function Field({
   );
 }
 
+// animated switch: knob slides + track fills on toggle
+function Switch({
+  name,
+  on,
+  onChange,
+  focusRing,
+}: {
+  name: string;
+  on: boolean;
+  onChange: (next: boolean) => void;
+  focusRing?: boolean;
+}) {
+  return (
+    <span className="relative mt-0.5 inline-flex shrink-0 select-none">
+      <input
+        type="checkbox"
+        name={name}
+        checked={on}
+        onChange={(e) => onChange(e.target.checked)}
+        className="peer sr-only"
+      />
+      <span
+        className={cn(
+          "block h-6 w-11 rounded-full transition-colors duration-300 ease-out",
+          focusRing &&
+            "peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent",
+          on ? "bg-accent" : "bg-border-bright",
+        )}
+      />
+      <span
+        className={cn(
+          "pointer-events-none absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-300 ease-out",
+          on ? "translate-x-5" : "translate-x-0",
+        )}
+      />
+    </span>
+  );
+}
+
 function Toggle({
   label,
   name,
@@ -116,28 +155,7 @@ function Toggle({
 
   return (
     <label className="flex cursor-pointer items-start gap-3">
-      {/* animated switch: knob slides + track fills on toggle */}
-      <span className="relative mt-0.5 inline-flex shrink-0 select-none">
-        <input
-          type="checkbox"
-          name={name}
-          checked={on}
-          onChange={(e) => handleChange(e.target.checked)}
-          className="peer sr-only"
-        />
-        <span
-          className={cn(
-            "block h-6 w-11 rounded-full transition-colors duration-300 ease-out peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent",
-            on ? "bg-accent" : "bg-border-bright",
-          )}
-        />
-        <span
-          className={cn(
-            "pointer-events-none absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-300 ease-out",
-            on ? "translate-x-5" : "translate-x-0",
-          )}
-        />
-      </span>
+      <Switch name={name} on={on} onChange={handleChange} focusRing />
       <span>
         <span className="flex items-center gap-1.5 text-sm font-medium">
           {label}
@@ -173,27 +191,7 @@ function FormToggle({
   const [on, setOn] = useState(defaultChecked);
   return (
     <label className="flex cursor-pointer items-start gap-3">
-      <span className="relative mt-0.5 inline-flex shrink-0 select-none">
-        <input
-          type="checkbox"
-          name={name}
-          checked={on}
-          onChange={(e) => setOn(e.target.checked)}
-          className="peer sr-only"
-        />
-        <span
-          className={cn(
-            "block h-6 w-11 rounded-full transition-colors duration-300 ease-out",
-            on ? "bg-accent" : "bg-border-bright",
-          )}
-        />
-        <span
-          className={cn(
-            "pointer-events-none absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-300 ease-out",
-            on ? "translate-x-5" : "translate-x-0",
-          )}
-        />
-      </span>
+      <Switch name={name} on={on} onChange={setOn} />
       <span>
         <span className="text-sm font-medium">{label}</span>
         {hint ? <span className="block text-xs text-faint">{hint}</span> : null}

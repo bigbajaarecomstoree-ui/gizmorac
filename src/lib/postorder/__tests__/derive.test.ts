@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { deriveOrderStatus } from "../derive-order-status";
-import { entryTargetFor, returnPolicy, RETURN_MATRIX } from "../return-matrix";
+import { entryTargetFor } from "../return-matrix";
 
 test("derive: CANCELLED/RTO override wins over items", () => {
   assert.equal(deriveOrderStatus(["ACTIVE", "REFUNDED"], { override: "CANCELLED" }), "CANCELLED");
@@ -31,16 +31,6 @@ test("derive: none resolved → fulfilment status", () => {
 test("derive: in-progress return (not yet resolved) with active siblings is not RETURNED", () => {
   // QC_PENDING is not a resolved state → with an ACTIVE sibling, still fulfilment
   assert.equal(deriveOrderStatus(["QC_PENDING", "ACTIVE"], { fulfillmentStatus: "DELIVERED" }), "DELIVERED");
-});
-
-test("return matrix: investigation + shipping per reason", () => {
-  assert.deepEqual(returnPolicy("CHANGE_OF_MIND"), { investigation: false, shipping: "customer", qc: true });
-  assert.deepEqual(returnPolicy("SIZE_ISSUE"), { investigation: false, shipping: "customer", qc: true });
-  for (const r of ["DEFECTIVE_PRODUCT", "DAMAGED_PRODUCT", "WRONG_ITEM_RECEIVED", "DELIVERY_DAMAGE", "MISSING_ACCESSORIES", "QUALITY_ISSUE"] as const) {
-    assert.equal(returnPolicy(r).investigation, true);
-    assert.equal(returnPolicy(r).shipping, "merchant");
-  }
-  assert.equal(Object.keys(RETURN_MATRIX).length, 8);
 });
 
 test("return matrix: entry target driven by investigation flag", () => {

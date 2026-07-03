@@ -73,7 +73,6 @@ export default async function OrderPage({ params }: { params: Params }) {
   // Neither the signed-in owner nor a valid token → reveal nothing. This stops
   // anyone from enumerating order numbers to harvest order data.
   if (!tokenOk && !isOwner) notFound();
-  const canView = isOwner || tokenOk;
 
   const placed = new Date(order.createdAt).toLocaleString("en-IN", {
     timeZone: "Asia/Kolkata",
@@ -509,32 +508,16 @@ export default async function OrderPage({ params }: { params: Params }) {
         {/* shipping — full details only for the owner */}
         <div className="mt-5 rounded-xl border border-border bg-surface p-5 text-sm">
           <h2 className="mb-3 font-semibold">Shipping</h2>
-          {canView ? (
-            <>
-              <p className="font-medium">{order.firstName} {order.lastName}</p>
-              <p className="text-muted">{order.phone}</p>
-              <p className="mt-1 text-muted">
-                {order.address}, {order.city}, {order.state} — {order.pincode}
-              </p>
-              {order.gstin ? (
-                <p className="mt-1 text-muted">
-                  {order.companyName ? `${order.companyName} · ` : ""}GSTIN: {order.gstin}
-                </p>
-              ) : null}
-            </>
-          ) : (
-            <>
-              <p className="text-muted">
-                Shipping to {order.city}, {order.state}.
-              </p>
-              <p className="mt-2 text-xs text-faint">
-                <Link href="/login" className="text-accent-bright hover:text-accent">
-                  Log in
-                </Link>{" "}
-                with this order&apos;s email to see full delivery details.
-              </p>
-            </>
-          )}
+          <p className="font-medium">{order.firstName} {order.lastName}</p>
+          <p className="text-muted">{order.phone}</p>
+          <p className="mt-1 text-muted">
+            {order.address}, {order.city}, {order.state} — {order.pincode}
+          </p>
+          {order.gstin ? (
+            <p className="mt-1 text-muted">
+              {order.companyName ? `${order.companyName} · ` : ""}GSTIN: {order.gstin}
+            </p>
+          ) : null}
         </div>
 
         <div className="mt-6 flex flex-wrap justify-center gap-3">

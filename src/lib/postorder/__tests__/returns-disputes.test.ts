@@ -1,7 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { canRequestReturn } from "../returns-policy";
-import { canAppeal, allDisputeItemsResolved, isSlaBreached } from "../dispute-policy";
 import { qcNextItemStatus, qcRestocksInventory } from "../qc";
 import { applyDelta } from "../inventory-math";
 
@@ -27,26 +26,6 @@ test("return eligibility: blocked cases", () => {
   assert.equal(canRequestReturn({ ...base, now: new Date(base.deliveredAt.getTime() + 8 * DAY) }).ok, false);
   // exactly on the deadline is still allowed
   assert.equal(canRequestReturn({ ...base, now: new Date(base.deliveredAt.getTime() + 7 * DAY) }).ok, true);
-});
-
-test("dispute appeal cap (max 1)", () => {
-  assert.equal(canAppeal({ status: "REJECTED", appealsUsed: 0, maxAppeals: 1 }), true);
-  assert.equal(canAppeal({ status: "REJECTED", appealsUsed: 1, maxAppeals: 1 }), false);
-  assert.equal(canAppeal({ status: "UNDER_INVESTIGATION", appealsUsed: 0, maxAppeals: 1 }), false);
-});
-
-test("dispute closure: all items resolved (mixed outcomes valid)", () => {
-  assert.equal(allDisputeItemsResolved(["REFUNDED", "REPLACED", "REJECTED"]), true);
-  assert.equal(allDisputeItemsResolved(["REFUNDED", null]), false);
-  assert.equal(allDisputeItemsResolved(["REFUNDED", "ACTIVE"]), false);
-  assert.equal(allDisputeItemsResolved([]), false);
-});
-
-test("dispute SLA breach", () => {
-  const now = new Date("2026-06-22T12:00:00Z");
-  assert.equal(isSlaBreached(new Date("2026-06-22T11:00:00Z"), now), true);
-  assert.equal(isSlaBreached(new Date("2026-06-22T13:00:00Z"), now), false);
-  assert.equal(isSlaBreached(null, now), false);
 });
 
 test("qc result → next item status", () => {

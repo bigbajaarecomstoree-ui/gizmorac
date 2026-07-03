@@ -36,13 +36,6 @@ export async function getCouponById(id: string): Promise<Coupon | null> {
   return row ? toCoupon(row) : null;
 }
 
-export async function getCouponByCode(code: string): Promise<Coupon | null> {
-  const row = await prisma.coupon.findUnique({
-    where: { code: code.trim().toUpperCase() },
-  });
-  return row ? toCoupon(row) : null;
-}
-
 /** One order that redeemed a coupon — who, when, and how much it saved them. */
 export interface CouponRedemption {
   orderId: string;

@@ -3,12 +3,9 @@ import { isAuthenticated } from "@/lib/auth";
 import { getFilteredOrders, DATE_RANGES, type DateRange } from "@/lib/data/orders";
 import { prisma } from "@/lib/prisma";
 import { gstStateCode, sameState } from "@/lib/india-states";
+import { buildCsv } from "@/lib/products-csv";
 
 export const dynamic = "force-dynamic";
-
-function csv(value: string | number): string {
-  return `"${String(value ?? "").replace(/"/g, '""')}"`;
-}
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
@@ -61,7 +58,7 @@ export async function GET(request: NextRequest) {
     tIgst = 0,
     tLine = 0;
 
-  const rows: string[] = [];
+  const rows: (string | number)[][] = [];
   for (const o of orders) {
     const intra = sameState(sellerState, o.state);
     const stateCode = gstStateCode(o.state);
@@ -82,28 +79,24 @@ export async function GET(request: NextRequest) {
       tIgst += igst;
       tLine += lineTotal;
 
-      rows.push(
-        [
-          o.orderNumber,
-          new Date(o.createdAt).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" }),
-          `${o.firstName} ${o.lastName}`,
-          o.state,
-          stateCode,
-          hsn,
-          item.name,
-          rate,
-          item.qty,
-          taxable,
-          cgst,
-          sgst,
-          igst,
-          totalGst,
-          lineTotal,
-          o.status,
-        ]
-          .map(csv)
-          .join(","),
-      );
+      rows.push([
+        o.orderNumber,
+        new Date(o.createdAt).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" }),
+        `${o.firstName} ${o.lastName}`,
+        o.state,
+        stateCode,
+        hsn,
+        item.name,
+        rate,
+        item.qty,
+        taxable,
+        cgst,
+        sgst,
+        igst,
+        totalGst,
+        lineTotal,
+        o.status,
+      ]);
     }
   }
 
@@ -124,11 +117,9 @@ export async function GET(request: NextRequest) {
     round2(tCgst + tSgst + tIgst),
     round2(tLine),
     "",
-  ]
-    .map(csv)
-    .join(",");
+  ];
 
-  const body = "﻿" + [header.map(csv).join(","), ...rows, totalRow].join("\r\n");
+  const body = buildCsv([header, ...rows, totalRow]);
   const tag = custom ? `${from}_to_${to}` : range;
 
   return new Response(body, {

@@ -10,7 +10,8 @@ import { OrderStatusBadge } from "@/components/admin/order-status-badge";
 import { OrderStatusForm } from "@/components/admin/order-status-form";
 import { OrderOperations } from "@/components/admin/order-operations";
 import { AdminOrderActions } from "@/components/admin/admin-order-actions";
-import { AdminNotes } from "@/components/admin/admin-notes";
+import { EditorCard } from "@/components/admin/editor-card";
+import { saveAdminNotes } from "@/lib/admin/actions";
 import { ShipmentPanel } from "@/components/admin/shipment-panel";
 import { CodPanel } from "@/components/admin/cod-panel";
 import { OrderActivity } from "@/components/admin/order-activity";
@@ -400,7 +401,17 @@ export default async function OrderDetailPage({ params }: { params: Params }) {
             ) : null}
           </div>
 
-          <AdminNotes orderId={order.id} initial={adminNotes} />
+          <EditorCard
+            icon="note"
+            title="Internal notes"
+            hint="Private to staff — never shown to the customer."
+            placeholder="e.g. Customer requested late delivery · High-value customer · Verify address"
+            saveLabel="Save notes"
+            rows={4}
+            id={order.id}
+            initial={adminNotes}
+            action={saveAdminNotes}
+          />
         </div>
       </div>
     </div>

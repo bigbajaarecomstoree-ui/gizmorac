@@ -1,13 +1,9 @@
 import type { NextRequest } from "next/server";
 import { isAuthenticated } from "@/lib/auth";
 import { getFilteredOrders, DATE_RANGES, type DateRange } from "@/lib/data/orders";
+import { buildCsv } from "@/lib/products-csv";
 
 export const dynamic = "force-dynamic";
-
-function csv(value: string | number): string {
-  const s = String(value ?? "");
-  return `"${s.replace(/"/g, '""')}"`;
-}
 
 export async function GET(request: NextRequest) {
   if (!(await isAuthenticated())) {
@@ -66,12 +62,10 @@ export async function GET(request: NextRequest) {
       o.total,
       o.paymentMethod,
       o.couponCode ?? "",
-    ]
-      .map(csv)
-      .join(",");
+    ];
   });
 
-  const body = "﻿" + [header.map(csv).join(","), ...rows].join("\r\n");
+  const body = buildCsv([header, ...rows]);
   const date = new Date().toISOString().slice(0, 10);
 
   return new Response(body, {

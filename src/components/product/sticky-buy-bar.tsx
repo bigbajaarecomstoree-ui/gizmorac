@@ -8,7 +8,7 @@ import type { DeviceArt } from "@/lib/types";
 import { useStore } from "@/components/store/store-provider";
 import { ProductArt } from "./product-art";
 import { Button } from "@/components/ui/button";
-import { formatINR, shortTitle } from "@/lib/format";
+import { discountPercent, formatINR, shortTitle } from "@/lib/format";
 
 /**
  * Sticky bottom buy bar (mobile + desktop). Appears once the main purchase block
@@ -37,7 +37,7 @@ export function StickyBuyBar({
   const { addToCart, loggedIn } = useStore();
   const [show, setShow] = React.useState(false);
   const outOfStock = stock <= 0;
-  const off = mrp && mrp > price ? Math.round(((mrp - price) / mrp) * 100) : 0;
+  const off = discountPercent({ price, mrp: mrp ?? 0 });
 
   React.useEffect(() => {
     const onScroll = () => {

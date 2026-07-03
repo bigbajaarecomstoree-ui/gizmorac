@@ -2,11 +2,9 @@
 
 import { usePathname } from "next/navigation";
 import { MessageCircle } from "lucide-react";
-import { WHATSAPP_LINK } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
-export function WhatsAppButton({ href }: { href?: string }) {
-  const target = href ?? WHATSAPP_LINK;
+export function WhatsAppButton({ href }: { href: string }) {
   const pathname = usePathname();
   // On cart/checkout the mobile sticky checkout bar lives at the bottom, so hide
   // this floating button on mobile there to avoid two stacked CTAs (keep it on desktop).
@@ -19,7 +17,7 @@ export function WhatsAppButton({ href }: { href?: string }) {
   return (
     <button
       type="button"
-      onClick={() => window.open(target, "_blank", "noopener,noreferrer")}
+      onClick={() => window.open(href, "_blank", "noopener,noreferrer")}
       aria-label="Chat with us on WhatsApp"
       className={cn(
         "group fixed bottom-5 right-5 z-50 cursor-pointer items-center gap-2.5 rounded-full border border-success/40 bg-success/15 py-3 pl-3 pr-4 text-success backdrop-blur transition-all hover:bg-success/25 hover:shadow-[0_0_24px_-6px_rgba(52,211,153,0.6)]",

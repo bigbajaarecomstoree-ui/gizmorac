@@ -50,7 +50,7 @@ export function ProductCard({ product }: { product: Product }) {
 
         <div className="absolute right-3 top-3 z-20 flex flex-col gap-1.5">
           <WishlistButton id={product.id} name={title} />
-          <CompareButton slug={product.slug} name={title} category={product.category} variant="icon" />
+          <CompareButton slug={product.slug} name={title} category={product.category} />
         </div>
 
         {outOfStock ? (
@@ -77,7 +77,7 @@ export function ProductCard({ product }: { product: Product }) {
 
         <RatingStars rating={product.rating} count={product.reviewCount} />
 
-        <Price product={product} size="sm" tone="ink" className="mt-0.5" />
+        <Price product={product} size="sm" className="mt-0.5" />
 
         {/* On the narrow 2-col mobile grid the buttons stack so neither is
             clipped; from sm up (wider cards) they sit side by side. */}
@@ -85,8 +85,6 @@ export function ProductCard({ product }: { product: Product }) {
           <BuyNowButton
             id={product.id}
             name={title}
-            label="Buy Now"
-            variant="primary"
             size="sm"
             className="w-full sm:flex-1"
           />

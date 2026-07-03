@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { rupeesToPaise, paiseToRupees, prorate } from "../money";
-import { wouldExceedCeiling, sumCountedRefunds, refundableRemaining } from "../refund-math";
+import { wouldExceedCeiling, sumCountedRefunds } from "../refund-math";
 import type { RefundStatus } from "@prisma/client";
 
 const r = (status: RefundStatus, amountPaise: number) => ({ status, amountPaise });
@@ -46,6 +46,4 @@ test("over-refund: partial refunds accumulate to the ceiling", () => {
   const paid = 159500;
   assert.equal(wouldExceedCeiling(paid, [r("PARTIALLY_REFUNDED", 50000)], 109500), false); // == paid
   assert.equal(wouldExceedCeiling(paid, [r("PARTIALLY_REFUNDED", 50000)], 110000), true); // over
-  assert.equal(refundableRemaining(paid, [r("PARTIALLY_REFUNDED", 50000)]), 109500);
-  assert.equal(refundableRemaining(paid, [r("REFUNDED", 159500)]), 0);
 });
