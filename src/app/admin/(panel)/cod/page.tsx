@@ -1,9 +1,7 @@
 import Link from "next/link";
 import { HandCoins } from "lucide-react";
-import { getSettings } from "@/lib/data/settings";
 import { getCodStats, getCodOrders } from "@/lib/data/cod-stats";
 import { getCodPincodeRules } from "@/lib/data/cod-pincode";
-import { CodSettingsForm } from "@/components/admin/cod-settings-form";
 import { CodPincodeRules } from "@/components/admin/cod-pincode-rules";
 import { formatINR } from "@/lib/format";
 
@@ -24,8 +22,7 @@ function fmtDate(iso: string) {
 }
 
 export default async function CodManagementPage() {
-  const [settings, stats, orders, pincodeRules] = await Promise.all([
-    getSettings(),
+  const [stats, orders, pincodeRules] = await Promise.all([
     getCodStats(),
     getCodOrders(50),
     getCodPincodeRules(),
@@ -93,13 +90,9 @@ export default async function CodManagementPage() {
         </table>
       </div>
 
-      {/* settings */}
+      {/* per-pincode COD rules; the advance settings live in Settings */}
       <div className="mt-8">
-        <h2 className="text-lg font-semibold">Settings</h2>
-        <div className="mt-3 space-y-5">
-          <CodSettingsForm settings={settings} />
-          <CodPincodeRules rules={pincodeRules} />
-        </div>
+        <CodPincodeRules rules={pincodeRules} />
       </div>
     </div>
   );

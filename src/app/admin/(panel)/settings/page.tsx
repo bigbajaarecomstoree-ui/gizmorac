@@ -3,6 +3,7 @@ import { getSettings } from "@/lib/data/settings";
 import { getPhonePeConfig } from "@/lib/phonepe";
 import { getShiprocketConfig } from "@/lib/shiprocket";
 import { SettingsForm } from "@/components/admin/settings-form";
+import { CodSettingsForm } from "@/components/admin/cod-settings-form";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +42,10 @@ export default async function SettingsPage() {
             connected: shiprocket.connected,
           }}
         />
+      </div>
+
+      <div className="mt-6">
+        <CodSettingsForm settings={settings} />
       </div>
     </div>
   );
