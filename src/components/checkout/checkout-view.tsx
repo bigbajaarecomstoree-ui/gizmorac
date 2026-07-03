@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Loader2, Lock, ShoppingBag, Tag, X, Truck, Star, Plus } from "lucide-react";
@@ -711,7 +712,11 @@ export function CheckoutView({
             {lines.map(({ product, qty }) => (
               <div key={product.id} className="flex items-center gap-3">
                 <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-border">
-                  <ProductArt art={product.art} glyphClassName="!h-[42%]" />
+                  {product.image ? (
+                    <Image src={product.image} alt="" fill sizes="48px" className="object-cover" />
+                  ) : (
+                    <ProductArt art={product.art} glyphClassName="!h-[42%]" />
+                  )}
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{shortTitle(product.name)}</p>
