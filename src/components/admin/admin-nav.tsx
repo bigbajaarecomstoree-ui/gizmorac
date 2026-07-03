@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -14,15 +14,16 @@ import {
   Settings,
   Store,
   LogOut,
+  ChevronDown,
 } from "lucide-react";
 import { logoutAction } from "@/lib/admin/actions";
 import { LiveVisitorsBadge } from "@/components/admin/live-visitors";
 import { cn } from "@/lib/utils";
 
-// Owner-specified structure (2026-07-03): six top-level jobs, everything else
-// a child. Sections auto-expand Shopify-style while you are inside them (no
-// click tax — the parent link both navigates and reveals). No route moves —
-// grouping is nav-only via `match`; Settings (pinned below) owns /admin/logs.
+// Owner-specified structure (2026-07-03): six top-level jobs, everything else a
+// child. Sections are a collapsible accordion — clicking a parent toggles its
+// children open/closed with a smooth height animation; the section you're in
+// opens automatically. No route moves: grouping is nav-only via `match`.
 type NavChild = { label: string; href: string };
 type NavItem = {
   label: string;
@@ -77,13 +78,125 @@ const NAV: NavItem[] = [
   { label: "Support", href: "/admin/support", icon: LifeBuoy },
 ];
 
+// Pinned in the footer, but part of the same accordion (owns /admin/logs).
+const SETTINGS: NavItem = {
+  label: "Settings",
+  href: "/admin/settings",
+  icon: Settings,
+  match: ["/admin/settings", "/admin/logs"],
+  children: [{ label: "Logs", href: "/admin/logs" }],
+};
+
+function matches(item: NavItem, pathname: string): boolean {
+  return item.exact
+    ? pathname === item.href
+    : (item.match ?? [item.href]).some((m) => pathname.startsWith(m));
+}
+
+// The active child is the longest matching prefix, so nested hrefs like Sales
+// (/admin/reports) vs GST (/admin/reports/gst) never both light up.
+function childActiveHref(children: NavChild[], pathname: string): string | null {
+  const best = children
+    .filter((c) => pathname.startsWith(c.href))
+    .sort((a, b) => b.href.length - a.href.length)[0];
+  return best?.href ?? null;
+}
+
+/** A top-level entry plus its collapsible children (Fragment so it flattens
+ * into the mobile strip / desktop column of the parent nav). */
+function NavGroup({
+  item,
+  pathname,
+  open,
+  onToggle,
+}: {
+  item: NavItem;
+  pathname: string;
+  open: boolean;
+  onToggle: (key: string) => void;
+}) {
+  const active = matches(item, pathname);
+  const kids = item.children ?? [];
+  const hasKids = kids.length > 0;
+  const activeChild = hasKids ? childActiveHref(kids, pathname) : null;
+
+  return (
+    <>
+      <Link
+        href={item.href}
+        onClick={hasKids ? () => onToggle(item.href) : undefined}
+        aria-expanded={hasKids ? open : undefined}
+        className={cn(
+          "flex items-center gap-2.5 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+          active
+            ? "bg-accent-soft text-accent-bright"
+            : "text-muted hover:bg-surface-2 hover:text-foreground",
+        )}
+      >
+        <item.icon size={17} />
+        {item.label}
+        {hasKids ? (
+          <ChevronDown
+            size={15}
+            aria-hidden
+            className={cn(
+              "ml-auto hidden shrink-0 transition-transform duration-200 md:block",
+              open && "rotate-180",
+            )}
+          />
+        ) : null}
+      </Link>
+
+      {hasKids ? (
+        // Grid-rows 0fr→1fr gives a smooth open/close without measuring height.
+        // `contents` on mobile lets the children flow into the horizontal strip.
+        <div
+          className={cn(
+            "contents md:grid md:transition-[grid-template-rows] md:duration-200 md:ease-out",
+            open ? "md:[grid-template-rows:1fr]" : "md:[grid-template-rows:0fr]",
+          )}
+        >
+          <div className="contents md:flex md:flex-col md:gap-1 md:overflow-hidden">
+            {kids.map((c) => (
+              <Link
+                key={c.href}
+                href={c.href}
+                className={cn(
+                  "flex items-center whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition-colors md:py-2 md:pl-10",
+                  activeChild === c.href
+                    ? "bg-accent-soft text-accent-bright md:bg-transparent"
+                    : "text-muted hover:bg-surface-2 hover:text-foreground",
+                )}
+              >
+                {c.label}
+              </Link>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
 export function AdminNav() {
   const pathname = usePathname();
 
-  const isActive = (item: Pick<NavItem, "href" | "exact" | "match">) =>
-    item.exact
-      ? pathname === item.href
-      : (item.match ?? [item.href]).some((m) => pathname.startsWith(m));
+  // Which section's children are expanded (accordion — one at a time). Seeded
+  // to the section you land in; opening one closes the others.
+  const activeKey =
+    [...NAV, SETTINGS].find((it) => matches(it, pathname))?.href ?? null;
+  const [openKey, setOpenKey] = useState<string | null>(activeKey);
+
+  // Auto-open the section when you navigate INTO a new one (but leave manual
+  // toggles alone while you stay within the same section).
+  const prevActive = useRef(activeKey);
+  useEffect(() => {
+    if (activeKey && activeKey !== prevActive.current) setOpenKey(activeKey);
+    prevActive.current = activeKey;
+  }, [activeKey]);
+
+  const toggle = (key: string) =>
+    setOpenKey((prev) => (prev === key ? null : key));
 
   return (
     <div className="flex h-full flex-col gap-1 p-4">
@@ -99,58 +212,18 @@ export function AdminNav() {
 
       <LiveVisitorsBadge />
 
-      {/* min-h-0 lets this flex child shrink below its content height so the
-          list scrolls inside the h-screen sidebar instead of clipping the
-          pinned utilities (View store / Settings / Log out) on short screens. */}
       <nav className="flex gap-1 overflow-x-auto md:min-h-0 md:flex-1 md:flex-col md:overflow-y-auto md:overflow-x-hidden">
-        {NAV.map((item) => {
-          const active = isActive(item);
-          return (
-            <Fragment key={item.href}>
-              <Link
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-2.5 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                  active
-                    ? "bg-accent-soft text-accent-bright"
-                    : "text-muted hover:bg-surface-2 hover:text-foreground",
-                )}
-              >
-                <item.icon size={17} />
-                {item.label}
-              </Link>
-              {/* Shopify-style sub-items: plain strip links on mobile; on
-                  desktop an indented child list that only shows while the
-                  section is active (auto-expand, no extra click). The active
-                  child is the LONGEST matching prefix, so nested hrefs like
-                  Sales (/admin/reports) vs GST (/admin/reports/gst) don't
-                  both light up. */}
-              {item.children?.map((c, _i, all) => {
-                const best = all
-                  .filter((x) => pathname.startsWith(x.href))
-                  .sort((a, b) => b.href.length - a.href.length)[0];
-                const childActive = best?.href === c.href;
-                return (
-                  <Link
-                    key={c.label}
-                    href={c.href}
-                    className={cn(
-                      "flex items-center whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition-colors md:py-2 md:pl-10",
-                      active ? "md:flex" : "md:hidden",
-                      childActive
-                        ? "bg-accent-soft text-accent-bright md:bg-transparent"
-                        : "text-muted hover:bg-surface-2 hover:text-foreground",
-                    )}
-                  >
-                    {c.label}
-                  </Link>
-                );
-              })}
-            </Fragment>
-          );
-        })}
-        {/* Logs lives under Settings on desktop; keep it directly reachable
-            in the mobile strip (Settings block below is desktop-only). */}
+        {NAV.map((item) => (
+          <NavGroup
+            key={item.href}
+            item={item}
+            pathname={pathname}
+            open={openKey === item.href}
+            onToggle={toggle}
+          />
+        ))}
+        {/* Logs lives under Settings on desktop; keep it directly reachable in
+            the mobile strip (the Settings block below is desktop-only). */}
         <Link
           href="/admin/logs"
           className={cn(
@@ -173,32 +246,12 @@ export function AdminNav() {
           <Store size={17} />
           View store
         </Link>
-        <Link
-          href="/admin/settings"
-          className={cn(
-            "flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-            isActive({ href: "/admin/settings", match: ["/admin/settings", "/admin/logs"] })
-              ? "bg-accent-soft text-accent-bright"
-              : "text-muted hover:bg-surface-2 hover:text-foreground",
-          )}
-        >
-          <Settings size={17} />
-          Settings
-        </Link>
-        {/* Auto-expanded child while inside the Settings section. */}
-        {(pathname.startsWith("/admin/settings") || pathname.startsWith("/admin/logs")) && (
-          <Link
-            href="/admin/logs"
-            className={cn(
-              "flex items-center whitespace-nowrap rounded-lg px-3 py-2 pl-10 text-sm font-medium transition-colors",
-              pathname.startsWith("/admin/logs")
-                ? "text-accent-bright"
-                : "text-muted hover:bg-surface-2 hover:text-foreground",
-            )}
-          >
-            Logs
-          </Link>
-        )}
+        <NavGroup
+          item={SETTINGS}
+          pathname={pathname}
+          open={openKey === SETTINGS.href}
+          onToggle={toggle}
+        />
         <form action={logoutAction}>
           <button
             type="submit"
