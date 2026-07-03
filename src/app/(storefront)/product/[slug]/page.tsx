@@ -49,6 +49,8 @@ export async function generateMetadata({
   const product = await getProductBySlug(slug);
   if (!product) return { title: "Product not found" };
   const url = `/product/${product.slug}`;
+  // Share preview uses the real product photo; falls back to the brand card.
+  const ogImage = product.image || "/og-default.png";
   return {
     title: product.name,
     description: product.shortDescription,
@@ -58,6 +60,13 @@ export async function generateMetadata({
       title: product.name,
       description: product.shortDescription,
       url,
+      images: [{ url: ogImage, alt: product.name }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: product.name,
+      description: product.shortDescription,
+      images: [ogImage],
     },
   };
 }
@@ -83,18 +92,14 @@ export default async function ProductPage({ params }: { params: Params }) {
   const inStock = product.stock > 0;
   const lowStock = inStock && product.stock <= 10;
 
-  const productSchema = {
+  const productSchema: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "Product",
     name: product.name,
     description: product.shortDescription,
     sku: product.sku,
+    ...(product.image ? { image: product.image } : {}),
     brand: { "@type": "Brand", name: product.brand },
-    aggregateRating: {
-      "@type": "AggregateRating",
-      ratingValue: product.rating,
-      reviewCount: product.reviewCount,
-    },
     offers: {
       "@type": "Offer",
       priceCurrency: "INR",
@@ -105,6 +110,16 @@ export default async function ProductPage({ params }: { params: Params }) {
       url: `${SITE.url}/product/${product.slug}`,
     },
   };
+  // Only advertise a rating when it's backed by real reviews — emitting a
+  // default/unearned rating violates Google's structured-data policy (and is
+  // the machine-readable version of a fake "4.5 (0)").
+  if (product.reviewCount > 0) {
+    productSchema.aggregateRating = {
+      "@type": "AggregateRating",
+      ratingValue: product.rating,
+      reviewCount: product.reviewCount,
+    };
+  }
 
   return (
     // pb-24: reserve room for the fixed sticky buy bar so it never overlays

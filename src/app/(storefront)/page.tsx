@@ -25,12 +25,34 @@ export default async function HomePage() {
         settings.landingPopupCode,
     );
 
+  // Social profiles + support contact feed Google's brand knowledge panel.
+  const sameAs = [
+    settings.instagramUrl,
+    settings.facebookUrl,
+    settings.youtubeUrl,
+    settings.twitterUrl,
+  ].filter(Boolean);
+  const hasContact = Boolean(settings.supportEmail || settings.supportPhone);
   const orgSchema = {
     "@context": "https://schema.org",
     "@type": "Organization",
     name: SITE.name,
     url: SITE.url,
     description: SITE.description,
+    logo: `${SITE.url}/logo.png`,
+    ...(sameAs.length ? { sameAs } : {}),
+    ...(hasContact
+      ? {
+          contactPoint: {
+            "@type": "ContactPoint",
+            contactType: "customer support",
+            ...(settings.supportEmail ? { email: settings.supportEmail } : {}),
+            ...(settings.supportPhone ? { telephone: settings.supportPhone } : {}),
+            areaServed: "IN",
+            availableLanguage: ["en", "hi"],
+          },
+        }
+      : {}),
   };
 
   return (
