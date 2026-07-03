@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Gift, ShoppingCart, X, Check } from "lucide-react";
 import { useStore } from "@/components/store/store-provider";
+import { useEngagementTrigger } from "./use-engagement-trigger";
 import { formatINR } from "@/lib/format";
 
 // Browse nudge stays off the cart/checkout flow; the cart-waiting reminder is
@@ -57,17 +58,23 @@ export function PromoPopups({
     ref.current = { browseSuppressed, cartSuppressed, offer, cartCount, active };
   });
 
-  // Browsing nudge — once per session, after a short delay.
+  // Browsing nudge — once per session, held until the shopper engages (scroll /
+  // dwell / exit-intent) rather than firing on load. The admin delay is the
+  // dwell component; scroll or exit-intent can surface it sooner, at a moment
+  // the shopper is actually browsing.
+  const browseArmed =
+    mounted && browse.enabled && browse.amount > 0 && !seen("browse");
+  const browseEngaged = useEngagementTrigger(
+    browseArmed,
+    Math.max(1, browse.delaySec) * 1000,
+  );
   React.useEffect(() => {
-    if (!mounted || !browse.enabled || browse.amount <= 0 || seen("browse")) return;
-    const t = setTimeout(() => {
-      const c = ref.current;
-      if (c.browseSuppressed || c.offer || c.active) return;
-      markSeen("browse");
-      setActive("browse");
-    }, Math.max(1, browse.delaySec) * 1000);
-    return () => clearTimeout(t);
-  }, [mounted, browse.enabled, browse.amount, browse.delaySec]);
+    if (!browseEngaged) return;
+    const c = ref.current;
+    if (c.browseSuppressed || c.offer || c.active) return;
+    markSeen("browse");
+    setActive("browse");
+  }, [browseEngaged]);
 
   // Cart-waiting — arms whenever items are present; fires after the dwell time.
   React.useEffect(() => {

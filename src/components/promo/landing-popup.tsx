@@ -2,13 +2,20 @@
 
 import * as React from "react";
 import { Gift, X, Copy, Check } from "lucide-react";
+import { useEngagementTrigger } from "./use-engagement-trigger";
 
 const SEEN_KEY = "gizmorac.popup.landing";
 
 /**
  * Admin-controlled welcome offer popup, shown once per browser session on the
  * home page. Displays a promo code with a one-tap copy button.
+ *
+ * It no longer fires on load (which interrupts before the shopper has seen
+ * anything). Instead it waits for a sign of engagement or intent — scroll, ~15s
+ * of dwell, or exit-intent — via useEngagementTrigger, so the offer lifts at
+ * the moment it is most welcome instead of the moment it is most annoying.
  */
+const SHOW_AFTER_MS = 15000;
 export function LandingPopup({
   title,
   message,
@@ -23,20 +30,24 @@ export function LandingPopup({
   const panelRef = React.useRef<HTMLDivElement>(null);
   const closeRef = React.useRef<HTMLButtonElement>(null);
 
+  // Arm the engagement trigger once per session (skip if already shown).
+  const [armed, setArmed] = React.useState(false);
   React.useEffect(() => {
     let seen = false;
     try {
       seen = sessionStorage.getItem(SEEN_KEY) === "1";
     } catch {}
-    if (seen) return;
-    const t = setTimeout(() => {
-      setOpen(true);
-      try {
-        sessionStorage.setItem(SEEN_KEY, "1");
-      } catch {}
-    }, 900);
-    return () => clearTimeout(t);
+    if (!seen) setArmed(true);
   }, []);
+
+  const engaged = useEngagementTrigger(armed, SHOW_AFTER_MS);
+  React.useEffect(() => {
+    if (!engaged) return;
+    setOpen(true);
+    try {
+      sessionStorage.setItem(SEEN_KEY, "1");
+    } catch {}
+  }, [engaged]);
 
   // Close on Escape.
   React.useEffect(() => {
