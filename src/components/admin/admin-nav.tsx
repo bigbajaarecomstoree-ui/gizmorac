@@ -7,13 +7,9 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Package,
-  Boxes,
   Receipt,
-  Users,
   LifeBuoy,
   BarChart3,
-  Wallet,
-  HandCoins,
   Megaphone,
   Settings,
   Store,
@@ -23,15 +19,10 @@ import { logoutAction } from "@/lib/admin/actions";
 import { LiveVisitorsBadge } from "@/components/admin/live-visitors";
 import { cn } from "@/lib/utils";
 
-// Frequency-first ordering (council-reviewed): the daily jobs — orders, COD
-// verification, stock, tickets — live in the top five slots; weekly money +
-// occasional catalog/marketing below. Sibling pages are grouped under one
-// entry Shopify-style: the section auto-expands its children in the sidebar
-// while you are inside it (no click tax — the parent link both navigates and
-// reveals). No route moves: Products also owns /admin/categories, Marketing =
-// promotions + subscribers, and Settings (pinned below) owns /admin/logs.
-// Rule for future items: no new top-level entry unless it is a new DAILY job —
-// otherwise it lands as a child (drafts → under Orders, WhatsApp → Support).
+// Owner-specified structure (2026-07-03): six top-level jobs, everything else
+// a child. Sections auto-expand Shopify-style while you are inside them (no
+// click tax — the parent link both navigates and reveals). No route moves —
+// grouping is nav-only via `match`; Settings (pinned below) owns /admin/logs.
 type NavChild = { label: string; href: string };
 type NavItem = {
   label: string;
@@ -44,19 +35,34 @@ type NavItem = {
 
 const NAV: NavItem[] = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard, exact: true },
-  { label: "Orders", href: "/admin/orders", icon: Receipt },
-  { label: "COD & RTO", href: "/admin/cod", icon: HandCoins },
-  { label: "Inventory", href: "/admin/inventory", icon: Boxes },
-  { label: "Support", href: "/admin/support", icon: LifeBuoy },
-  { label: "Customers", href: "/admin/customers", icon: Users },
-  { label: "Finance", href: "/admin/finance", icon: Wallet },
-  { label: "Reports", href: "/admin/reports", icon: BarChart3 },
+  {
+    label: "Orders",
+    href: "/admin/orders",
+    icon: Receipt,
+    match: ["/admin/orders", "/admin/cod"],
+    children: [{ label: "COD & RTO", href: "/admin/cod" }],
+  },
   {
     label: "Products",
     href: "/admin/products",
     icon: Package,
-    match: ["/admin/products", "/admin/categories"],
-    children: [{ label: "Categories", href: "/admin/categories" }],
+    match: ["/admin/products", "/admin/inventory", "/admin/categories"],
+    children: [
+      { label: "Inventory", href: "/admin/inventory" },
+      { label: "Categories", href: "/admin/categories" },
+    ],
+  },
+  {
+    label: "Report",
+    href: "/admin/reports",
+    icon: BarChart3,
+    match: ["/admin/reports", "/admin/finance", "/admin/customers"],
+    children: [
+      { label: "Finance", href: "/admin/finance" },
+      { label: "GST", href: "/admin/reports/gst" },
+      { label: "Sales", href: "/admin/reports" },
+      { label: "Customer", href: "/admin/customers" },
+    ],
   },
   {
     label: "Marketing",
@@ -68,6 +74,7 @@ const NAV: NavItem[] = [
       { label: "Subscribers", href: "/admin/subscribers" },
     ],
   },
+  { label: "Support", href: "/admin/support", icon: LifeBuoy },
 ];
 
 export function AdminNav() {
@@ -114,9 +121,15 @@ export function AdminNav() {
               </Link>
               {/* Shopify-style sub-items: plain strip links on mobile; on
                   desktop an indented child list that only shows while the
-                  section is active (auto-expand, no extra click). */}
-              {item.children?.map((c) => {
-                const childActive = pathname.startsWith(c.href);
+                  section is active (auto-expand, no extra click). The active
+                  child is the LONGEST matching prefix, so nested hrefs like
+                  Sales (/admin/reports) vs GST (/admin/reports/gst) don't
+                  both light up. */}
+              {item.children?.map((c, _i, all) => {
+                const best = all
+                  .filter((x) => pathname.startsWith(x.href))
+                  .sort((a, b) => b.href.length - a.href.length)[0];
+                const childActive = best?.href === c.href;
                 return (
                   <Link
                     key={c.label}
