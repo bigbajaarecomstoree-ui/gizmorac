@@ -43,6 +43,74 @@ export async function getCouponByCode(code: string): Promise<Coupon | null> {
   return row ? toCoupon(row) : null;
 }
 
+/** One order that redeemed a coupon — who, when, and how much it saved them. */
+export interface CouponRedemption {
+  orderId: string;
+  orderNumber: string;
+  buyer: string;
+  email: string;
+  createdAt: string;
+  /** The coupon's own discount on this order (excludes any instant popup offer). */
+  couponDiscount: number;
+  orderTotal: number;
+  status: string;
+}
+
+export interface CouponUsage {
+  coupon: Coupon;
+  /** "manual" (admin-created) | "reward" (auto-issued repeat-order coupon). */
+  kind: string;
+  /** For reward coupons: the customer the coupon was issued to. */
+  issuedTo: { name: string; email: string } | null;
+  redemptions: CouponRedemption[];
+}
+
+/** A coupon plus the full list of orders that redeemed it — powers the admin
+ * coupon-detail page ("who used this, when, and how many times"). */
+export async function getCouponUsage(id: string): Promise<CouponUsage | null> {
+  const row = await prisma.coupon.findUnique({ where: { id } });
+  if (!row) return null;
+
+  const orders = await prisma.order.findMany({
+    where: { couponCode: row.code },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      orderNumber: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      createdAt: true,
+      discount: true,
+      instantDiscount: true,
+      total: true,
+      status: true,
+    },
+  });
+
+  const redemptions: CouponRedemption[] = orders.map((o) => ({
+    orderId: o.id,
+    orderNumber: o.orderNumber,
+    buyer: `${o.firstName} ${o.lastName}`.trim(),
+    email: o.email,
+    createdAt: o.createdAt.toISOString(),
+    couponDiscount: Math.max(0, o.discount - o.instantDiscount),
+    orderTotal: o.total,
+    status: o.status,
+  }));
+
+  let issuedTo: CouponUsage["issuedTo"] = null;
+  if (row.kind === "reward" && row.customerId) {
+    const c = await prisma.customer.findUnique({
+      where: { id: row.customerId },
+      select: { fullName: true, email: true },
+    });
+    if (c) issuedTo = { name: c.fullName, email: c.email };
+  }
+
+  return { coupon: toCoupon(row), kind: row.kind, issuedTo, redemptions };
+}
+
 export interface CartLineInput {
   price: number;
   qty: number;

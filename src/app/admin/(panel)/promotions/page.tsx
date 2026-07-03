@@ -89,7 +89,12 @@ export default async function PromotionsPage() {
                   return (
                     <tr key={c.id} className="hover:bg-surface-2">
                       <td className="px-4 py-3">
-                        <span className="font-mono font-semibold">{c.code}</span>
+                        <Link
+                          href={`/admin/promotions/${c.id}`}
+                          className="font-mono font-semibold text-foreground hover:text-accent hover:underline"
+                        >
+                          {c.code}
+                        </Link>
                         {c.description ? (
                           <div className="text-xs text-faint">{c.description}</div>
                         ) : null}
