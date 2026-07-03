@@ -1,5 +1,6 @@
 "use client";
 
+import { Fragment } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -25,16 +26,20 @@ import { cn } from "@/lib/utils";
 // Frequency-first ordering (council-reviewed): the daily jobs — orders, COD
 // verification, stock, tickets — live in the top five slots; weekly money +
 // occasional catalog/marketing below. Sibling pages are grouped under one
-// entry via `match` + an in-page tab bar (AdminSubnav) so no route moves:
-// Products also owns /admin/categories, Marketing = promotions + subscribers,
-// and Settings (pinned below) owns /admin/logs. Rule for future items: no new
-// top-level entry unless it is a new DAILY job — otherwise it joins a group.
+// entry Shopify-style: the section auto-expands its children in the sidebar
+// while you are inside it (no click tax — the parent link both navigates and
+// reveals). No route moves: Products also owns /admin/categories, Marketing =
+// promotions + subscribers, and Settings (pinned below) owns /admin/logs.
+// Rule for future items: no new top-level entry unless it is a new DAILY job —
+// otherwise it lands as a child (drafts → under Orders, WhatsApp → Support).
+type NavChild = { label: string; href: string };
 type NavItem = {
   label: string;
   href: string;
   icon: typeof LayoutDashboard;
   exact?: boolean;
   match?: string[];
+  children?: NavChild[];
 };
 
 const NAV: NavItem[] = [
@@ -51,12 +56,17 @@ const NAV: NavItem[] = [
     href: "/admin/products",
     icon: Package,
     match: ["/admin/products", "/admin/categories"],
+    children: [{ label: "Categories", href: "/admin/categories" }],
   },
   {
     label: "Marketing",
     href: "/admin/promotions",
     icon: Megaphone,
     match: ["/admin/promotions", "/admin/subscribers"],
+    children: [
+      { label: "Promotions", href: "/admin/promotions" },
+      { label: "Subscribers", href: "/admin/subscribers" },
+    ],
   },
 ];
 
@@ -89,21 +99,56 @@ export function AdminNav() {
         {NAV.map((item) => {
           const active = isActive(item);
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-2.5 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                active
-                  ? "bg-accent-soft text-accent-bright"
-                  : "text-muted hover:bg-surface-2 hover:text-foreground",
-              )}
-            >
-              <item.icon size={17} />
-              {item.label}
-            </Link>
+            <Fragment key={item.href}>
+              <Link
+                href={item.href}
+                className={cn(
+                  "flex items-center gap-2.5 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                  active
+                    ? "bg-accent-soft text-accent-bright"
+                    : "text-muted hover:bg-surface-2 hover:text-foreground",
+                )}
+              >
+                <item.icon size={17} />
+                {item.label}
+              </Link>
+              {/* Shopify-style sub-items: plain strip links on mobile; on
+                  desktop an indented child list that only shows while the
+                  section is active (auto-expand, no extra click). */}
+              {item.children?.map((c) => {
+                const childActive = pathname.startsWith(c.href);
+                return (
+                  <Link
+                    key={c.label}
+                    href={c.href}
+                    className={cn(
+                      "flex items-center whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition-colors md:py-2 md:pl-10",
+                      active ? "md:flex" : "md:hidden",
+                      childActive
+                        ? "bg-accent-soft text-accent-bright md:bg-transparent"
+                        : "text-muted hover:bg-surface-2 hover:text-foreground",
+                    )}
+                  >
+                    {c.label}
+                  </Link>
+                );
+              })}
+            </Fragment>
           );
         })}
+        {/* Logs lives under Settings on desktop; keep it directly reachable
+            in the mobile strip (Settings block below is desktop-only). */}
+        <Link
+          href="/admin/logs"
+          className={cn(
+            "flex items-center whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium transition-colors md:hidden",
+            pathname.startsWith("/admin/logs")
+              ? "bg-accent-soft text-accent-bright"
+              : "text-muted hover:bg-surface-2 hover:text-foreground",
+          )}
+        >
+          Logs
+        </Link>
       </nav>
 
       <div className="mt-auto hidden flex-col gap-1 border-t border-border pt-3 md:flex">
@@ -127,6 +172,20 @@ export function AdminNav() {
           <Settings size={17} />
           Settings
         </Link>
+        {/* Auto-expanded child while inside the Settings section. */}
+        {(pathname.startsWith("/admin/settings") || pathname.startsWith("/admin/logs")) && (
+          <Link
+            href="/admin/logs"
+            className={cn(
+              "flex items-center whitespace-nowrap rounded-lg px-3 py-2 pl-10 text-sm font-medium transition-colors",
+              pathname.startsWith("/admin/logs")
+                ? "text-accent-bright"
+                : "text-muted hover:bg-surface-2 hover:text-foreground",
+            )}
+          >
+            Logs
+          </Link>
+        )}
         <form action={logoutAction}>
           <button
             type="submit"

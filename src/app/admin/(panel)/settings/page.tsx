@@ -3,7 +3,6 @@ import { getSettings } from "@/lib/data/settings";
 import { getPhonePeConfig } from "@/lib/phonepe";
 import { getShiprocketConfig } from "@/lib/shiprocket";
 import { SettingsForm } from "@/components/admin/settings-form";
-import { AdminSubnav } from "@/components/admin/admin-subnav";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +15,6 @@ export default async function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <AdminSubnav tabs={[{ label: "Settings", href: "/admin/settings" }, { label: "Logs", href: "/admin/logs" }]} />
       <div className="flex items-center gap-2">
         <SettingsIcon size={22} className="text-accent" />
         <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
