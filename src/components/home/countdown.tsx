@@ -30,12 +30,12 @@ function remaining(target: number) {
 function Segment({ value, label }: { value: string; label: string }) {
   return (
     <div className="flex flex-col items-center gap-1.5">
-      <span
-        className="readout !text-on-accent grid h-12 w-12 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-accent to-[#9333ea] text-xl font-bold tabular-nums shadow-[0_10px_22px_-10px_rgba(109,40,217,0.7)] sm:h-14 sm:w-14 sm:text-2xl"
-        suppressHydrationWarning
-      >
-        {/* Re-mount on value change so the digit pops in on every tick. */}
-        <span key={value} className="animate-pop inline-block">
+      <span className="readout !text-on-accent grid h-12 w-12 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-accent to-[#9333ea] text-xl font-bold tabular-nums shadow-[0_10px_22px_-10px_rgba(109,40,217,0.7)] sm:h-14 sm:w-14 sm:text-2xl">
+        {/* Re-mount on value change so the digit pops in on every tick.
+            suppressHydrationWarning sits on the element that directly holds the
+            text: the SSR clock and the client clock can be a tick apart, and
+            React only suppresses one level deep. */}
+        <span key={value} className="animate-pop inline-block" suppressHydrationWarning>
           {value}
         </span>
       </span>

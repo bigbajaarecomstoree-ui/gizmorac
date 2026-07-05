@@ -8,7 +8,7 @@ import { WishlistButton } from "@/components/product/wishlist-button";
 import { Price } from "@/components/product/price";
 import { formatINR, discountPercent, shortTitle } from "@/lib/format";
 import { TRUST_STATS } from "@/lib/constants";
-import { getDealOfTheDay, getBestSellers } from "@/lib/data/queries";
+import { getDealOfTheDay, getBestSellers, getRelatedProducts } from "@/lib/data/queries";
 import { cn } from "@/lib/utils";
 
 const TRUST = [
@@ -22,6 +22,7 @@ const CALLOUT_TONES = {
   surface: "border-border-bright bg-surface/85",
   dark: "border-transparent bg-foreground",
   purple: "border-transparent bg-accent",
+  highlight: "border-transparent bg-highlight",
 } as const;
 
 function Callout({
@@ -37,7 +38,8 @@ function Callout({
   delay?: number;
   tone?: keyof typeof CALLOUT_TONES;
 }) {
-  const onColor = tone !== "surface";
+  const onColor = tone === "dark" || tone === "purple";
+  const onYellow = tone === "highlight";
   return (
     <div
       className={cn(
@@ -47,10 +49,22 @@ function Callout({
       )}
       style={{ animationDelay: `${delay}s` }}
     >
-      <div className={cn("readout text-sm font-semibold leading-none", onColor && "text-white")}>
+      <div
+        className={cn(
+          "readout text-sm font-semibold leading-none",
+          onColor && "text-white",
+          onYellow && "text-on-highlight",
+        )}
+      >
         {value}
       </div>
-      <div className={cn("tech-label mt-1 !text-[0.5625rem]", onColor && "!text-white/65")}>
+      <div
+        className={cn(
+          "tech-label mt-1 !text-[0.5625rem]",
+          onColor && "!text-white/65",
+          onYellow && "!text-on-highlight/70",
+        )}
+      >
         {label}
       </div>
     </div>
@@ -133,6 +147,40 @@ function Eyebrow({ className }: { className?: string }) {
   );
 }
 
+// The shopper-visible title — near-duplicate catalogue listings (same product,
+// separate rows) collapse to the same shortTitle, so this is how we tell "the
+// same product" apart from "a genuinely different one" for the mini-cards.
+const titleKey = (p: Product) => shortTitle(p.name).toLowerCase();
+
+// The hero product rotates (deal of the day / best seller), so the floating
+// callouts must come from that product's own data — a hardcoded claim would
+// end up describing a product that isn't on screen. Specs fit the value/label
+// shape natively; highlights/features are split into a short lead + caption;
+// warranty is the always-true fallback.
+function productCallouts(product: Product | null) {
+  if (!product) return [];
+  const out: { value: string; label: string }[] = [];
+  for (const s of product.specs) {
+    if (out.length === 2) break;
+    if (s.value.length <= 14 && s.label.length <= 22) {
+      out.push({ value: s.value, label: s.label });
+    }
+  }
+  for (const text of [...product.highlights, ...product.features]) {
+    if (out.length === 2) break;
+    const words = text.trim().split(/\s+/);
+    let head = words[0] ?? "";
+    if (words[1] && `${head} ${words[1]}`.length <= 12) head = `${head} ${words[1]}`;
+    if (!head || head.length > 14) continue;
+    const rest = text.trim().slice(head.length).trim();
+    out.push({ value: head, label: rest ? rest.slice(0, 26) : "Highlight" });
+  }
+  if (out.length < 2 && product.warrantyMonths > 0) {
+    out.push({ value: `${product.warrantyMonths}-month`, label: "Warranty" });
+  }
+  return out;
+}
+
 export async function Hero() {
   // Lead with the real Deal of the Day, backed by best-sellers for the floating
   // mini-cards. (Falls back gracefully if nothing is flagged yet.)
@@ -141,9 +189,36 @@ export async function Hero() {
     getBestSellers(6),
   ]);
   const hero = deal ?? bestSellers[0] ?? null;
-  const rest = bestSellers.filter((p) => p.id !== hero?.id);
-  const [secondary, tertiary] = rest;
+
+  // Floating mini-cards: prefer DIFFERENT products from the hero's own category.
+  // Dedupe by the shopper-visible title (not id) so near-duplicate listings
+  // don't show the hero's product twice. Fall back to same-category variants —
+  // then best-sellers — only when the category is too thin to fill both slots.
+  const related = hero ? await getRelatedProducts(hero, 8) : [];
+  const NEED = 2;
+  const seenIds = new Set<string>(hero ? [hero.id] : []);
+  const shownTitles = new Set<string>(hero ? [titleKey(hero)] : []);
+  const miniCards: Product[] = [];
+  const addCard = (p: Product) => {
+    if (miniCards.length >= NEED || seenIds.has(p.id)) return;
+    seenIds.add(p.id);
+    miniCards.push(p);
+  };
+  // 1) same category, a product that looks different from the hero and each other
+  for (const p of related) {
+    if (miniCards.length >= NEED) break;
+    const key = titleKey(p);
+    if (seenIds.has(p.id) || shownTitles.has(key)) continue;
+    shownTitles.add(key);
+    addCard(p);
+  }
+  // 2) thin category (only a variant left) — show it rather than leave a gap
+  for (const p of related) addCard(p);
+  // 3) last resort so a slot is never empty: best-sellers from anywhere
+  for (const p of bestSellers) addCard(p);
+  const [secondary, tertiary] = miniCards;
   const off = hero ? discountPercent(hero) : 0;
+  const [calloutA, calloutB] = productCallouts(hero);
 
   return (
     <section className="relative flex min-h-[calc(100svh-6rem)] flex-col justify-center overflow-hidden border-b border-border">
@@ -238,23 +313,27 @@ export async function Hero() {
           <Callout
             value={`${off}% OFF`}
             label="Deal of the day"
-            tone="dark"
+            tone="highlight"
             className="left-0 top-2 sm:top-10"
             delay={0}
           />
-          <Callout
-            value="Auto-stop"
-            label="Set & forget"
-            tone="purple"
-            className="right-0 top-14 sm:right-2 sm:top-24"
-            delay={1.2}
-          />
-          <Callout
-            value="USB-C"
-            label="Cordless"
-            className="hidden bottom-24 left-2 sm:block"
-            delay={0.6}
-          />
+          {calloutA ? (
+            <Callout
+              value={calloutA.value}
+              label={calloutA.label}
+              tone="purple"
+              className="right-0 top-14 sm:right-2 sm:top-24"
+              delay={1.2}
+            />
+          ) : null}
+          {calloutB ? (
+            <Callout
+              value={calloutB.value}
+              label={calloutB.label}
+              className="hidden bottom-24 left-2 sm:block"
+              delay={0.6}
+            />
+          ) : null}
 
           {/* floating product cards */}
           {secondary ? (
