@@ -1,19 +1,20 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, Star, Truck, ShieldCheck, Users } from "lucide-react";
+import { ArrowRight, Users, Star, Truck, ShieldCheck } from "lucide-react";
 import type { Product } from "@/lib/types";
 import { buttonVariants } from "@/components/ui/button";
 import { ProductArt } from "@/components/product/product-art";
 import { WishlistButton } from "@/components/product/wishlist-button";
 import { Price } from "@/components/product/price";
 import { formatINR, discountPercent, shortTitle } from "@/lib/format";
-import { TRUST_STATS } from "@/lib/constants";
 import { getDealOfTheDay, getBestSellers, getRelatedProducts } from "@/lib/data/queries";
 import { cn } from "@/lib/utils";
 
 const TRUST = [
-  { icon: Users, value: TRUST_STATS.customers, label: "Customers" },
-  { icon: Star, value: `${TRUST_STATS.rating}★`, label: "Rating" },
+  // Owner-attested all-channel (Amazon + direct) figures — real business numbers,
+  // not this store's DB counts. Confirmed by owner 5 Jul (rating 4.7, 10,000+).
+  { icon: Users, value: "10,000+", label: "Customers" },
+  { icon: Star, value: "4.7★", label: "Rating" },
   { icon: Truck, value: "PAN India", label: "Shipping" },
   { icon: ShieldCheck, value: "Secure", label: "Checkout" },
 ];

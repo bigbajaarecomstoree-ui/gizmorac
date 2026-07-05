@@ -33,7 +33,7 @@ export function Newsletter() {
             Get early access to drops &amp; deals
           </h2>
           <p className="mt-3 text-sm text-muted sm:text-base">
-            Join 10,000+ subscribers. New gadgets, restocks and member-only
+            Be first to know about new gadgets, restocks and member-only
             discounts — no spam, ever.
           </p>
 

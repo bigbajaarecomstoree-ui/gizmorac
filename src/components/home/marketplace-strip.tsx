@@ -1,12 +1,13 @@
 import Image from "next/image";
 import { Star } from "lucide-react";
-import { TRUST_STATS } from "@/lib/constants";
 import { CountUp } from "./count-up";
 
+// Owner-attested all-channel figures (confirmed 5 Jul): 10,000+ orders delivered,
+// 1,000+ verified reviews, 4.7 average rating. The Amazon badge matches the rating.
 const STATS = [
-  { value: TRUST_STATS.orders, label: "Orders delivered" },
-  { value: TRUST_STATS.reviews, label: "Verified reviews" },
-  { value: `${TRUST_STATS.rating}+`, label: "Average rating" },
+  { value: "10,000+", label: "Orders delivered" },
+  { value: "1,000+", label: "Verified reviews" },
+  { value: "4.7+", label: "Average rating" },
 ];
 
 export function MarketplaceStrip() {
@@ -28,7 +29,7 @@ export function MarketplaceStrip() {
           />
           <span className="flex items-center gap-1 rounded-full border border-border bg-surface px-2.5 py-1">
             <Star size={13} className="fill-highlight text-highlight" />
-            <span className="readout text-xs font-semibold">4.6</span>
+            <span className="readout text-xs font-semibold">4.7</span>
           </span>
         </div>
 

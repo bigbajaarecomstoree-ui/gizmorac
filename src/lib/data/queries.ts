@@ -9,14 +9,12 @@ import type {
   DeviceArt,
   PagedResult,
   Product,
-  Review,
   ShopQuery,
   SortOption,
 } from "@/lib/types";
 import { discountPercent } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { normalizeSpecs } from "./specs";
-import { reviews } from "./reviews";
 import { REVENUE_STATUSES } from "./revenue";
 
 // Products + orders live in the database (Prisma/SQLite). Categories, reviews
@@ -311,10 +309,6 @@ export async function getRelatedProducts(
     take: limit,
   });
   return rows.map(toProduct);
-}
-
-export async function getReviews(limit = 6): Promise<Review[]> {
-  return reviews.slice(0, limit);
 }
 
 function sortProducts(list: Product[], sort: SortOption): Product[] {

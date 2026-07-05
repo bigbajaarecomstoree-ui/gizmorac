@@ -9,7 +9,7 @@ import { Analytics } from "@/components/analytics/analytics";
 import { PresencePinger } from "@/components/analytics/presence-pinger";
 import { getCurrentCustomer } from "@/lib/customer-auth";
 import { getSettings, whatsappLink } from "@/lib/data/settings";
-import { getVisibleCategories, getReviews, getProductsBySlugs } from "@/lib/data/queries";
+import { getVisibleCategories, getProductsBySlugs } from "@/lib/data/queries";
 import { getRecentReviews } from "@/lib/data/customer-reviews";
 import { shortTitle } from "@/lib/format";
 import { ReviewSpotlight, type SpotlightReview } from "@/components/product/review-spotlight";
@@ -17,19 +17,18 @@ import { ReviewSpotlight, type SpotlightReview } from "@/components/product/revi
 export default async function StorefrontLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const [customer, settings, categories, seeded, realReviews] = await Promise.all([
+  const [customer, settings, categories, realReviews] = await Promise.all([
     getCurrentCustomer(),
     getSettings(),
     getVisibleCategories(),
-    getReviews(12),
     getRecentReviews(12),
   ]);
 
   const waHref = whatsappLink(settings.whatsappNumber);
 
-  // Floating review spotlight — real customer reviews first, then the existing
-  // review set; both are reviews already shown on the product pages.
-  const reviewPool = [...realReviews, ...seeded].filter((r) => r.productSlug);
+  // Floating review spotlight — REAL customer reviews only. Empty until genuine
+  // reviews exist, at which point ReviewSpotlight self-hides (no fake proof).
+  const reviewPool = realReviews.filter((r) => r.productSlug);
   const reviewProducts = await getProductsBySlugs([
     ...new Set(reviewPool.map((r) => r.productSlug as string)),
   ]);
