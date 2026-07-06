@@ -8,6 +8,7 @@ import {
   Lock,
   IndianRupee,
   Sparkles,
+  User,
 } from "lucide-react";
 import { getDealOfTheDay } from "@/lib/data/queries";
 import { getUnitsSoldForProduct } from "@/lib/data/orders";
@@ -16,6 +17,7 @@ import {
   savings,
   shortTitle,
   formatINR,
+  formatCount,
 } from "@/lib/format";
 import { ProductArt } from "@/components/product/product-art";
 import { Price } from "@/components/product/price";
@@ -48,6 +50,12 @@ export async function DealOfTheDay() {
   const remaining = deal.stock;
   const total = sold + remaining;
   const claimed = total > 0 ? Math.round((sold / total) * 100) : remaining === 0 ? 100 : 0;
+
+  // Honest social proof / urgency — surfaced only when the REAL numbers earn it
+  // (no fabricated baselines). The card fills out as the store genuinely sells.
+  const SOCIAL_MIN = 12; // real lifetime buyers before we show a "bought" badge
+  const LOW_STOCK = 10; // stock at/under which the deal is genuinely scarce
+  const showSocial = sold >= SOCIAL_MIN;
 
   const warranty =
     deal.warrantyMonths >= 12
@@ -109,7 +117,24 @@ export async function DealOfTheDay() {
               </div>
             ) : null}
 
-            {/* social proof */}
+            {/* social proof — real lifetime buyers, shown only once it's meaningful */}
+            {showSocial ? (
+              <div className="absolute bottom-3 left-3 flex items-center gap-2 rounded-full bg-surface/90 py-1.5 pl-1.5 pr-3 shadow-md ring-1 ring-border backdrop-blur">
+                <div className="flex -space-x-2">
+                  {[0, 1, 2].map((i) => (
+                    <span
+                      key={i}
+                      className="grid h-6 w-6 place-items-center rounded-full bg-accent-soft text-accent ring-2 ring-surface"
+                    >
+                      <User size={12} />
+                    </span>
+                  ))}
+                </div>
+                <span className="text-xs font-semibold text-foreground">
+                  {formatCount(sold)} bought
+                </span>
+              </div>
+            ) : null}
           </Tilt>
 
           {/* details */}
@@ -156,14 +181,27 @@ export async function DealOfTheDay() {
             </div>
             <div className="mt-2 flex items-center justify-between text-xs">
               <span className="font-semibold text-muted">{claimed}% claimed</span>
-              {remaining > 0 ? (
-                <span className="inline-flex items-center gap-1 font-semibold text-danger">
-                  <Flame size={13} /> Only {remaining} left in stock
-                </span>
-              ) : (
+              {remaining === 0 ? (
                 <span className="font-semibold text-danger">Sold out</span>
-              )}
+              ) : sold > 0 ? (
+                <span className="font-medium text-faint">{formatCount(sold)} sold</span>
+              ) : null}
             </div>
+
+            {/* honest urgency — genuine low stock first, else real demand; hidden when neither */}
+            {remaining > 0 && remaining <= LOW_STOCK ? (
+              <div className="mt-3 flex items-center gap-2 rounded-xl bg-danger/10 px-3.5 py-2.5 text-sm font-semibold text-danger ring-1 ring-danger/20">
+                <Flame size={15} className="shrink-0" />
+                {sold > 0
+                  ? `Hurry — only ${remaining} left in stock`
+                  : `Limited drop — only ${remaining} in stock`}
+              </div>
+            ) : showSocial ? (
+              <div className="mt-3 flex items-center gap-2 rounded-xl bg-accent-soft px-3.5 py-2.5 text-sm font-semibold text-accent-bright ring-1 ring-accent-dim/40">
+                <Flame size={15} className="shrink-0" />
+                {formatCount(sold)} sold — a customer favourite
+              </div>
+            ) : null}
 
 
             {/* countdown */}
