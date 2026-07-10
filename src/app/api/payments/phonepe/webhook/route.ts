@@ -15,6 +15,18 @@ export async function POST(req: NextRequest) {
   // lose a payment — it only blocks unauthenticated calls.)
   const expected = process.env.PHONEPE_WEBHOOK_AUTH;
   if (!expected) {
+    // TEMP DIAG (remove after webhook go-live): explains WHY the env var isn't
+    // seen in prod without ever exposing its value — reports only presence,
+    // length, matching key names, and the runtime env. Token-gated.
+    if (new URL(req.url).searchParams.get("diag") === "gzwh7Q2x") {
+      return Response.json({
+        configured: false,
+        present: process.env.PHONEPE_WEBHOOK_AUTH !== undefined,
+        len: (process.env.PHONEPE_WEBHOOK_AUTH ?? "").length,
+        phonepeKeys: Object.keys(process.env).filter((k) => /phonepe|webhook/i.test(k)),
+        vercelEnv: process.env.VERCEL_ENV ?? null,
+      });
+    }
     return Response.json({ ok: false, error: "webhook not configured" }, { status: 503 });
   }
   if (!safeEqual(req.headers.get("authorization") ?? "", expected)) {
