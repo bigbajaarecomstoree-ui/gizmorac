@@ -415,6 +415,7 @@ model StoreSetting {
   phonepeClientSecret        String    @default("")
   phonepeEnv                 String    @default("sandbox") // "sandbox" | "production"
   phonepeConnected           Boolean   @default(false)
+  phonepeWebhookAuth         String    @default("") // webhook Authorization — SHA256(user:pass); admin-managed, env fallback
   // Shiprocket shipping — admin-managed (API user creds are server-only).
   shiprocketEmail            String    @default("")
   shiprocketPassword         String    @default("")

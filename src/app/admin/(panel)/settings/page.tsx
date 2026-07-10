@@ -34,6 +34,7 @@ export default async function SettingsPage() {
             env: phonepe.env,
             connected: phonepe.connected,
             hasSecret: Boolean(phonepe.clientSecret),
+            hasWebhookAuth: Boolean(phonepe.webhookAuth),
           }}
           shiprocket={{
             email: shiprocket.email,

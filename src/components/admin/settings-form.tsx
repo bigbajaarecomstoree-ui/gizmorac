@@ -21,6 +21,7 @@ export interface PaymentGatewayProps {
   env: "sandbox" | "production";
   connected: boolean;
   hasSecret: boolean;
+  hasWebhookAuth: boolean;
 }
 
 export interface ShiprocketProps {
@@ -431,6 +432,7 @@ export function SettingsForm({
           env={phonepe.env}
           connected={phonepe.connected}
           hasSecret={phonepe.hasSecret}
+          hasWebhookAuth={phonepe.hasWebhookAuth}
         />
       </div>
 

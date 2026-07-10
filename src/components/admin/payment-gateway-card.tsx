@@ -118,6 +118,7 @@ export function PaymentGatewayCard({
   env,
   connected,
   hasSecret,
+  hasWebhookAuth,
 }: {
   clientIdLast4: string;
   hasClientId: boolean;
@@ -125,16 +126,19 @@ export function PaymentGatewayCard({
   env: Env;
   connected: boolean;
   hasSecret: boolean;
+  hasWebhookAuth: boolean;
 }) {
   // The real Client ID / Secret are NEVER sent to the browser. Fields start
   // blank; leaving them blank on Connect keeps the stored value (server-side).
   const [cid, setCid] = React.useState("");
   const [cver, setCver] = React.useState(clientVersion || "1");
   const [secret, setSecret] = React.useState("");
+  const [webhookAuth, setWebhookAuth] = React.useState("");
   const [cenv, setCenv] = React.useState<Env>(env);
   const [isConnected, setIsConnected] = React.useState(connected);
   const [liveEnv, setLiveEnv] = React.useState<Env>(env);
   const [secretStored, setSecretStored] = React.useState(hasSecret);
+  const [webhookStored, setWebhookStored] = React.useState(hasWebhookAuth);
   const [idStored, setIdStored] = React.useState(hasClientId);
   const [pending, start] = React.useTransition();
   const [msg, setMsg] = React.useState<{ type: "ok" | "err"; text: string } | null>(
@@ -152,15 +156,18 @@ export function PaymentGatewayCard({
         clientId: cid.trim(),
         clientVersion: cver.trim() || "1",
         clientSecret: secret.trim(),
+        webhookAuth: webhookAuth.trim(),
         env: cenv,
       });
       if (res.ok) {
         setIsConnected(true);
         setLiveEnv(res.env ?? cenv);
         setSecretStored(true);
+        setWebhookStored(true);
         setIdStored(true);
         setCid(""); // never keep key values in the fields
         setSecret("");
+        setWebhookAuth("");
         setMsg({
           type: "ok",
           text: `Connected — keys verified. Online payments are live on ${(
@@ -276,6 +283,26 @@ export function PaymentGatewayCard({
           />
           <span className="mt-1 block text-xs text-faint">
             Stored securely on the server — never shown again after saving.
+          </span>
+        </label>
+
+        <label className="block">
+          <span className="mb-1.5 block text-sm font-medium">Webhook secret</span>
+          <MaskedKeyInput
+            value={webhookAuth}
+            onChange={setWebhookAuth}
+            placeholder={
+              webhookStored
+                ? "•••••••• (leave blank to keep current)"
+                : "SHA256(username:password) from your PhonePe webhook config"
+            }
+            label="Webhook secret"
+          />
+          <span className="mt-1 block text-xs text-faint">
+            The Authorization value PhonePe sends to your webhook —
+            SHA256(username:password) from the PhonePe dashboard. Enables
+            real-time payment confirmation. Leave blank if you haven&apos;t set
+            one up yet.
           </span>
         </label>
 

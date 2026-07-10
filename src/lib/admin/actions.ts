@@ -1319,6 +1319,7 @@ export async function connectPaymentGateway(input: {
   clientId: string;
   clientVersion: string;
   clientSecret: string;
+  webhookAuth: string;
   env: PhonePeEnv;
 }): Promise<PaymentGatewayState> {
   await assertAdmin();
@@ -1332,6 +1333,7 @@ export async function connectPaymentGateway(input: {
   const clientVersion =
     (input.clientVersion ?? "").trim() || existing?.phonepeClientVersion || "1";
   const clientSecret = (input.clientSecret ?? "").trim() || existing?.phonepeClientSecret || "";
+  const webhookAuth = (input.webhookAuth ?? "").trim() || existing?.phonepeWebhookAuth || "";
 
   if (!clientId || !clientSecret) {
     return { ok: false, error: "Enter the Client ID and Client Secret." };
@@ -1347,6 +1349,7 @@ export async function connectPaymentGateway(input: {
     phonepeClientId: clientId,
     phonepeClientVersion: clientVersion,
     phonepeClientSecret: clientSecret,
+    phonepeWebhookAuth: webhookAuth,
     phonepeEnv: env,
     phonepeConnected: true,
   };

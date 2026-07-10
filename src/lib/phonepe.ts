@@ -14,6 +14,8 @@ export interface PhonePeConfig {
   clientId: string;
   clientVersion: string;
   clientSecret: string;
+  /** Webhook Authorization secret PhonePe sends us — SHA256(user:pass). */
+  webhookAuth: string;
   env: PhonePeEnv;
   connected: boolean;
   /** Has keys AND the admin has switched the gateway on. */
@@ -49,6 +51,10 @@ export async function getPhonePeConfig(): Promise<PhonePeConfig> {
     (row?.phonepeClientVersion || process.env.PHONEPE_CLIENT_VERSION || "1").trim() || "1";
   const clientSecret =
     (row?.phonepeClientSecret || process.env.PHONEPE_CLIENT_SECRET || "").trim();
+  // Webhook secret: admin-saved value first, env var as fallback. Trimmed so a
+  // stray newline in the env var can't silently break authentication.
+  const webhookAuth =
+    (row?.phonepeWebhookAuth || process.env.PHONEPE_WEBHOOK_AUTH || "").trim();
   const env: PhonePeEnv =
     row?.phonepeEnv === "production" || row?.phonepeEnv === "sandbox"
       ? row.phonepeEnv
@@ -59,7 +65,7 @@ export async function getPhonePeConfig(): Promise<PhonePeConfig> {
   const connected = row ? row.phonepeConnected : Boolean(clientId && clientSecret);
   const configured = connected && Boolean(clientId && clientSecret);
 
-  return { clientId, clientVersion, clientSecret, env, connected, configured };
+  return { clientId, clientVersion, clientSecret, webhookAuth, env, connected, configured };
 }
 
 // Cache the OAuth token per env+clientId (it lives ~ minutes/hours).

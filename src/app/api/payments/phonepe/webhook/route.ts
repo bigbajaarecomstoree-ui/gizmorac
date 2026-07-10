@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { reconcilePhonePeOrder, reconcileRefund } from "@/lib/data/payments";
+import { getPhonePeConfig } from "@/lib/phonepe";
 import { safeEqual } from "@/lib/secure-compare";
 
 export const dynamic = "force-dynamic";
@@ -13,20 +14,9 @@ export async function POST(req: NextRequest) {
   // Fail closed: refuse the webhook unless its auth value is configured.
   // (Payments still reconcile via the redirect callback + cron, so this can't
   // lose a payment — it only blocks unauthenticated calls.)
-  const expected = process.env.PHONEPE_WEBHOOK_AUTH;
+  // Admin-managed secret (StoreSetting row), env var as fallback.
+  const { webhookAuth: expected } = await getPhonePeConfig();
   if (!expected) {
-    // TEMP DIAG (remove after webhook go-live): explains WHY the env var isn't
-    // seen in prod without ever exposing its value — reports only presence,
-    // length, matching key names, and the runtime env. Token-gated.
-    if (new URL(req.url).searchParams.get("diag") === "gzwh7Q2x") {
-      return Response.json({
-        configured: false,
-        present: process.env.PHONEPE_WEBHOOK_AUTH !== undefined,
-        len: (process.env.PHONEPE_WEBHOOK_AUTH ?? "").length,
-        phonepeKeys: Object.keys(process.env).filter((k) => /phonepe|webhook/i.test(k)),
-        vercelEnv: process.env.VERCEL_ENV ?? null,
-      });
-    }
     return Response.json({ ok: false, error: "webhook not configured" }, { status: 503 });
   }
   if (!safeEqual(req.headers.get("authorization") ?? "", expected)) {
