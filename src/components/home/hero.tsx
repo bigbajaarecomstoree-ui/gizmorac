@@ -4,7 +4,6 @@ import { ArrowRight, Users, Star, Truck, ShieldCheck } from "lucide-react";
 import type { Product } from "@/lib/types";
 import { buttonVariants } from "@/components/ui/button";
 import { ProductArt } from "@/components/product/product-art";
-import { WishlistButton } from "@/components/product/wishlist-button";
 import { Price } from "@/components/product/price";
 import { formatINR, discountPercent, shortTitle } from "@/lib/format";
 import { getDealOfTheDay, getBestSellers, getRelatedProducts } from "@/lib/data/queries";
@@ -90,12 +89,6 @@ function MiniCard({
       )}
       style={{ animationDelay: `${delay}s` }}
     >
-      {/* Heart sits above the link overlay so it toggles wishlist without navigating. */}
-      <WishlistButton
-        id={product.id}
-        name={shortTitle(product.name)}
-        className="absolute right-2 top-2 z-20 h-7 w-7 border-danger/30 bg-background/80 text-danger hover:border-danger hover:text-danger"
-      />
       <Link
         href={`/product/${product.slug}`}
         aria-label={shortTitle(product.name)}
@@ -153,35 +146,6 @@ function Eyebrow({ className }: { className?: string }) {
 // same product" apart from "a genuinely different one" for the mini-cards.
 const titleKey = (p: Product) => shortTitle(p.name).toLowerCase();
 
-// The hero product rotates (deal of the day / best seller), so the floating
-// callouts must come from that product's own data — a hardcoded claim would
-// end up describing a product that isn't on screen. Specs fit the value/label
-// shape natively; highlights/features are split into a short lead + caption;
-// warranty is the always-true fallback.
-function productCallouts(product: Product | null) {
-  if (!product) return [];
-  const out: { value: string; label: string }[] = [];
-  for (const s of product.specs) {
-    if (out.length === 2) break;
-    if (s.value.length <= 14 && s.label.length <= 22) {
-      out.push({ value: s.value, label: s.label });
-    }
-  }
-  for (const text of [...product.highlights, ...product.features]) {
-    if (out.length === 2) break;
-    const words = text.trim().split(/\s+/);
-    let head = words[0] ?? "";
-    if (words[1] && `${head} ${words[1]}`.length <= 12) head = `${head} ${words[1]}`;
-    if (!head || head.length > 14) continue;
-    const rest = text.trim().slice(head.length).trim();
-    out.push({ value: head, label: rest ? rest.slice(0, 26) : "Highlight" });
-  }
-  if (out.length < 2 && product.warrantyMonths > 0) {
-    out.push({ value: `${product.warrantyMonths}-month`, label: "Warranty" });
-  }
-  return out;
-}
-
 export async function Hero() {
   // Lead with the real Deal of the Day, backed by best-sellers for the floating
   // mini-cards. (Falls back gracefully if nothing is flagged yet.)
@@ -219,7 +183,6 @@ export async function Hero() {
   for (const p of bestSellers) addCard(p);
   const [secondary, tertiary] = miniCards;
   const off = hero ? discountPercent(hero) : 0;
-  const [calloutA, calloutB] = productCallouts(hero);
 
   return (
     <section className="relative flex min-h-[calc(100svh-6rem)] flex-col justify-center overflow-hidden border-b border-border">
@@ -310,7 +273,7 @@ export async function Hero() {
             ) : null}
           </div>
 
-          {/* floating spec callouts */}
+          {/* floating deal badge */}
           <Callout
             value={`${off}% OFF`}
             label="Deal of the day"
@@ -318,23 +281,6 @@ export async function Hero() {
             className="left-0 top-2 sm:top-10"
             delay={0}
           />
-          {calloutA ? (
-            <Callout
-              value={calloutA.value}
-              label={calloutA.label}
-              tone="purple"
-              className="right-0 top-14 sm:right-2 sm:top-24"
-              delay={1.2}
-            />
-          ) : null}
-          {calloutB ? (
-            <Callout
-              value={calloutB.value}
-              label={calloutB.label}
-              className="hidden bottom-24 left-2 sm:block"
-              delay={0.6}
-            />
-          ) : null}
 
           {/* floating product cards */}
           {secondary ? (
