@@ -27,7 +27,7 @@ import { ProductCard } from "@/components/product/product-card";
 import { RatingStars } from "@/components/product/rating-stars";
 import { PincodeChecker } from "@/components/product/pincode-checker";
 import { formatINR, discountPercent, shortTitle } from "@/lib/format";
-import { applyCoupon } from "@/lib/storefront/actions";
+import { applyCoupon, getMyDeliveryEstimate } from "@/lib/storefront/actions";
 import { COUPON_STORAGE_KEY, MAX_QTY } from "@/lib/checkout-shared";
 
 const PAYMENTS = [
@@ -91,6 +91,38 @@ export function CartView({
   const [coupon, setCoupon] = React.useState<{ code: string; off: number } | null>(null);
   const [couponError, setCouponError] = React.useState<string | null>(null);
   const [pending, startTransition] = React.useTransition();
+
+  // Live per-pincode shipping (Shiprocket) for the signed-in customer's saved
+  // address — the SAME fee checkout shows and the server charges. null = fee
+  // unknown (guest / no saved pincode / unserviceable) → the summary says
+  // "Calculated at checkout" instead of quoting a flat fee that then jumps.
+  const [liveFee, setLiveFee] = React.useState<number | null>(null);
+  const [feeChecked, setFeeChecked] = React.useState(false);
+  React.useEffect(() => {
+    let active = true;
+    getMyDeliveryEstimate()
+      .then((r) => {
+        if (!active) return;
+        if (r?.ok && r.serviceable) {
+          // Live courier freight; a 0 rate means "unknown" → flat fallback,
+          // exactly like checkout and the server-side charge.
+          setLiveFee(r.ratePaise > 0 ? Math.round(r.ratePaise / 100) : shippingFee);
+        } else if (r && !r.ok) {
+          // Signed in with an address but Shiprocket unreachable → the server
+          // will charge the flat fee, so quote that.
+          setLiveFee(shippingFee);
+        }
+        // r === null (guest/no pincode) or unserviceable → leave null.
+        setFeeChecked(true);
+      })
+      .catch(() => {
+        if (active) setFeeChecked(true);
+      });
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const map = React.useMemo(
     () => new Map(products.map((p) => [p.id, p])),
@@ -188,8 +220,12 @@ export function CartView({
     ? Math.min(offer.amount, Math.max(0, subtotal - couponDiscount))
     : 0;
   const afterDiscount = Math.max(0, subtotal - couponDiscount - instantOff);
-  const shipping = afterDiscount >= freeShippingThreshold ? 0 : shippingFee;
-  const total = afterDiscount + shipping;
+  // Shipping: free over the threshold; otherwise the live per-pincode courier
+  // fee when we know it. null = unknown → "Calculated at checkout" (never quote
+  // a flat number the checkout would then contradict).
+  const freeShip = afterDiscount >= freeShippingThreshold;
+  const shipping: number | null = freeShip ? 0 : liveFee;
+  const total: number | null = shipping === null ? null : afterDiscount + shipping;
   // GST already included in the tax-inclusive prices shown — scaled by the
   // discount ratio so it reflects the tax inside the amount actually charged.
   const gstIncl = Math.round(
@@ -238,7 +274,7 @@ export function CartView({
         {/* left: free-shipping nudge + lines + recommendations */}
         <div className="min-w-0">
           {/* free-shipping progress */}
-          {shipping > 0 ? (
+          {!freeShip ? (
             <div className="rounded-xl border border-accent/30 bg-accent-soft/40 p-3.5">
               <p className="flex items-center gap-2 text-sm text-foreground">
                 <Gift size={16} className="shrink-0 text-accent" />
@@ -449,17 +485,23 @@ export function CartView({
                 <dd>
                   {shipping === 0 ? (
                     <span className="font-medium text-success">Free</span>
+                  ) : shipping === null ? (
+                    <span className="text-faint">
+                      {feeChecked ? "Calculated at checkout" : "Calculating…"}
+                    </span>
                   ) : (
                     formatINR(shipping)
                   )}
                 </dd>
               </div>
-              {shipping > 0 ? (
+              {!freeShip ? (
                 <p className="-mt-1 text-xs text-faint">Free over ₹{freeShippingThreshold}</p>
               ) : null}
               <div className="mt-1 flex items-baseline justify-between border-t-2 border-border pt-3">
                 <dt className="text-base font-semibold">Total</dt>
-                <dd className="readout text-xl font-bold text-accent">{formatINR(total)}</dd>
+                <dd className="readout text-xl font-bold text-accent">
+                  {total === null ? `${formatINR(afterDiscount)} + shipping` : formatINR(total)}
+                </dd>
               </div>
               <div className="flex justify-between text-xs text-faint">
                 <dt>Includes GST</dt>
@@ -502,7 +544,9 @@ export function CartView({
         <div className="flex items-center gap-3">
           <div className="min-w-0">
             <p className="text-[0.7rem] text-faint">Total</p>
-            <p className="readout text-lg font-bold leading-tight">{formatINR(total)}</p>
+            <p className="readout text-lg font-bold leading-tight">
+              {total === null ? `${formatINR(afterDiscount)} + ship.` : formatINR(total)}
+            </p>
           </div>
           <Link href="/checkout" className={`${buttonVariants({ size: "lg" })} ml-auto`}>
             <Lock size={16} /> Secure Checkout

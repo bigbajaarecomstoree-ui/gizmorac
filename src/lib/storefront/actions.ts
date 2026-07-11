@@ -6,6 +6,7 @@ import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { stripEmoji, cleanStrings } from "@/lib/sanitize";
 import { getCurrentCustomer } from "@/lib/customer-auth";
+import { getAddressesForCustomer } from "@/lib/data/addresses";
 import { getSettings } from "@/lib/data/settings";
 import { computeCodAdvance } from "@/lib/data/cod";
 import { getCodPincodeRule, codAllowedForRule } from "@/lib/data/cod-pincode";
@@ -537,6 +538,24 @@ export async function getDeliveryEstimate(
   const est = await checkServiceability({ deliveryPincode: pincode });
   if (!est) return { ok: false };
   return { ok: true, ...est };
+}
+
+/**
+ * Live delivery estimate for the SIGNED-IN customer's saved pincode (default
+ * address first, else profile pincode). Lets the cart show the SAME per-pincode
+ * Shiprocket fee that checkout displays and the server charges — instead of a
+ * flat fallback that then "jumps" at checkout. Returns null for guests / no
+ * saved pincode (the cart then shows "Calculated at checkout"). Reads only the
+ * caller's own session data — no input, nothing sensitive returned.
+ */
+export async function getMyDeliveryEstimate(): Promise<DeliveryEstimateResult | null> {
+  const customer = await getCurrentCustomer();
+  if (!customer) return null;
+  const addresses = await getAddressesForCustomer(customer.id);
+  // getAddressesForCustomer orders the default address first.
+  const pin = addresses[0]?.pincode ?? customer.pincode ?? "";
+  if (!/^\d{6}$/.test(pin)) return null;
+  return getDeliveryEstimate(pin);
 }
 
 /**
