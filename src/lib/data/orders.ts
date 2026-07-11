@@ -231,11 +231,20 @@ export async function getOrderByNumber(
 export async function getOrdersForCustomer(
   customerId: string,
   email: string,
+  // Security: DEFAULT is strict — match only orders this account actually placed
+  // while logged in (`customerId`). We do NOT email-match by default: guest orders
+  // store only an email, so matching by email would surface orders placed by
+  // ANYONE who used this address to a freshly-created account of the same email
+  // (a privacy leak + support magnet). Guest orders stay reachable via their
+  // tokenized tracking link; re-link them to an account only after it verifies
+  // the email (future "claim" step, tied to M3). Admin views may opt in.
+  opts: { matchEmail?: boolean } = {},
 ): Promise<Order[]> {
+  const where = opts.matchEmail
+    ? { OR: [{ customerId }, { email: email.toLowerCase() }] }
+    : { customerId };
   const rows = await prisma.order.findMany({
-    where: {
-      OR: [{ customerId }, { email: email.toLowerCase() }],
-    },
+    where,
     orderBy: { createdAt: "desc" },
   });
   return rows.map(toOrder);

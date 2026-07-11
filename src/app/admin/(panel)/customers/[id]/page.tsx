@@ -66,7 +66,9 @@ export default async function CustomerDetailPage({ params }: { params: Params })
   const customer = await getCustomerById(id);
   if (!customer) notFound();
 
-  const orders = await getOrdersForCustomer(customer.id, customer.email);
+  // Admin view intentionally includes email-matched (guest) orders for a full
+  // customer history; the storefront self-view stays strict (customerId only).
+  const orders = await getOrdersForCustomer(customer.id, customer.email, { matchEmail: true });
   const addresses = await getAddressesForCustomer(customer.id);
 
   const totalSpent = orders
