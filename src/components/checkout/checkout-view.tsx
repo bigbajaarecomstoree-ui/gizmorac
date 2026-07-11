@@ -289,6 +289,15 @@ export function CheckoutView({
     });
   }
 
+  // A pincode prefilled from a saved/default address never passes through
+  // onPincode/onAddress, so resolve its delivery fee once on mount — otherwise
+  // the total stays stuck behind "Enter pincode" and Shipping reads a misleading
+  // ₹0. Typing or picking an address trigger checkDelivery on their own.
+  React.useEffect(() => {
+    if (/^\d{6}$/.test(form.pincode)) checkDelivery(form.pincode);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Pincode → auto-detect state (and city if empty) via India Post.
   function onPincode(e: React.ChangeEvent<HTMLInputElement>) {
     const v = e.target.value.replace(/\D/g, "").slice(0, 6);
@@ -807,12 +816,12 @@ export function CheckoutView({
                   <span className="font-medium text-success">Free</span>
                 ) : !pinValid ? (
                   <span className="text-faint">Enter pincode</span>
-                ) : shipStatus === "checking" ? (
-                  <span className="text-faint">Calculating…</span>
                 ) : notDeliverable ? (
                   <span className="text-danger">Not serviceable</span>
+                ) : shipping === null ? (
+                  <span className="text-faint">Calculating…</span>
                 ) : (
-                  formatINR(shipping ?? 0)
+                  formatINR(shipping)
                 )}
               </dd>
             </div>
@@ -836,7 +845,7 @@ export function CheckoutView({
                 </div>
                 <div className="flex justify-between text-sm">
                   <dt className="text-muted">Pay on delivery</dt>
-                  <dd className="font-medium">{formatINR(cod.remaining)}</dd>
+                  <dd className="font-medium">{shippingPending ? "—" : formatINR(cod.remaining)}</dd>
                 </div>
               </>
             ) : null}
