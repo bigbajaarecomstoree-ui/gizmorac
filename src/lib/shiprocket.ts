@@ -324,6 +324,18 @@ export async function createShiprocketOrder(
 
   const { weight, length, breadth, height } = await computePackage(order);
 
+  // COD collectable: for a COD-advance order the customer already paid the
+  // booking advance online, so the courier must collect only the REMAINING
+  // balance — sending the full total would double-charge them at the door.
+  // codRemainingPaise is written at checkout (= total − advance); derive it
+  // defensively if a row ever has the advance without the remaining.
+  const isCodAdvance = order.paymentMethod === "COD" && order.codAdvancePaise > 0;
+  const codDueRupees =
+    order.codRemainingPaise > 0
+      ? Math.round(order.codRemainingPaise / 100)
+      : Math.max(0, order.total - Math.round(order.codAdvancePaise / 100));
+  const collectable = isCodAdvance ? codDueRupees : order.total;
+
   const payload = {
     order_id: `${order.orderNumber}${opts?.orderIdSuffix ?? ""}`,
     order_date: orderDate,
@@ -346,7 +358,9 @@ export async function createShiprocketOrder(
       selling_price: i.price,
     })),
     payment_method: order.paymentMethod === "COD" ? "COD" : "Prepaid",
-    sub_total: order.total,
+    // For COD this is what the courier collects (Shiprocket keys collection
+    // on sub_total) — the remaining balance for advance-paid orders.
+    sub_total: collectable,
     length,
     breadth,
     height,
