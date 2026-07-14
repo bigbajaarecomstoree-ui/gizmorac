@@ -26,6 +26,7 @@ import {
   estimateOrderFreight,
 } from "@/lib/shiprocket";
 import { refundOrderPayment, cancelOrderEverywhere } from "@/lib/data/order-fulfillment";
+import { reconcilePhonePeOrder, type Reconciled } from "@/lib/data/payments";
 import { getOrderById, ORDER_STATUSES } from "@/lib/data/orders";
 import { revalidateAdminOrderViews } from "@/lib/data/revalidate";
 import { recordShipmentUpdate } from "@/lib/data/shipments";
@@ -953,6 +954,35 @@ export async function saveAdminNotes(orderId: string, notes: string): Promise<{ 
   });
   revalidatePath(`/admin/orders/${orderId}`);
   return { ok: true };
+}
+
+/**
+ * Manually re-verify a Pending online payment against PhonePe — the operator's
+ * on-demand lever for the "customer paid in their UPI app but never returned"
+ * case (the webhook/cron would normally recover it, but they need their secrets
+ * configured, and even then a specific order shouldn't have to wait for a
+ * sweep). Delegates to reconcilePhonePeOrder: idempotent, amount-asserted, and
+ * it already confirms + restocks/releases + logs + revalidates as appropriate.
+ */
+export async function verifyOrderPayment(
+  orderNumber: string,
+): Promise<{ ok: true; result: Reconciled } | { ok: false; error: string }> {
+  await assertAdmin();
+  const num = (orderNumber ?? "").toString().trim();
+  if (!num) return { ok: false, error: "Missing order number." };
+  try {
+    const result = await reconcilePhonePeOrder(num);
+    await logEvent({
+      actor: "admin",
+      action: "payment.verify",
+      message: `Manual PhonePe verify for ${num}: ${result}`,
+      meta: { orderNumber: num, result },
+    });
+    revalidateAdminOrderViews();
+    return { ok: true, result };
+  } catch {
+    return { ok: false, error: "Could not reach PhonePe — try again in a moment." };
+  }
 }
 
 /**

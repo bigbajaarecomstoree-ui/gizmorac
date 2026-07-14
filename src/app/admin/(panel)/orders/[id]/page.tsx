@@ -13,6 +13,7 @@ import { AdminOrderActions } from "@/components/admin/admin-order-actions";
 import { EditorCard } from "@/components/admin/editor-card";
 import { saveAdminNotes } from "@/lib/admin/actions";
 import { ShipmentPanel } from "@/components/admin/shipment-panel";
+import { VerifyPaymentButton } from "@/components/admin/verify-payment-button";
 import { CodPanel } from "@/components/admin/cod-panel";
 import { OrderActivity } from "@/components/admin/order-activity";
 
@@ -304,6 +305,12 @@ export default async function OrderDetailPage({ params }: { params: Params }) {
                 <span className="text-muted">Reference</span>
                 <span className="font-mono">{order.paymentRef}</span>
               </div>
+            ) : null}
+            {/* Pending online payment (prepaid or COD advance) → on-demand
+                re-check with PhonePe, so a paid-but-never-returned customer
+                doesn't wait on the webhook/cron. */}
+            {order.paymentStatus === "Pending" ? (
+              <VerifyPaymentButton orderNumber={order.orderNumber} />
             ) : null}
             {order.refundStatus ? (
               <div className="mt-1 flex justify-between text-xs">
