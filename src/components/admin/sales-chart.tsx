@@ -126,6 +126,13 @@ export function SalesChart({ data }: { data: DashboardChart }) {
   const labelEvery = series.granularity === "month" ? 1 : n <= 8 ? 1 : Math.ceil(n / 6);
   const showYoy = range === "7d" || range === "30d" || range === "week" || range === "month";
 
+  // Sparse data (early days): print the value on top of each bar so a lone
+  // bar can never be misread as some other day's order. Once the chart gets
+  // busy the labels would collide, so they yield to the hover tooltip.
+  const nonZero = series.buckets.filter((b) => !b.future && b.value > 0).length;
+  const showBarValues = nonZero > 0 && nonZero <= 10;
+  const fmtBar = (v: number) => (isMoney ? `₹${compactINR(v, compact1)}` : enIN.format(v));
+
   const H = 240;
 
   return (
@@ -198,19 +205,34 @@ export function SalesChart({ data }: { data: DashboardChart }) {
             <div
               key={i}
               className="group relative flex h-full min-w-0 flex-1 items-end"
-              title={b.future ? undefined : `${b.label}: ${fmtFull(b.value)}`}
             >
               {!b.future ? (
-                <div
-                  className={cn(
-                    "w-full rounded-t-[3px] transition-colors",
-                    b.partial ? "bg-border-bright" : "bg-accent group-hover:bg-accent-hover",
-                  )}
-                  style={{
-                    height: `${(b.value / max) * 100}%`,
-                    minHeight: b.value > 0 ? 2 : 0,
-                  }}
-                />
+                <>
+                  {/* instant styled tooltip — the native title was hover-only,
+                      slow and invisible on touch, so bars read as anonymous */}
+                  <div className="pointer-events-none absolute left-1/2 top-0 z-10 hidden -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-md border border-border bg-surface px-2 py-1 text-xs font-semibold shadow-sm group-hover:block">
+                    {b.label} · {fmtFull(b.value)}
+                  </div>
+                  {showBarValues && b.value > 0 ? (
+                    <span
+                      className="pointer-events-none absolute left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] font-semibold text-muted"
+                      style={{ bottom: `calc(${(b.value / max) * 100}% + 4px)` }}
+                    >
+                      {fmtBar(b.value)}
+                    </span>
+                  ) : null}
+                  <span className="sr-only">{`${b.label}: ${fmtFull(b.value)}`}</span>
+                  <div
+                    className={cn(
+                      "w-full rounded-t-[3px] transition-colors",
+                      b.partial ? "bg-border-bright" : "bg-accent group-hover:bg-accent-hover",
+                    )}
+                    style={{
+                      height: `${(b.value / max) * 100}%`,
+                      minHeight: b.value > 0 ? 2 : 0,
+                    }}
+                  />
+                </>
               ) : null}
             </div>
           ))}
