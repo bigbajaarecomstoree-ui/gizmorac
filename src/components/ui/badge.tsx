@@ -5,6 +5,7 @@ const base = "inline-flex items-center gap-1.5 rounded-full font-medium leading-
 
 const variants: Record<string, string> = {
   accent: "bg-accent text-on-accent",
+  highlight: "bg-highlight text-on-highlight",
   soft: "bg-accent-soft text-accent-bright border border-accent-dim/40",
   surface: "bg-surface-2 text-muted border border-border",
   success: "bg-success/15 text-success border border-success/30",
@@ -18,7 +19,7 @@ const sizes: Record<string, string> = {
 
 export interface BadgeProps
   extends React.HTMLAttributes<HTMLSpanElement> {
-  variant?: "accent" | "soft" | "surface" | "success" | "danger";
+  variant?: "accent" | "highlight" | "soft" | "surface" | "success" | "danger";
   size?: "sm" | "md";
 }
 

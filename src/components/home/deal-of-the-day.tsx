@@ -92,7 +92,7 @@ export async function DealOfTheDay() {
               <ProductArt art={deal.art} glyphClassName="!h-[60%] !max-h-96 text-accent" />
             )}
 
-            <Badge variant="accent" size="md" className="absolute left-4 top-4 font-semibold shadow-md">
+            <Badge variant="highlight" size="md" className="absolute left-4 top-4 font-semibold shadow-md">
               {off}% OFF
             </Badge>
 
@@ -161,7 +161,7 @@ export async function DealOfTheDay() {
             <div className="mt-4">
               <div className="flex flex-wrap items-center gap-3">
                 <Price product={deal} size="lg" showDiscount={false} />
-                <Badge variant="accent" size="sm" className="font-semibold">
+                <Badge variant="highlight" size="sm" className="font-semibold">
                   {off}% OFF
                 </Badge>
               </div>

@@ -21,7 +21,7 @@ function Tags({ off, badges }: { off: number; badges: string[] }) {
   return (
     <div className="pointer-events-none absolute left-4 top-4 z-10 flex flex-col items-start gap-1.5">
       {off > 0 ? (
-        <Badge variant="accent" className="font-semibold shadow-sm">
+        <Badge variant="highlight" className="font-semibold shadow-sm">
           {off}% OFF
         </Badge>
       ) : null}

@@ -39,7 +39,7 @@ export function ProductCard({ product }: { product: Product }) {
 
         <div className="absolute left-3 top-3 flex flex-col items-start gap-1.5">
           {off > 0 ? (
-            <Badge variant="accent" size="sm" className="font-semibold">
+            <Badge variant="highlight" size="sm" className="font-semibold">
               {off}% OFF
             </Badge>
           ) : null}
