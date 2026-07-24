@@ -94,7 +94,9 @@ export default async function OrderDetailPage({ params }: { params: Params }) {
 
   const v2Status = v2Order?.statusV2 ?? "PENDING";
   const canCancel = ["PENDING", "CONFIRMED", "PROCESSING"].includes(v2Status);
-  const canMarkDelivered = ["SHIPPED", "OUT_FOR_DELIVERY"].includes(v2Status);
+  // A parcel coming back can't be marked delivered — hide contradicting actions.
+  const rtoActive = order.rtoStatus === "DELIVERY_FAILED" || order.rtoStatus === "RTO_INITIATED";
+  const canMarkDelivered = ["SHIPPED", "OUT_FOR_DELIVERY"].includes(v2Status) && !rtoActive;
   const itemCount = order.items.reduce((n, it) => n + it.qty, 0);
   const paymentLabel =
     order.paymentMethod === "PhonePe"
@@ -167,6 +169,7 @@ export default async function OrderDetailPage({ params }: { params: Params }) {
             <OrderOperations
               orderId={order.id}
               orderStatus={v2Order?.statusV2 ?? "PENDING"}
+              rtoStatus={order.rtoStatus}
               items={v2Items.map((i) => ({
                 id: i.id,
                 name: i.name,

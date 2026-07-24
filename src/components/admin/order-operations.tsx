@@ -73,10 +73,12 @@ const btnPrimary = "inline-flex items-center gap-1.5 rounded-lg bg-accent px-2.5
 export function OrderOperations({
   orderId,
   orderStatus,
+  rtoStatus = "NONE",
   items,
 }: {
   orderId: string;
   orderStatus: string;
+  rtoStatus?: string;
   items: OpItem[];
 }) {
   const [pending, start] = React.useTransition();
@@ -94,7 +96,14 @@ export function OrderOperations({
   }
 
   const canCancel = ["PENDING", "CONFIRMED", "PROCESSING"].includes(orderStatus);
-  const fulfilment = FULFILMENT_NEXT[orderStatus] ?? [];
+  // While a parcel is returning, the only sensible transition is RTO —
+  // "Out for delivery" / "Mark delivered" would contradict the courier.
+  const rtoActive = rtoStatus === "DELIVERY_FAILED" || rtoStatus === "RTO_INITIATED";
+  const fulfilment = (FULFILMENT_NEXT[orderStatus] ?? []).filter(
+    (f) => !rtoActive || f.to === "RTO",
+  );
+  // Customer returns only exist for parcels that actually reached the customer.
+  const returnable = orderStatus === "DELIVERED";
 
   return (
     <div className="rounded-xl border border-border bg-surface">
@@ -131,7 +140,7 @@ export function OrderOperations({
 
       <div className="divide-y divide-border">
         {items.map((it) => (
-          <ItemRow key={it.id} orderId={orderId} item={it} pending={pending} busyKey={busyKey} run={run} />
+          <ItemRow key={it.id} orderId={orderId} item={it} returnable={returnable} pending={pending} busyKey={busyKey} run={run} />
         ))}
       </div>
     </div>
@@ -139,10 +148,11 @@ export function OrderOperations({
 }
 
 function ItemRow({
-  orderId, item, pending, busyKey, run,
+  orderId, item, returnable, pending, busyKey, run,
 }: {
   orderId: string;
   item: OpItem;
+  returnable: boolean;
   pending: boolean;
   busyKey: string | null;
   run: (key: string, fn: () => Promise<OpResult>) => void;
@@ -166,7 +176,7 @@ function ItemRow({
       </div>
 
       <div className="mt-2 flex flex-wrap items-center gap-2">
-        {item.status === "ACTIVE" && (
+        {item.status === "ACTIVE" && returnable && (
           <>
             <select value={reason} onChange={(e) => setReason(e.target.value as ReturnReason)}
               className="rounded-lg border border-border bg-surface px-2 py-1.5 text-xs">

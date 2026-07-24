@@ -85,39 +85,72 @@ export function CodPanel({
         <div className="flex items-center justify-between"><dt className="text-muted">RTO status</dt><dd><Pill label={rtoStatus} tone={rtoActive ? "red" : "gray"} /></dd></div>
       </dl>
 
+      {/* One clear next step per state — never a wall of buttons. Tracking
+          auto-sync records "delivery failed" / "RTO initiated" by itself, so
+          those appear only while still applicable. */}
       <div className="mt-4 space-y-2 border-t border-border pt-4">
-        {!collected ? (
-          <button type="button" disabled={pending} onClick={() => run(() => markDeliveryCollected(orderId))} className={`${btn} w-full`}>
-            <Check size={15} /> Mark delivery payment collected ({formatINR(dueRupees)})
-          </button>
+        {rtoStatus === "NONE" ? (
+          <>
+            {!collected ? (
+              <button type="button" disabled={pending} onClick={() => run(() => markDeliveryCollected(orderId))} className={`${btn} w-full`}>
+                <Check size={15} /> Mark delivery payment collected ({formatINR(dueRupees)})
+              </button>
+            ) : (
+              <p className="flex items-center gap-1.5 text-sm text-success"><Check size={15} /> Delivery payment collected</p>
+            )}
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <button type="button" disabled={pending} onClick={() => run(() => markDeliveryFailed(orderId))} className={btn}>
+                <Truck size={15} /> Delivery failed
+              </button>
+              <button type="button" disabled={pending} onClick={() => run(() => markRtoInitiated(orderId))} className={btn}>
+                <RotateCcw size={15} /> RTO initiated
+              </button>
+            </div>
+            <p className="text-xs text-faint">
+              Usually automatic — courier tracking records failed deliveries and RTO by itself.
+            </p>
+          </>
+        ) : rtoStatus === "DELIVERY_FAILED" ? (
+          <>
+            <button type="button" disabled={pending} onClick={() => run(() => markRtoInitiated(orderId))} className={`${btn} w-full`}>
+              <RotateCcw size={15} /> RTO initiated
+            </button>
+            <p className="text-xs text-faint">
+              Courier will usually re-attempt first — tracking updates this automatically.
+            </p>
+          </>
+        ) : rtoStatus === "RTO_INITIATED" ? (
+          <>
+            <button type="button" disabled={pending} onClick={() => run(() => markRtoReceived(orderId))} className={`${btn} w-full`}>
+              <Check size={15} /> RTO received — parcel is back
+            </button>
+            <p className="text-xs text-faint">
+              Click when the parcel physically arrives: items restock
+              {codAdvancePaise > 0 ? ` and the ${formatINR(codAdvancePaise / 100)} advance is forfeited` : ""}.
+            </p>
+          </>
         ) : (
-          <p className="flex items-center gap-1.5 text-sm text-success"><Check size={15} /> Delivery payment collected</p>
+          <p className="flex items-center gap-1.5 text-sm text-success">
+            <Check size={15} /> RTO closed — items restocked.
+          </p>
         )}
 
-        {/* RTO lifecycle */}
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          <button type="button" disabled={pending || rtoStatus !== "NONE"} onClick={() => run(() => markDeliveryFailed(orderId))} className={btn}>
-            <Truck size={15} /> Delivery failed
-          </button>
-          <button type="button" disabled={pending || !["NONE", "DELIVERY_FAILED"].includes(rtoStatus)} onClick={() => run(() => markRtoInitiated(orderId))} className={btn}>
-            <RotateCcw size={15} /> RTO initiated
-          </button>
-          <button type="button" disabled={pending || rtoStatus === "RTO_RECEIVED"} onClick={() => run(() => markRtoReceived(orderId))} className={btn}>
-            <Check size={15} /> RTO received
-          </button>
-        </div>
-
-        {/* payment override */}
-        <div className="flex items-center gap-2 pt-1">
-          <select value={override} onChange={(e) => setOverride(e.target.value)} className="h-9 flex-1 rounded-lg border border-border bg-background px-2 text-sm outline-none focus:border-accent">
-            {["Pending", "PartiallyPaid", "Paid", "Failed"].map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-          <button type="button" disabled={pending} onClick={() => run(() => overridePaymentStatus(orderId, override))} className={btn}>
-            Override
-          </button>
-        </div>
+        {/* payment override — rare, so kept out of the way */}
+        <details className="pt-1">
+          <summary className="cursor-pointer text-xs font-medium text-faint transition-colors hover:text-foreground">
+            Payment status override
+          </summary>
+          <div className="mt-2 flex items-center gap-2">
+            <select value={override} onChange={(e) => setOverride(e.target.value)} className="h-9 flex-1 rounded-lg border border-border bg-background px-2 text-sm outline-none focus:border-accent">
+              {["Pending", "PartiallyPaid", "Paid", "Failed"].map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+            <button type="button" disabled={pending} onClick={() => run(() => overridePaymentStatus(orderId, override))} className={btn}>
+              Override
+            </button>
+          </div>
+        </details>
       </div>
 
       {pending ? (
