@@ -1016,9 +1016,11 @@ export async function setRtoCost(
   if (!Number.isFinite(rupees) || rupees < 0 || rupees > 1_000_000) {
     return { ok: false, error: "Enter a valid amount between ₹0 and ₹10,00,000." };
   }
+  // A pencil edit is a deliberate correction (e.g. a dispute credited via the
+  // Shiprocket wallet): flag it so the auto-reconcile never overwrites it.
   await prisma.order.update({
     where: { id: orderId },
-    data: { rtoCostPaise: Math.round(rupees * 100) },
+    data: { rtoCostPaise: Math.round(rupees * 100), rtoCostManual: true },
   });
   revalidatePath(`/admin/orders/${orderId}`);
   return { ok: true };

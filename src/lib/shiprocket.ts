@@ -11,6 +11,20 @@ import type { Order } from "@/lib/types";
 
 const BASE = "https://apiv2.shiprocket.in/v1/external";
 
+// Read-path calls run inside page renders and the daily cron — a stalled
+// Shiprocket response must never hang a render or eat the cron's budget.
+const READ_TIMEOUT_MS = 8_000;
+
+/** Drop the cached token so the next call re-authenticates (used on 401/403). */
+async function invalidateToken(): Promise<void> {
+  await prisma.storeSetting
+    .update({
+      where: { id: SETTINGS_ID },
+      data: { shiprocketToken: "", shiprocketTokenExp: new Date(0) },
+    })
+    .catch(() => {});
+}
+
 export interface ShiprocketConfig {
   email: string;
   password: string;
@@ -432,8 +446,16 @@ export async function getTracking(
   try {
     const res = await fetch(
       `${BASE}/courier/track/shipment/${encodeURIComponent(shipmentId)}`,
-      { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" },
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+        signal: AbortSignal.timeout(READ_TIMEOUT_MS),
+      },
     );
+    if (res.status === 401 || res.status === 403) {
+      await invalidateToken();
+      return null;
+    }
     const data = (await res.json().catch(() => ({}))) as {
       tracking_data?: {
         track_status?: number;
@@ -470,6 +492,77 @@ export async function getTracking(
       etd: td?.etd || "",
       destination: t?.destination || "",
       activities,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export interface AwbCharges {
+  /** Forward freight in rupees (COD-collection fee stripped out); 0 if unknown. */
+  forwardFreight: number;
+  /** COD collection fee in rupees. */
+  codFee: number;
+  /** RTO return-leg charge in rupees; 0 until Shiprocket bills the return. */
+  rtoCharge: number;
+  /** True when rtoCharge is the post-weight-reconciliation (final) figure. */
+  rtoFinal: boolean;
+}
+
+/**
+ * Fetch the ACTUAL billing for an order's AWB from Shiprocket
+ * (orders/show → awb_data.charges). Numbers arrive as strings; `charged_*`
+ * fields are the post-weight-reconciliation finals and win over `applied_*`.
+ * freight_charges includes the COD fee, so it's stripped to get pure freight.
+ */
+export async function getShipmentCharges(
+  shiprocketOrderId: string,
+): Promise<AwbCharges | null> {
+  if (!shiprocketOrderId) return null;
+  const token = await getToken();
+  if (!token) return null;
+  try {
+    const res = await fetch(
+      `${BASE}/orders/show/${encodeURIComponent(shiprocketOrderId)}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+        signal: AbortSignal.timeout(READ_TIMEOUT_MS),
+      },
+    );
+    if (res.status === 401 || res.status === 403) {
+      await invalidateToken();
+      return null;
+    }
+    if (!res.ok) return null;
+    const data = (await res.json().catch(() => ({}))) as {
+      data?: {
+        awb_data?: {
+          charges?: {
+            cod_charges?: number | string;
+            freight_charges?: number | string;
+            applied_weight_amount?: number | string;
+            charged_weight_amount?: number | string;
+            applied_weight_amount_rto?: number | string;
+            charged_weight_amount_rto?: number | string;
+          };
+        };
+      };
+    };
+    const c = data.data?.awb_data?.charges;
+    if (!c) return null;
+    const num = (v: number | string | undefined): number => {
+      const n = Number(v);
+      return Number.isFinite(n) && n > 0 ? n : 0;
+    };
+    const codFee = num(c.cod_charges);
+    const gross = num(c.charged_weight_amount) || num(c.freight_charges) || num(c.applied_weight_amount);
+    const rtoFinal = num(c.charged_weight_amount_rto) > 0;
+    return {
+      forwardFreight: Math.max(0, gross - codFee),
+      codFee,
+      rtoCharge: rtoFinal ? num(c.charged_weight_amount_rto) : num(c.applied_weight_amount_rto),
+      rtoFinal,
     };
   } catch {
     return null;

@@ -226,6 +226,7 @@ export interface Order {
   /** Freight charged to us by Shiprocket for this shipment, in paise. */
   shipmentCostPaise: number;
   rtoCostPaise: number;
+  rtoCostManual: boolean;
   /** Replacement: reverse pickup (customer → warehouse). */
   returnOrderId: string;
   returnShipmentId: string;

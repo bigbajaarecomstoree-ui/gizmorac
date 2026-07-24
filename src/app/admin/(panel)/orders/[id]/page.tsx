@@ -269,6 +269,7 @@ export default async function OrderDetailPage({ params }: { params: Params }) {
             shipmentCostPaise={order.shipmentCostPaise}
             rtoStatus={order.rtoStatus}
             rtoCostPaise={order.rtoCostPaise}
+            rtoCostManual={order.rtoCostManual}
             activities={trackingFeed}
             returnAwb={order.returnAwb}
             returnCourier={order.returnCourier}

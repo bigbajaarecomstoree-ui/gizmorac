@@ -211,12 +211,15 @@ function RtoCost({
   orderId,
   costPaise,
   forwardPaise,
+  manual,
 }: {
   orderId: string;
   costPaise: number;
   forwardPaise: number;
+  manual: boolean;
 }) {
   const [current, setCurrent] = React.useState(costPaise);
+  const [isManual, setIsManual] = React.useState(manual);
   const [editing, setEditing] = React.useState(false);
   const [value, setValue] = React.useState(costPaise > 0 ? String(costPaise / 100) : "");
   const [pending, start] = React.useTransition();
@@ -241,6 +244,7 @@ function RtoCost({
         return;
       }
       setCurrent(Math.round(rupees * 100));
+      setIsManual(true);
       setEditing(false);
     });
   }
@@ -312,8 +316,16 @@ function RtoCost({
           </span>
         )}
       </div>
-      {!editing && current > 0 && current === forwardPaise ? (
-        <p className="text-right text-xs text-faint">Estimated · equal to forward freight</p>
+      {!editing ? (
+        isManual ? (
+          <p className="text-right text-xs text-faint">
+            Manual override — Shiprocket auto-sync paused for this order
+          </p>
+        ) : current > 0 && current === forwardPaise ? (
+          <p className="text-right text-xs text-faint">Estimated · equal to forward freight</p>
+        ) : current > 0 ? (
+          <p className="text-right text-xs text-faint">Actual · Shiprocket billing</p>
+        ) : null
       ) : null}
       {err ? (
         <p className="text-right text-xs text-danger" role="alert">
@@ -353,6 +365,7 @@ export function ShipmentPanel({
   shipmentCostPaise,
   rtoStatus = "NONE",
   rtoCostPaise = 0,
+  rtoCostManual = false,
   activities = [],
   returnAwb,
   returnCourier,
@@ -375,6 +388,7 @@ export function ShipmentPanel({
   shipmentCostPaise: number;
   rtoStatus?: string;
   rtoCostPaise?: number;
+  rtoCostManual?: boolean;
   activities?: { when: string; activity: string; location: string }[];
   returnAwb: string;
   returnCourier: string;
@@ -480,6 +494,7 @@ export function ShipmentPanel({
               orderId={orderId}
               costPaise={rtoCostPaise}
               forwardPaise={shipmentCostPaise}
+              manual={rtoCostManual}
             />
           ) : null}
           <div className="flex flex-wrap items-center gap-2 pt-2">

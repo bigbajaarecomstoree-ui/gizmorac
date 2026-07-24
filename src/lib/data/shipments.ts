@@ -2,7 +2,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { logEvent } from "@/lib/data/logs";
 import { issueRepeatCoupon } from "@/lib/data/rewards";
-import { getTracking, type TrackingResult } from "@/lib/shiprocket";
+import { getShipmentCharges, getTracking, type TrackingResult } from "@/lib/shiprocket";
 
 // Single sync engine for courier → store status. Every entry point funnels
 // through applyShipmentUpdate: the Shiprocket webhook, the daily cron sweep,
@@ -77,8 +77,10 @@ const SYNC_SELECT = {
   trackingUrl: true,
   customerId: true,
   email: true,
+  shiprocketOrderId: true,
   shipmentCostPaise: true,
   rtoCostPaise: true,
+  rtoCostManual: true,
 } as const;
 
 interface SyncRow {
@@ -93,35 +95,95 @@ interface SyncRow {
   trackingUrl: string;
   customerId: string | null;
   email: string;
+  shiprocketOrderId: string;
   shipmentCostPaise: number;
   rtoCostPaise: number;
+  rtoCostManual: boolean;
+}
+
+interface RtoChargeRow {
+  id: string;
+  orderNumber: string;
+  shiprocketOrderId: string;
+  shipmentCostPaise: number;
+  rtoCostPaise: number;
+  rtoCostManual: boolean;
 }
 
 /**
- * Book the RTO return-leg freight the moment an RTO is underway: couriers
- * bill the return roughly equal to the forward leg, so that's the estimate
- * (admin-editable in the Shipping panel). CAS on rtoCostPaise=0 → books once.
+ * Settle the RTO return-leg freight for an order in RTO. Returns true when a
+ * figure was written.
+ * 1) A pencil-edited value (rtoCostManual) is a deliberate correction — e.g.
+ *    a dispute credited via the Shiprocket wallet that never restates the AWB
+ *    charge row — and is NEVER overwritten or re-booked.
+ * 2) Otherwise prefer Shiprocket's ACTUAL billing (orders/show →
+ *    awb_data.charges); the applied RTO amount, upgraded to the
+ *    weight-reconciled figure when that lands. CAS-guarded so concurrent
+ *    syncs write + log at most once per value change.
+ * 3) If Shiprocket hasn't billed the return yet, book an estimate equal to
+ *    the forward freight (CAS on rtoCostPaise=0 → books once).
+ * opts.recheck=false (page-view syncs) skips the Shiprocket call once any
+ * figure is booked — renders stay fast; drift-reconciliation belongs to the
+ * daily cron / webhook / admin-action paths, which pass recheck=true.
  */
-export async function bookRtoCharge(order: {
-  id: string;
-  orderNumber: string;
-  shipmentCostPaise: number;
-  rtoCostPaise: number;
-}): Promise<void> {
-  if (order.rtoCostPaise > 0 || order.shipmentCostPaise <= 0) return;
+export async function settleRtoCharge(
+  order: RtoChargeRow,
+  opts?: { recheck?: boolean },
+): Promise<boolean> {
+  if (order.rtoCostManual) return false;
+  if (!(opts?.recheck ?? true) && order.rtoCostPaise > 0) return false;
+
+  // Actual from Shiprocket billing.
+  const charges = order.shiprocketOrderId
+    ? await getShipmentCharges(order.shiprocketOrderId).catch(() => null)
+    : null;
+  if (charges && charges.rtoCharge > 0) {
+    const paise = Math.round(charges.rtoCharge * 100);
+    if (paise === order.rtoCostPaise) return false;
+    // CAS: skip if a manual edit landed meanwhile, or a concurrent sync
+    // already wrote this exact figure (prevents duplicate audit events).
+    const claimed = await prisma.order.updateMany({
+      where: { id: order.id, rtoCostManual: false, rtoCostPaise: { not: paise } },
+      data: { rtoCostPaise: paise },
+    });
+    if (claimed.count === 0) return false;
+    await logEvent({
+      actor: "system",
+      action: "shipment.rto_charge_actual",
+      message: `RTO return charge for ${order.orderNumber}: ₹${(paise / 100).toLocaleString(
+        "en-IN",
+      )} — Shiprocket ${charges.rtoFinal ? "final (weight-reconciled)" : "billed"} amount${
+        order.rtoCostPaise > 0
+          ? ` (was ₹${(order.rtoCostPaise / 100).toLocaleString("en-IN")})`
+          : ""
+      }`,
+      meta: {
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        paise,
+        previousPaise: order.rtoCostPaise,
+        final: charges.rtoFinal,
+      },
+    });
+    return true;
+  }
+
+  // Estimate fallback until Shiprocket bills the return leg.
+  if (order.rtoCostPaise > 0 || order.shipmentCostPaise <= 0) return false;
   const claimed = await prisma.order.updateMany({
-    where: { id: order.id, rtoCostPaise: 0 },
+    where: { id: order.id, rtoCostPaise: 0, rtoCostManual: false },
     data: { rtoCostPaise: order.shipmentCostPaise },
   });
-  if (claimed.count === 0) return;
+  if (claimed.count === 0) return false;
   await logEvent({
     actor: "system",
     action: "shipment.rto_charge",
     message: `RTO return charge booked for ${order.orderNumber}: ₹${(
       order.shipmentCostPaise / 100
-    ).toLocaleString("en-IN")} (est. = forward freight; edit in the Shipping panel)`,
+    ).toLocaleString("en-IN")} (est. = forward freight until Shiprocket bills the return)`,
     meta: { orderId: order.id, orderNumber: order.orderNumber, paise: order.shipmentCostPaise },
   });
+  return true;
 }
 
 /** Audit row + event log carrying before/after values (same shape as admin ops). */
@@ -246,14 +308,18 @@ async function applyShipmentUpdate(
     }
   }
 
-  // Book the return-leg freight once an RTO is in play — covers both the
+  // Settle the return-leg freight once an RTO is in play — covers both the
   // transition we just made and orders whose RTO predates this bookkeeping.
+  // Page-view syncs skip the extra Shiprocket call once a figure is booked.
   if (
     res.rtoStatus === "RTO_INITIATED" ||
     order.rtoStatus === "RTO_INITIATED" ||
     order.rtoStatus === "RTO_RECEIVED"
   ) {
-    await bookRtoCharge(order);
+    const settled = await settleRtoCharge(order, {
+      recheck: opts.source !== "page-view",
+    }).catch(() => false);
+    if (settled) changed = true;
   }
 
   // A parcel arriving back at the warehouse still needs a human: flag it once,
@@ -365,6 +431,10 @@ export async function syncOrderTracking(
 export async function syncActiveShipments(
   limit = 25,
 ): Promise<{ scanned: number; updated: number }> {
+  // Stay well inside the cron route's 60s maxDuration: stop starting new
+  // Shiprocket round-trips once the budget is spent (next run picks up the
+  // rest — both loops are ordered oldest-updated-first, so nothing starves).
+  const deadline = Date.now() + 40_000;
   const rows = await prisma.order.findMany({
     where: {
       shipmentId: { not: "" },
@@ -379,6 +449,7 @@ export async function syncActiveShipments(
   });
   let updated = 0;
   for (const row of rows) {
+    if (Date.now() > deadline) break;
     const t = await getTracking(row.shipmentId);
     if (!t) continue;
     const r = await applyShipmentUpdate(
@@ -402,6 +473,30 @@ export async function syncActiveShipments(
       });
     }
   }
+
+  // Tail pass: RTO already received (order Returned, so outside the sweep
+  // above) — Shiprocket's weight-reconciled RTO charge can land days later,
+  // so keep re-checking recently closed RTOs. No-op once figures match.
+  const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const closedRtos = await prisma.order.findMany({
+    where: {
+      rtoStatus: "RTO_RECEIVED",
+      rtoCostManual: false,
+      shiprocketOrderId: { not: "" },
+      updatedAt: { gte: cutoff },
+    },
+    orderBy: { updatedAt: "asc" },
+    take: 25,
+    select: {
+      id: true, orderNumber: true, shiprocketOrderId: true,
+      shipmentCostPaise: true, rtoCostPaise: true, rtoCostManual: true,
+    },
+  });
+  for (const row of closedRtos) {
+    if (Date.now() > deadline) break;
+    await settleRtoCharge(row, { recheck: true }).catch(() => {});
+  }
+
   return { scanned: rows.length, updated };
 }
 

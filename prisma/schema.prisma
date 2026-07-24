@@ -133,8 +133,11 @@ model Order {
   shipmentStatus         String             @default("") // latest Shiprocket status label
   shipmentCostPaise      Int                @default(0) // forward freight charged to us by Shiprocket (paise)
   // RTO return-leg freight (paise). Auto-booked = forward freight when an RTO
-  // starts (couriers bill the return ≈ the forward leg); admin-editable.
+  // starts, then reconciled to Shiprocket's actual billing; admin-editable.
   rtoCostPaise           Int                @default(0)
+  // True once the admin pencil-edits the RTO cost — a deliberate correction
+  // (e.g. a wallet-credited dispute) that the auto-sync must never overwrite.
+  rtoCostManual          Boolean            @default(false)
   // Replacement: reverse pickup (customer -> warehouse).
   returnOrderId          String             @default("")
   returnShipmentId       String             @default("")

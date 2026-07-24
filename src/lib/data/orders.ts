@@ -65,6 +65,7 @@ function toOrder(r: OrderRow): Order {
     shipmentStatus: r.shipmentStatus,
     shipmentCostPaise: r.shipmentCostPaise,
     rtoCostPaise: r.rtoCostPaise,
+    rtoCostManual: r.rtoCostManual,
     returnOrderId: r.returnOrderId,
     returnShipmentId: r.returnShipmentId,
     returnAwb: r.returnAwb,
