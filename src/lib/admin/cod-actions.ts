@@ -11,6 +11,7 @@ import { isAuthenticated } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logEvent } from "@/lib/data/logs";
 import { applyInventoryTxn } from "@/lib/postorder/inventory";
+import { bookRtoCharge } from "@/lib/data/shipments";
 import { revalidateAdminOrderViews } from "@/lib/data/revalidate";
 import { COD_PINCODE_MODES } from "@/lib/data/cod-pincode";
 
@@ -105,7 +106,10 @@ export async function markDeliveryFailed(orderId: string): Promise<CodOpResult> 
 /** Return-to-origin started. */
 export async function markRtoInitiated(orderId: string): Promise<CodOpResult> {
   await guard();
-  const order = await prisma.order.findUnique({ where: { id: orderId }, select: { id: true, orderNumber: true, rtoStatus: true } });
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: { id: true, orderNumber: true, rtoStatus: true, shipmentCostPaise: true, rtoCostPaise: true },
+  });
   if (!order) return { ok: false, error: "Order not found." };
   const claimed = await prisma.order.updateMany({
     where: { id: orderId, rtoStatus: { in: ["NONE", "DELIVERY_FAILED"] } },
@@ -113,6 +117,8 @@ export async function markRtoInitiated(orderId: string): Promise<CodOpResult> {
   });
   if (claimed.count === 0) return { ok: true, note: "RTO already initiated or received." };
   await audit(order, "rtoStatus", order.rtoStatus, "RTO_INITIATED", "cod.rto_initiated", `RTO initiated for ${order.orderNumber}`);
+  // Book the return-leg freight (est. = forward), same as the auto-sync path.
+  await bookRtoCharge(order);
   done(orderId);
   return { ok: true, note: "Marked RTO initiated." };
 }

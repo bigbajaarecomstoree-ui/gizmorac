@@ -1007,6 +1007,23 @@ export async function setShipmentCost(
   return { ok: true };
 }
 
+/** Manually correct the RTO return-leg freight (auto-booked = forward freight). */
+export async function setRtoCost(
+  orderId: string,
+  rupees: number,
+): Promise<{ ok: boolean; error?: string }> {
+  await assertAdmin();
+  if (!Number.isFinite(rupees) || rupees < 0 || rupees > 1_000_000) {
+    return { ok: false, error: "Enter a valid amount between ₹0 and ₹10,00,000." };
+  }
+  await prisma.order.update({
+    where: { id: orderId },
+    data: { rtoCostPaise: Math.round(rupees * 100) },
+  });
+  revalidatePath(`/admin/orders/${orderId}`);
+  return { ok: true };
+}
+
 export interface DeliveryRateResult {
   ok: boolean;
   ratePaise?: number;

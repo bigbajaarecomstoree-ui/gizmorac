@@ -18,6 +18,7 @@ import {
   syncShipment,
   shipNow,
   setShipmentCost,
+  setRtoCost,
   autoEstimateDeliveryCost,
 } from "@/lib/admin/actions";
 import { Button } from "@/components/ui/button";
@@ -201,6 +202,139 @@ function DeliveryCost({
   );
 }
 
+/**
+ * RTO return-leg freight row + two-way total. Auto-booked equal to the
+ * forward freight when an RTO starts (that's how couriers bill the return);
+ * the pencil corrects it once Shiprocket's actual charge is known.
+ */
+function RtoCost({
+  orderId,
+  costPaise,
+  forwardPaise,
+}: {
+  orderId: string;
+  costPaise: number;
+  forwardPaise: number;
+}) {
+  const [current, setCurrent] = React.useState(costPaise);
+  const [editing, setEditing] = React.useState(false);
+  const [value, setValue] = React.useState(costPaise > 0 ? String(costPaise / 100) : "");
+  const [pending, start] = React.useTransition();
+  const [err, setErr] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    setCurrent(costPaise);
+    setValue(costPaise > 0 ? String(costPaise / 100) : "");
+  }, [costPaise]);
+
+  function save() {
+    const rupees = Number(value.trim() === "" ? "0" : value);
+    if (!Number.isFinite(rupees) || rupees < 0) {
+      setErr("Enter a valid amount.");
+      return;
+    }
+    setErr(null);
+    start(async () => {
+      const res = await setRtoCost(orderId, rupees);
+      if (!res.ok) {
+        setErr(res.error ?? "Could not save.");
+        return;
+      }
+      setCurrent(Math.round(rupees * 100));
+      setEditing(false);
+    });
+  }
+
+  return (
+    <>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-muted">RTO return cost</span>
+        {editing ? (
+          <span className="flex items-center gap-1">
+            <span className="text-muted">₹</span>
+            <input
+              type="number"
+              inputMode="decimal"
+              min="0"
+              step="1"
+              autoFocus
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") save();
+                if (e.key === "Escape") setEditing(false);
+              }}
+              placeholder="0"
+              aria-label="RTO return cost in rupees"
+              className="w-24 rounded-md border border-border bg-background px-2 py-1 text-right text-sm tabular-nums outline-none focus:border-accent"
+            />
+            <button
+              type="button"
+              onClick={save}
+              disabled={pending}
+              aria-label="Save RTO return cost"
+              className="grid h-7 w-7 place-items-center rounded-md bg-accent text-on-accent transition-colors hover:bg-accent-hover disabled:opacity-50"
+            >
+              {pending ? <Loader2 size={13} className="animate-spin" /> : <Check size={14} />}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setEditing(false);
+                setErr(null);
+              }}
+              aria-label="Cancel"
+              className="grid h-7 w-7 place-items-center rounded-md border border-border text-muted transition-colors hover:text-foreground"
+            >
+              <X size={14} />
+            </button>
+          </span>
+        ) : (
+          <span className="flex items-center gap-2">
+            {current > 0 ? (
+              <span className="font-semibold text-danger">{formatINR(current / 100)}</span>
+            ) : (
+              <span className="text-faint">—</span>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                setErr(null);
+                setValue(current > 0 ? String(current / 100) : "");
+                setEditing(true);
+              }}
+              aria-label="Edit RTO return cost"
+              title="Edit manually"
+              className="text-faint transition-colors hover:text-accent"
+            >
+              <Pencil size={12} />
+            </button>
+          </span>
+        )}
+      </div>
+      {!editing && current > 0 && current === forwardPaise ? (
+        <p className="text-right text-xs text-faint">Estimated · equal to forward freight</p>
+      ) : null}
+      {err ? (
+        <p className="text-right text-xs text-danger" role="alert">
+          {err}
+        </p>
+      ) : null}
+      {!editing && current > 0 ? (
+        <div className="flex items-center justify-between gap-2 border-t border-border pt-1.5">
+          <span className="text-muted">Total shipping</span>
+          <span className="font-semibold">
+            {formatINR((forwardPaise + current) / 100)}
+            <span className="ml-1 text-xs font-normal text-faint">
+              ({formatINR(forwardPaise / 100)} send + {formatINR(current / 100)} return)
+            </span>
+          </span>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
 const RTO_LABELS: Record<string, string> = {
   DELIVERY_FAILED: "Delivery failed",
   RTO_INITIATED: "RTO in progress",
@@ -218,6 +352,7 @@ export function ShipmentPanel({
   shipmentStatus,
   shipmentCostPaise,
   rtoStatus = "NONE",
+  rtoCostPaise = 0,
   activities = [],
   returnAwb,
   returnCourier,
@@ -239,6 +374,7 @@ export function ShipmentPanel({
   shipmentStatus: string;
   shipmentCostPaise: number;
   rtoStatus?: string;
+  rtoCostPaise?: number;
   activities?: { when: string; activity: string; location: string }[];
   returnAwb: string;
   returnCourier: string;
@@ -339,6 +475,13 @@ export function ShipmentPanel({
             connected={connected}
             shipped={shipped}
           />
+          {rtoStatus !== "NONE" || rtoCostPaise > 0 ? (
+            <RtoCost
+              orderId={orderId}
+              costPaise={rtoCostPaise}
+              forwardPaise={shipmentCostPaise}
+            />
+          ) : null}
           <div className="flex flex-wrap items-center gap-2 pt-2">
             {labelUrl ? (
               <a

@@ -64,6 +64,7 @@ function toOrder(r: OrderRow): Order {
     labelUrl: r.labelUrl,
     shipmentStatus: r.shipmentStatus,
     shipmentCostPaise: r.shipmentCostPaise,
+    rtoCostPaise: r.rtoCostPaise,
     returnOrderId: r.returnOrderId,
     returnShipmentId: r.returnShipmentId,
     returnAwb: r.returnAwb,
@@ -449,7 +450,11 @@ async function buildSummary(bounds: {
   const feePaymentPct = fee?.paymentFeePct ?? 2;
   const feeCodPct = fee?.codFeePct ?? 0;
   const feeCodFlat = fee?.codFeeFlat ?? 0;
-  const shipping = counted.reduce((s, o) => s + Math.round((o.shipmentCostPaise ?? 0) / 100), 0);
+  // Shipping cost = forward freight + any RTO return-leg freight.
+  const shipping = counted.reduce(
+    (s, o) => s + Math.round(((o.shipmentCostPaise ?? 0) + (o.rtoCostPaise ?? 0)) / 100),
+    0,
+  );
   const gatewayFees = Math.round(
     counted
       .filter((o) => o.paymentMethod === "PhonePe")

@@ -77,6 +77,8 @@ const SYNC_SELECT = {
   trackingUrl: true,
   customerId: true,
   email: true,
+  shipmentCostPaise: true,
+  rtoCostPaise: true,
 } as const;
 
 interface SyncRow {
@@ -91,6 +93,35 @@ interface SyncRow {
   trackingUrl: string;
   customerId: string | null;
   email: string;
+  shipmentCostPaise: number;
+  rtoCostPaise: number;
+}
+
+/**
+ * Book the RTO return-leg freight the moment an RTO is underway: couriers
+ * bill the return roughly equal to the forward leg, so that's the estimate
+ * (admin-editable in the Shipping panel). CAS on rtoCostPaise=0 → books once.
+ */
+export async function bookRtoCharge(order: {
+  id: string;
+  orderNumber: string;
+  shipmentCostPaise: number;
+  rtoCostPaise: number;
+}): Promise<void> {
+  if (order.rtoCostPaise > 0 || order.shipmentCostPaise <= 0) return;
+  const claimed = await prisma.order.updateMany({
+    where: { id: order.id, rtoCostPaise: 0 },
+    data: { rtoCostPaise: order.shipmentCostPaise },
+  });
+  if (claimed.count === 0) return;
+  await logEvent({
+    actor: "system",
+    action: "shipment.rto_charge",
+    message: `RTO return charge booked for ${order.orderNumber}: ₹${(
+      order.shipmentCostPaise / 100
+    ).toLocaleString("en-IN")} (est. = forward freight; edit in the Shipping panel)`,
+    meta: { orderId: order.id, orderNumber: order.orderNumber, paise: order.shipmentCostPaise },
+  });
 }
 
 /** Audit row + event log carrying before/after values (same shape as admin ops). */
@@ -213,6 +244,16 @@ async function applyShipmentUpdate(
           : `Delivery attempt failed for ${order.orderNumber} (Shiprocket: ${label})`,
       );
     }
+  }
+
+  // Book the return-leg freight once an RTO is in play — covers both the
+  // transition we just made and orders whose RTO predates this bookkeeping.
+  if (
+    res.rtoStatus === "RTO_INITIATED" ||
+    order.rtoStatus === "RTO_INITIATED" ||
+    order.rtoStatus === "RTO_RECEIVED"
+  ) {
+    await bookRtoCharge(order);
   }
 
   // A parcel arriving back at the warehouse still needs a human: flag it once,
@@ -346,6 +387,20 @@ export async function syncActiveShipments(
       { revalidate: true, source: "cron" },
     );
     if (r.changed) updated++;
+    // Daily heartbeat: on days with no status/RTO transition, still record one
+    // checkpoint with the courier's latest scan, so the order's Activity feed
+    // shows movement (or confirmed stillness) every day while in transit.
+    if (!r.orderStatus && !r.rtoStatus) {
+      const latest = t.activities[0];
+      await logEvent({
+        actor: "system",
+        action: "shipment.checkpoint",
+        message: `${row.orderNumber} — ${t.status || row.shipmentStatus || "In transit"}${
+          latest ? ` · ${latest.activity}${latest.location ? ` (${latest.location})` : ""}` : ""
+        }`,
+        meta: { orderId: row.id, orderNumber: row.orderNumber, status: t.status },
+      });
+    }
   }
   return { scanned: rows.length, updated };
 }

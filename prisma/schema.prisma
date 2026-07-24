@@ -131,7 +131,10 @@ model Order {
   trackingUrl            String             @default("")
   labelUrl               String             @default("") // Shiprocket shipping-label PDF
   shipmentStatus         String             @default("") // latest Shiprocket status label
-  shipmentCostPaise      Int                @default(0) // freight charged to us by Shiprocket (paise)
+  shipmentCostPaise      Int                @default(0) // forward freight charged to us by Shiprocket (paise)
+  // RTO return-leg freight (paise). Auto-booked = forward freight when an RTO
+  // starts (couriers bill the return ≈ the forward leg); admin-editable.
+  rtoCostPaise           Int                @default(0)
   // Replacement: reverse pickup (customer -> warehouse).
   returnOrderId          String             @default("")
   returnShipmentId       String             @default("")

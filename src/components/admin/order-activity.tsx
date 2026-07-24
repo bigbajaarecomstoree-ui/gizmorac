@@ -23,6 +23,15 @@ const META: Record<string, { label: string; Icon: LucideIcon; tone: Tone }> = {
   "admin.shipping.push": { label: "Sent to Shiprocket", Icon: Truck, tone: "default" },
   "admin.shipping.shipped": { label: "Shipped", Icon: Truck, tone: "success" },
   "admin.shipping.cancel": { label: "Shipment cancelled", Icon: XCircle, tone: "danger" },
+  // Auto-sync events (courier → store)
+  "shipment.shipped": { label: "Shipped — courier confirmed", Icon: Truck, tone: "success" },
+  "shipment.delivered": { label: "Delivered — courier confirmed", Icon: Package, tone: "success" },
+  "shipment.checkpoint": { label: "In transit — daily check", Icon: Truck, tone: "default" },
+  "shipment.delivery_failed": { label: "Delivery attempt failed", Icon: XCircle, tone: "danger" },
+  "shipment.rto_initiated": { label: "RTO — parcel returning", Icon: Undo2, tone: "danger" },
+  "shipment.rto_charge": { label: "RTO return charge booked", Icon: IndianRupee, tone: "danger" },
+  "shipment.rto_back_at_origin": { label: "RTO reached origin hub", Icon: Undo2, tone: "accent" },
+  "payment.advance_paid": { label: "COD advance received", Icon: IndianRupee, tone: "success" },
 };
 
 const DOT: Record<Tone, string> = {
@@ -47,6 +56,7 @@ function when(iso: string): string {
   });
 }
 
+/** Recency hint shown after the (always-visible) absolute time; "" once stale. */
 function relative(iso: string): string {
   const s = Math.round((Date.now() - new Date(iso).getTime()) / 1000);
   if (s < 60) return "just now";
@@ -56,7 +66,7 @@ function relative(iso: string): string {
   if (h < 24) return `${h} hour${h === 1 ? "" : "s"} ago`;
   const d = Math.round(h / 24);
   if (d < 30) return `${d} day${d === 1 ? "" : "s"} ago`;
-  return when(iso);
+  return "";
 }
 
 export function OrderActivity({ events }: { events: OrderEvent[] }) {
@@ -100,8 +110,11 @@ export function OrderActivity({ events }: { events: OrderEvent[] }) {
                     {e.message ? (
                       <p className="mt-0.5 text-sm text-muted break-words">{e.message}</p>
                     ) : null}
-                    <p className="mt-1 text-xs text-faint" title={when(e.createdAt)}>
-                      {actorName(e.actor, e.actorEmail)} · {relative(e.createdAt)}
+                    <p className="mt-1 text-xs text-faint">
+                      {actorName(e.actor, e.actorEmail)} · {when(e.createdAt)}
+                      {relative(e.createdAt) ? (
+                        <span className="text-faint/80"> · {relative(e.createdAt)}</span>
+                      ) : null}
                     </p>
                   </div>
                 </li>
