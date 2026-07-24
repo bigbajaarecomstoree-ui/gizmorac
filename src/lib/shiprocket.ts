@@ -404,11 +404,22 @@ export async function createShiprocketOrder(
   }
 }
 
+/** One courier scan event (Shiprocket sends these newest-first, in IST). */
+export interface TrackingActivity {
+  date: string;
+  activity: string;
+  location: string;
+}
+
 export interface TrackingResult {
   status: string;
   awb: string;
   courier: string;
   trackingUrl: string;
+  /** Courier's estimated delivery date-time (IST string), "" if unknown. */
+  etd: string;
+  destination: string;
+  activities: TrackingActivity[];
 }
 
 /** Fetch live tracking for a shipment id. */
@@ -431,18 +442,34 @@ export async function getTracking(
           current_status?: string;
           courier_name?: string;
           awb_code?: string;
+          destination?: string;
         }[];
+        shipment_track_activities?:
+          | { date?: string; activity?: string; location?: string }[]
+          | null;
+        etd?: string;
         track_url?: string;
       };
     };
     if (!res.ok) return null;
     const td = data.tracking_data;
     const t = td?.shipment_track?.[0];
+    const activities = (td?.shipment_track_activities ?? [])
+      .filter((a) => a && (a.activity || a.date))
+      .slice(0, 25)
+      .map((a) => ({
+        date: a.date || "",
+        activity: a.activity || "",
+        location: a.location || "",
+      }));
     return {
       status: t?.current_status || "",
       awb: t?.awb_code || "",
       courier: t?.courier_name || "",
       trackingUrl: td?.track_url || "",
+      etd: td?.etd || "",
+      destination: t?.destination || "",
+      activities,
     };
   } catch {
     return null;

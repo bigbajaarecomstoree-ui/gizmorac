@@ -4,8 +4,9 @@ import { ArrowLeft, Package, ShoppingBag, CreditCard, CalendarClock, IndianRupee
 import { getOrderById, ORDER_STATUSES } from "@/lib/data/orders";
 import { getOrderActivity } from "@/lib/data/logs";
 import { getShiprocketConfig } from "@/lib/shiprocket";
+import { getLiveTracking } from "@/lib/data/shipments";
 import { prisma } from "@/lib/prisma";
-import { formatINR, shortTitle } from "@/lib/format";
+import { formatINR, formatTrackingWhen, shortTitle } from "@/lib/format";
 import { OrderStatusBadge } from "@/components/admin/order-status-badge";
 import { OrderStatusForm } from "@/components/admin/order-status-form";
 import { OrderOperations } from "@/components/admin/order-operations";
@@ -23,8 +24,20 @@ export const dynamic = "force-dynamic";
 
 export default async function OrderDetailPage({ params }: { params: Params }) {
   const { id } = await params;
-  const order = await getOrderById(id);
+  let order = await getOrderById(id);
   if (!order) notFound();
+
+  // Live-refresh the shipment from Shiprocket (throttled) so status/RTO fields
+  // reflect the courier's truth; re-read if the sync advanced the order.
+  const live = await getLiveTracking(order);
+  if (live.changed) {
+    order = (await getOrderById(id)) ?? order;
+  }
+  const trackingFeed = (live.tracking?.activities ?? []).slice(0, 6).map((a) => ({
+    when: formatTrackingWhen(a.date),
+    activity: a.activity,
+    location: a.location,
+  }));
 
   const shiprocket = await getShiprocketConfig();
   const activity = await getOrderActivity(order.orderNumber);
@@ -253,6 +266,8 @@ export default async function OrderDetailPage({ params }: { params: Params }) {
             labelUrl={order.labelUrl}
             shipmentStatus={order.shipmentStatus}
             shipmentCostPaise={order.shipmentCostPaise}
+            rtoStatus={order.rtoStatus}
+            activities={trackingFeed}
             returnAwb={order.returnAwb}
             returnCourier={order.returnCourier}
             returnTrackingUrl={order.returnTrackingUrl}

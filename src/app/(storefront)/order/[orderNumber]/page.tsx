@@ -8,10 +8,12 @@ import { getReviewsForOrder } from "@/lib/data/customer-reviews";
 import { getRewardForOrder } from "@/lib/data/rewards";
 import { getTicketForOrder } from "@/lib/data/tickets";
 import { getCurrentCustomer } from "@/lib/customer-auth";
-import { formatINR, deliveryWindow, shortTitle } from "@/lib/format";
+import { getLiveTracking } from "@/lib/data/shipments";
+import { formatINR, deliveryWindow, formatTrackingDay, shortTitle } from "@/lib/format";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { OrderStatusBadge } from "@/components/admin/order-status-badge";
 import { OrderTracker } from "@/components/order/order-tracker";
+import { ShipmentJourney } from "@/components/order/shipment-journey";
 import { OrderItemReview } from "@/components/account/order-review";
 import { RewardCouponCard } from "@/components/account/reward-coupon";
 import { ResumePayment } from "@/components/order/resume-payment";
@@ -60,7 +62,7 @@ export default async function OrderPage({ params }: { params: Params }) {
   const orderNumber = m?.[1] ?? rawParam;
   const urlToken = m?.[2] ?? "";
 
-  const order = await getOrderByNumber(orderNumber);
+  let order = await getOrderByNumber(orderNumber);
   if (!order) notFound();
 
   const customer = await getCurrentCustomer();
@@ -73,6 +75,13 @@ export default async function OrderPage({ params }: { params: Params }) {
   // Neither the signed-in owner nor a valid token → reveal nothing. This stops
   // anyone from enumerating order numbers to harvest order data.
   if (!tokenOk && !isOwner) notFound();
+
+  // Live-refresh the shipment from Shiprocket (throttled) so the page shows
+  // the courier's truth, not a stale label; re-read if the sync advanced it.
+  const live = await getLiveTracking(order);
+  if (live.changed) {
+    order = (await getOrderByNumber(orderNumber)) ?? order;
+  }
 
   const placed = new Date(order.createdAt).toLocaleString("en-IN", {
     timeZone: "Asia/Kolkata",
@@ -161,9 +170,10 @@ export default async function OrderPage({ params }: { params: Params }) {
           </div>
         ) : null}
 
-        {/* COD delivery reminder once the parcel is on its way */}
+        {/* COD delivery reminder once the parcel is on its way (not during RTO) */}
         {order.paymentMethod === "COD" &&
         order.deliveryPaymentStatus !== "COLLECTED" &&
+        order.rtoStatus === "NONE" &&
         order.status === "Shipped" ? (
           <div className="mt-5 rounded-xl border border-accent/40 bg-accent-soft/40 px-4 py-3 text-sm">
             <p className="font-medium text-accent-bright">
@@ -302,41 +312,24 @@ export default async function OrderPage({ params }: { params: Params }) {
           ) : (
             <OrderTracker currentStep={currentStep} />
           )}
-          {!isTerminal ? (
+          {!isTerminal && !isDelivered && order.rtoStatus === "NONE" ? (
             <p className="mt-5 text-sm text-muted">
-              Estimated delivery:{" "}
-              <span className="font-medium text-foreground">{deliveryWindow()}</span>
+              {live.tracking?.etd ? "Expected delivery: " : "Estimated delivery: "}
+              <span className="font-medium text-foreground">
+                {live.tracking?.etd ? formatTrackingDay(live.tracking.etd) : deliveryWindow()}
+              </span>
             </p>
           ) : null}
 
-          {/* shipment tracking */}
-          {order.trackingUrl || order.awb ? (
-            <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-background px-4 py-3">
-              <div className="text-sm">
-                <p className="font-medium">
-                  {order.courier ? `Shipped via ${order.courier}` : "Shipment created"}
-                  {order.shipmentStatus ? (
-                    <span className="text-muted"> · {order.shipmentStatus}</span>
-                  ) : null}
-                </p>
-                {order.awb ? (
-                  <p className="mt-0.5 text-xs text-muted">
-                    AWB: <span className="font-mono text-foreground">{order.awb}</span>
-                  </p>
-                ) : null}
-              </div>
-              {order.trackingUrl ? (
-                <a
-                  href={order.trackingUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={buttonVariants({ variant: "outline", size: "sm" })}
-                >
-                  <Truck size={15} /> Track shipment
-                </a>
-              ) : null}
-            </div>
-          ) : null}
+          {/* live shipment journey: courier status, scan feed + RTO banner */}
+          <ShipmentJourney
+            live={live.tracking}
+            shipmentStatus={order.shipmentStatus}
+            awb={order.awb}
+            courier={order.courier}
+            trackingUrl={order.trackingUrl}
+            rtoStatus={order.rtoStatus}
+          />
 
           {/* replacement tracking */}
           {order.replacementAwb || order.returnAwb ? (

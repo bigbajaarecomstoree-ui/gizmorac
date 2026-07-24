@@ -62,3 +62,31 @@ export function deliveryWindow(fromDays = 2, toDays = 5): string {
   end.setDate(end.getDate() + toDays);
   return `${fmt(start)} – ${fmt(end)}`;
 }
+
+const TRACK_MONTHS = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+/**
+ * "2026-07-23 09:00:00" (Shiprocket timestamps are already IST) → "23 Jul, 9:00 am".
+ * Pure string math — never routed through Date, so the server's timezone
+ * can't shift courier times.
+ */
+export function formatTrackingWhen(raw: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/.exec(raw || "");
+  if (!m) return raw || "";
+  const mon = TRACK_MONTHS[Number(m[2]) - 1] ?? "";
+  let h = Number(m[4]);
+  const ap = h >= 12 ? "pm" : "am";
+  h = h % 12 || 12;
+  return `${Number(m[3])} ${mon}, ${h}:${m[5]} ${ap}`;
+}
+
+/** Same source format, date only → "23 Jul 2026" (for the courier's ETD). */
+export function formatTrackingDay(raw: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw || "");
+  if (!m) return raw || "";
+  const mon = TRACK_MONTHS[Number(m[2]) - 1] ?? "";
+  return `${Number(m[3])} ${mon} ${m[1]}`;
+}

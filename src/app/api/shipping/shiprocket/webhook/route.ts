@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { recordShipmentUpdate } from "@/lib/data/shipments";
+import { recordShipmentUpdate, syncOrderTracking } from "@/lib/data/shipments";
 import { safeEqual } from "@/lib/secure-compare";
 
 export const dynamic = "force-dynamic";
@@ -37,11 +37,21 @@ export async function POST(req: NextRequest) {
     return Response.json({ ok: false, error: "no order reference" }, { status: 400 });
   }
 
-  await recordShipmentUpdate({
-    orderNumber: orderNumber || undefined,
-    awb: awb || undefined,
-    status: status || undefined,
-    courier: courier || undefined,
-  });
+  // The token gates the door, but the courier facts come from the source:
+  // re-verify against Shiprocket's tracking API rather than trusting the
+  // payload. Only if the live fetch is unavailable do we fall back to the
+  // (authenticated) payload fields.
+  const verified = await syncOrderTracking(
+    { orderNumber: orderNumber || undefined, awb: awb || undefined },
+    { source: "webhook" },
+  );
+  if (!verified.ok) {
+    await recordShipmentUpdate({
+      orderNumber: orderNumber || undefined,
+      awb: awb || undefined,
+      status: status || undefined,
+      courier: courier || undefined,
+    });
+  }
   return Response.json({ ok: true });
 }

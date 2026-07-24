@@ -1,4 +1,5 @@
 import { reconcileStalePendingOrders } from "@/lib/data/order-reconcile";
+import { syncActiveShipments } from "@/lib/data/shipments";
 import { logEvent } from "@/lib/data/logs";
 
 export const dynamic = "force-dynamic";
@@ -38,7 +39,20 @@ export async function GET(req: Request) {
         },
       });
     }
-    return Response.json({ ok: true, ...result, at: new Date().toISOString() });
+    // Also refresh live shipments from Shiprocket so order/RTO statuses stay
+    // true even if the tracking webhook is missed. Best-effort: a Shiprocket
+    // outage must not fail the payment reconcile above.
+    const shipments = await syncActiveShipments().catch(() => ({ scanned: 0, updated: 0 }));
+    if (shipments.updated > 0) {
+      await logEvent({
+        actor: "system",
+        action: "cron.shipment_sync",
+        message: `Shipment sync: ${shipments.updated} of ${shipments.scanned} live shipments updated from Shiprocket`,
+        meta: shipments,
+      });
+    }
+
+    return Response.json({ ok: true, ...result, shipments, at: new Date().toISOString() });
   } catch {
     return Response.json(
       { ok: false, error: "reconcile failed" },

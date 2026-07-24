@@ -29,7 +29,7 @@ import { refundOrderPayment, cancelOrderEverywhere } from "@/lib/data/order-fulf
 import { reconcilePhonePeOrder, type Reconciled } from "@/lib/data/payments";
 import { getOrderById, ORDER_STATUSES } from "@/lib/data/orders";
 import { revalidateAdminOrderViews } from "@/lib/data/revalidate";
-import { recordShipmentUpdate } from "@/lib/data/shipments";
+import { syncOrderTracking } from "@/lib/data/shipments";
 import { logEvent } from "@/lib/data/logs";
 import { limitByIp, clientIp } from "@/lib/rate-limit";
 import { adminPasswordWeak } from "@/lib/auth";
@@ -1542,20 +1542,13 @@ export async function pushToShiprocket(orderId: string): Promise<ShipResult> {
 /** Refresh an order's live tracking from Shiprocket. */
 export async function syncShipment(orderId: string): Promise<ShipResult> {
   await assertAdmin();
-  const order = await getOrderById(orderId);
-  if (!order) return { ok: false, error: "Order not found." };
-  if (!order.shipmentId) return { ok: false, error: "Push the order to Shiprocket first." };
-
-  const t = await getTracking(order.shipmentId);
-  if (!t) return { ok: false, error: "Couldn't fetch tracking right now." };
-
-  await recordShipmentUpdate({
-    orderNumber: order.orderNumber,
-    status: t.status,
-    awb: t.awb,
-    courier: t.courier,
-    trackingUrl: t.trackingUrl,
-  });
+  const res = await syncOrderTracking({ orderId }, { source: "admin" });
+  if (!res.ok) {
+    return {
+      ok: false,
+      error: res.error === "No shipment yet." ? "Push the order to Shiprocket first." : res.error,
+    };
+  }
   return { ok: true };
 }
 
