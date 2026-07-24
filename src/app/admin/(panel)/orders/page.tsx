@@ -218,6 +218,7 @@ export default async function AdminOrdersPage({
             id: o.id,
             orderNumber: o.orderNumber,
             status: o.status,
+            rtoStatus: o.rtoStatus,
             itemsLabel: itemsLabel(o),
             meta: `${o.firstName} ${o.lastName} · ${fmtDate(o.createdAt)}`,
             image: o.items[0] ? imageById.get(o.items[0].id) ?? null : null,

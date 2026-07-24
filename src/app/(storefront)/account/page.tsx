@@ -279,6 +279,7 @@ export default async function AccountPage() {
                     id: o.id,
                     orderNumber: o.orderNumber,
                     status: o.status,
+                    rtoStatus: o.rtoStatus,
                     createdAt: o.createdAt,
                     paymentLabel: o.paymentMethod === "PhonePe" ? "Prepaid" : "COD",
                     total: o.total,

@@ -26,3 +26,32 @@ export function OrderStatusBadge({ status }: { status: OrderStatus }) {
     </span>
   );
 }
+
+// Active-RTO companion chip. The order status stays "Shipped" while a parcel
+// is coming back (it only becomes "Returned" once the admin confirms receipt),
+// so lists and headers pair the status badge with this chip to carry the
+// courier reality. Renders nothing for NONE / RTO_RECEIVED.
+const RTO_ADMIN: Record<string, string> = {
+  DELIVERY_FAILED: "Delivery failed",
+  RTO_INITIATED: "RTO",
+};
+const RTO_CUSTOMER: Record<string, string> = {
+  DELIVERY_FAILED: "Delivery failed",
+  RTO_INITIATED: "Returning",
+};
+
+export function RtoBadge({
+  rtoStatus,
+  customerFacing = false,
+}: {
+  rtoStatus: string;
+  customerFacing?: boolean;
+}) {
+  const label = (customerFacing ? RTO_CUSTOMER : RTO_ADMIN)[rtoStatus];
+  if (!label) return null;
+  return (
+    <span className="inline-flex items-center rounded-full border border-red-500/35 bg-red-500/15 px-2.5 py-1 text-[0.6875rem] font-semibold leading-none text-red-600">
+      {label}
+    </span>
+  );
+}

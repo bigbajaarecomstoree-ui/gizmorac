@@ -11,7 +11,7 @@ import { getCurrentCustomer } from "@/lib/customer-auth";
 import { getLiveTracking } from "@/lib/data/shipments";
 import { formatINR, deliveryWindow, formatTrackingDay, shortTitle } from "@/lib/format";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
-import { OrderStatusBadge } from "@/components/admin/order-status-badge";
+import { OrderStatusBadge, RtoBadge } from "@/components/admin/order-status-badge";
 import { OrderTracker } from "@/components/order/order-tracker";
 import { ShipmentJourney } from "@/components/order/shipment-journey";
 import { OrderItemReview } from "@/components/account/order-review";
@@ -149,8 +149,9 @@ export default async function OrderPage({ params }: { params: Params }) {
           <p className="mt-1.5 text-sm text-muted">
             Order <span className="font-mono font-semibold text-foreground">{order.orderNumber}</span> · placed {placed}
           </p>
-          <div className="mt-3 flex justify-center">
+          <div className="mt-3 flex items-center justify-center gap-2">
             <OrderStatusBadge status={order.status} />
+            <RtoBadge rtoStatus={order.rtoStatus} customerFacing />
           </div>
         </div>
 

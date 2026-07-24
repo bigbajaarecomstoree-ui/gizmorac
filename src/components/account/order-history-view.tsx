@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Search, LayoutGrid, Table2 } from "lucide-react";
-import { OrderStatusBadge } from "@/components/admin/order-status-badge";
+import { OrderStatusBadge, RtoBadge } from "@/components/admin/order-status-badge";
 import { ProductArt } from "@/components/product/product-art";
 import { OrderActions } from "@/components/account/order-actions";
 import { ShipmentProgress } from "@/components/account/shipment-progress";
@@ -15,6 +15,7 @@ export interface OrderRow {
   id: string;
   orderNumber: string;
   status: string;
+  rtoStatus: string;
   createdAt: string;
   paymentLabel: string; // "Prepaid" | "COD"
   total: number;
@@ -90,6 +91,7 @@ export function OrderHistoryView({ rows }: { rows: OrderRow[] }) {
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-sm font-semibold">{o.orderNumber}</span>
                   <OrderStatusBadge status={o.status as OrderStatus} />
+                  <RtoBadge rtoStatus={o.rtoStatus} customerFacing />
                 </div>
                 <span className="text-xs text-muted">{fmtDate(o.createdAt)}</span>
               </div>
@@ -160,7 +162,12 @@ export function OrderHistoryView({ rows }: { rows: OrderRow[] }) {
                   <td className="whitespace-nowrap px-4 py-3 text-muted">{fmtDate(o.createdAt)}</td>
                   <td className="whitespace-nowrap px-4 py-3 text-muted">{o.paymentLabel}</td>
                   <td className="whitespace-nowrap px-4 py-3 readout font-semibold">{formatINR(o.total)}</td>
-                  <td className="px-4 py-3"><OrderStatusBadge status={o.status as OrderStatus} /></td>
+                  <td className="px-4 py-3">
+                    <span className="inline-flex items-center gap-1.5">
+                      <OrderStatusBadge status={o.status as OrderStatus} />
+                      <RtoBadge rtoStatus={o.rtoStatus} customerFacing />
+                    </span>
+                  </td>
                   <td className="px-4 py-3 text-muted">{o.address}</td>
                   <td className="whitespace-nowrap px-4 py-3 text-right">
                     <Link href={`/order/${o.orderNumber}`} className="font-medium text-accent hover:underline">

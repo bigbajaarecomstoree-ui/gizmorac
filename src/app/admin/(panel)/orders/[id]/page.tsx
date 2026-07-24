@@ -7,7 +7,7 @@ import { getShiprocketConfig } from "@/lib/shiprocket";
 import { getLiveTracking } from "@/lib/data/shipments";
 import { prisma } from "@/lib/prisma";
 import { formatINR, formatTrackingWhen, shortTitle } from "@/lib/format";
-import { OrderStatusBadge } from "@/components/admin/order-status-badge";
+import { OrderStatusBadge, RtoBadge } from "@/components/admin/order-status-badge";
 import { OrderStatusForm } from "@/components/admin/order-status-form";
 import { OrderOperations } from "@/components/admin/order-operations";
 import { AdminOrderActions } from "@/components/admin/admin-order-actions";
@@ -126,6 +126,7 @@ export default async function OrderDetailPage({ params }: { params: Params }) {
             <div className="flex flex-wrap items-center gap-2.5">
               <h1 className="font-mono text-2xl font-bold tracking-tight">{order.orderNumber}</h1>
               <OrderStatusBadge status={order.status} />
+              <RtoBadge rtoStatus={order.rtoStatus} />
             </div>
             <p className="mt-1 text-sm text-faint">Placed {placed}</p>
           </div>

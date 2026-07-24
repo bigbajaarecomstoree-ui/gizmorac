@@ -26,7 +26,7 @@ import {
   getNewCustomerCount,
 } from "@/lib/data/dashboard";
 import { formatINR } from "@/lib/format";
-import { OrderStatusBadge } from "@/components/admin/order-status-badge";
+import { OrderStatusBadge, RtoBadge } from "@/components/admin/order-status-badge";
 import { SalesChart } from "@/components/admin/sales-chart";
 import { DashboardCreateMenu } from "@/components/admin/dashboard-create-menu";
 import { LiveVisitorsCard } from "@/components/admin/live-visitors";
@@ -204,8 +204,9 @@ export default async function AdminDashboard() {
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
                   {/* fixed columns so badges and prices line up across rows */}
-                  <span className="flex w-24 justify-end">
+                  <span className="flex w-24 flex-col items-end gap-1">
                     <OrderStatusBadge status={o.status} />
+                    <RtoBadge rtoStatus={o.rtoStatus} />
                   </span>
                   <span className="readout w-20 text-right text-sm font-semibold">
                     {formatINR(o.total)}

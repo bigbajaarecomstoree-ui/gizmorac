@@ -15,7 +15,7 @@ import {
   XCircle,
   Download,
 } from "lucide-react";
-import { OrderStatusBadge } from "@/components/admin/order-status-badge";
+import { OrderStatusBadge, RtoBadge } from "@/components/admin/order-status-badge";
 import { bulkDownloadLabels, bulkMarkShipped } from "@/lib/admin/actions";
 import { adminCancelOrder } from "@/lib/admin/postorder-actions";
 import { formatINR } from "@/lib/format";
@@ -25,6 +25,7 @@ export interface OrderRow {
   id: string;
   orderNumber: string;
   status: OrderStatus;
+  rtoStatus: string;
   itemsLabel: string;
   meta: string; // customer · date
   image: string | null;
@@ -192,6 +193,7 @@ export function OrdersList({ rows }: { rows: OrderRow[] }) {
                     <div className="flex items-center gap-2">
                       <span className="font-mono text-sm font-semibold">{o.orderNumber}</span>
                       <OrderStatusBadge status={o.status} />
+                      <RtoBadge rtoStatus={o.rtoStatus} />
                     </div>
                     <div className="mt-0.5 truncate text-sm text-foreground">{o.itemsLabel}</div>
                     <div className="mt-0.5 truncate text-xs text-muted">{o.meta}</div>
