@@ -30,6 +30,7 @@ const META: Record<string, { label: string; Icon: LucideIcon; tone: Tone }> = {
   "shipment.delivery_failed": { label: "Delivery attempt failed", Icon: XCircle, tone: "danger" },
   "shipment.rto_initiated": { label: "RTO — parcel returning", Icon: Undo2, tone: "danger" },
   "shipment.rto_charge": { label: "RTO return charge booked", Icon: IndianRupee, tone: "danger" },
+  "shipment.rto_charge_actual": { label: "RTO charge — Shiprocket actual", Icon: IndianRupee, tone: "danger" },
   "shipment.rto_back_at_origin": { label: "RTO reached origin hub", Icon: Undo2, tone: "accent" },
   "payment.advance_paid": { label: "COD advance received", Icon: IndianRupee, tone: "success" },
 };
