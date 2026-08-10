@@ -303,6 +303,32 @@ const NAME_FILLER = new Set([
   "with", "for", "and", "to", "the", "a", "of", "in", "on", "&", "compatible",
 ]);
 
+/**
+ * Shiprocket caps SKU at 70 chars AND rejects duplicate SKUs within one order
+ * ("SKU cannot be repeated"). Slugs of duplicated listings can differ only
+ * beyond the cap (…-with-led vs …-with-led-3), so plain truncation collides.
+ * First occurrence keeps the clean truncated slug; any later line that would
+ * collide gets a short distinguishing tail from its product id.
+ */
+function uniqueSkus(items: { id: string; slug?: string }[]): string[] {
+  const used = new Set<string>();
+  return items.map((i) => {
+    const base = i.slug || i.id;
+    let sku = base.slice(0, 70);
+    if (used.has(sku)) {
+      const tail = `-${i.id.slice(-6)}`;
+      sku = base.slice(0, 70 - tail.length) + tail;
+      // Same product listed twice would still clash — bump until free.
+      for (let n = 2; used.has(sku); n++) {
+        const t = `${tail}-${n}`;
+        sku = base.slice(0, 70 - t.length) + t;
+      }
+    }
+    used.add(sku);
+    return sku;
+  });
+}
+
 function labelItemName(name: string): string {
   // Core title = the part before the first comma (marketing titles list
   // features after one), capped at 50 chars on a word boundary.
@@ -350,6 +376,8 @@ export async function createShiprocketOrder(
       : Math.max(0, order.total - Math.round(order.codAdvancePaise / 100));
   const collectable = isCodAdvance ? codDueRupees : order.total;
 
+  const skus = uniqueSkus(order.items);
+
   const payload = {
     order_id: `${order.orderNumber}${opts?.orderIdSuffix ?? ""}`,
     order_date: orderDate,
@@ -364,10 +392,9 @@ export async function createShiprocketOrder(
     billing_email: order.email,
     billing_phone: order.phone,
     shipping_is_billing: true,
-    order_items: order.items.map((i) => ({
+    order_items: order.items.map((i, idx) => ({
       name: labelItemName(i.name),
-      // Shiprocket caps SKU at 70 chars; slugs can be longer.
-      sku: (i.slug || i.id).slice(0, 70),
+      sku: skus[idx],
       units: i.qty,
       selling_price: i.price,
     })),
@@ -814,6 +841,7 @@ export async function createReturnOrder(
 
   const { weight, length, breadth, height } = await computePackage(order);
   const orderDate = new Date().toISOString().slice(0, 16).replace("T", " ");
+  const returnSkus = uniqueSkus(order.items);
 
   const payload = {
     order_id: `${order.orderNumber}-RET`,
@@ -839,11 +867,10 @@ export async function createReturnOrder(
     shipping_state: wh.state,
     shipping_email: wh.email || order.email,
     shipping_phone: wh.phone || order.phone,
-    order_items: order.items.map((i) => ({
+    order_items: order.items.map((i, idx) => ({
       name: labelItemName(i.name),
       qc_enable: false,
-      // Shiprocket caps SKU at 70 chars; slugs can be longer.
-      sku: (i.slug || i.id).slice(0, 70),
+      sku: returnSkus[idx],
       units: i.qty,
       selling_price: i.price,
     })),
