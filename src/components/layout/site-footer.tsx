@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ShieldCheck, Truck, RotateCcw, Headset, MapPin, Phone, Mail } from "lucide-react";
+import { ShieldCheck, Truck, RotateCcw, Headset, MapPin, Mail } from "lucide-react";
 import type { Category } from "@/lib/types";
 import { policies } from "@/lib/data/policies";
 import { FooterNewsletter } from "./footer-newsletter";
@@ -14,7 +14,6 @@ const TRUST = [
 
 // Fallbacks used only until the admin fills these in under Settings → Company.
 const FALLBACK_COMPANY = "BIG BAJAAR ECOM STOREE";
-const FALLBACK_PHONE = "+91 93102 14091";
 const FALLBACK_EMAIL = "care@gizmorac.com";
 
 // Brand glyphs as inline SVG (lucide dropped brand/logo icons).
@@ -59,7 +58,6 @@ export function SiteFooter({
   twitterUrl,
   legalName,
   companyAddress,
-  supportPhone,
   supportEmail,
 }: {
   whatsappHref: string;
@@ -70,12 +68,10 @@ export function SiteFooter({
   twitterUrl?: string;
   legalName?: string;
   companyAddress?: string;
-  supportPhone?: string;
   supportEmail?: string;
 }) {
   const company = legalName?.trim() || FALLBACK_COMPANY;
   const address = companyAddress?.trim() || "";
-  const phone = supportPhone?.trim() || FALLBACK_PHONE;
   const email = supportEmail?.trim() || FALLBACK_EMAIL;
   const socials = [
     { url: instagramUrl, Icon: InstagramIcon, label: "Instagram" },
@@ -207,13 +203,6 @@ export function SiteFooter({
                   {address}
                 </p>
               </div>
-              <a
-                href={`tel:${phone.replace(/\s+/g, "")}`}
-                className="flex items-center gap-2.5 text-muted transition-colors hover:text-accent"
-              >
-                <Phone size={16} className="shrink-0 text-accent" />
-                {phone}
-              </a>
               <a
                 href={`mailto:${email}`}
                 className="flex items-center gap-2.5 text-muted transition-colors hover:text-accent"

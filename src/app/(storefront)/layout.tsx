@@ -76,7 +76,6 @@ export default async function StorefrontLayout({
           twitterUrl={settings.twitterUrl}
           legalName={settings.legalName}
           companyAddress={settings.companyAddress}
-          supportPhone={settings.supportPhone}
           supportEmail={settings.supportEmail}
         />
         <WhatsAppButton href={waHref} />
