@@ -167,6 +167,17 @@ export function CheckoutView({
     }
   }, [pinCod, payMethod, phonepeEnabled]);
 
+  // A pincode prefilled from a saved/default address never passes through
+  // onPincode/onAddress, so resolve its delivery fee once on mount — otherwise
+  // the total stays stuck behind "Enter pincode" and Shipping reads a misleading
+  // ₹0. Typing or picking an address trigger checkDelivery on their own.
+  // Must stay above the early returns below: hooks have to run on every render.
+  React.useEffect(() => {
+    if (!mounted) return;
+    if (/^\d{6}$/.test(form.pincode)) checkDelivery(form.pincode);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted]);
+
   if (!mounted) {
     return <div className="py-20 text-center text-sm text-muted">Loading checkout…</div>;
   }
@@ -288,15 +299,6 @@ export function CheckoutView({
       setShipStatus("ok");
     });
   }
-
-  // A pincode prefilled from a saved/default address never passes through
-  // onPincode/onAddress, so resolve its delivery fee once on mount — otherwise
-  // the total stays stuck behind "Enter pincode" and Shipping reads a misleading
-  // ₹0. Typing or picking an address trigger checkDelivery on their own.
-  React.useEffect(() => {
-    if (/^\d{6}$/.test(form.pincode)) checkDelivery(form.pincode);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // Pincode → auto-detect state (and city if empty) via India Post.
   function onPincode(e: React.ChangeEvent<HTMLInputElement>) {
